@@ -14,6 +14,7 @@ type System interface {
 	SetConfig(cfg *map[string]interface{})
 	GetCapabilities() []adapter.Capability
 
+	Connect(sysURL string) error
 	Load() error
 
 	ListPosts() ([]post.Post, error)
