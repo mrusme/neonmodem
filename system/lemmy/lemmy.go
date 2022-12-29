@@ -17,6 +17,10 @@ func (sys *System) SetConfig(cfg *map[string]interface{}) {
 	sys.config = *cfg
 }
 
+func (sys *System) Connect(sysURL string) error {
+	return nil
+}
+
 func (sys *System) Load() error {
 	return nil
 }
