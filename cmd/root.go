@@ -1,17 +1,16 @@
 package cmd
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mrusme/gobbs/config"
 	"github.com/mrusme/gobbs/system"
-	"github.com/mrusme/gobbs/ui"
 	"github.com/mrusme/gobbs/ui/ctx"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
-var sugar *zap.SugaredLogger
+var LOG *zap.SugaredLogger
+var CFG config.Config
 
 func init() {
 	cobra.OnInitialize(load)
@@ -31,27 +30,27 @@ func init() {
 func load() {
 	var logger *zap.Logger
 
-	cfg, err := config.Load()
+	CFG, err := config.Load()
 	if err != nil {
 		panic(err)
 	}
 
-	if cfg.Debug == "true" {
+	if CFG.Debug == "true" {
 		logger, _ = zap.NewDevelopment()
 	} else {
 		logger, _ = zap.NewProduction()
 	}
 	defer logger.Sync()
-	sugar = logger.Sugar()
+	LOG = logger.Sugar()
 
-	c := ctx.New(&cfg, sugar)
-	_ = loadSystems(&c) // TODO: Handle errs
-
-	tui := tea.NewProgram(ui.NewModel(&c), tea.WithAltScreen())
-	err = tui.Start()
-	if err != nil {
-		panic(err)
-	}
+	// c := ctx.New(&cfg, LOG)
+	// _ = loadSystems(&c) // TODO: Handle errs
+	//
+	// tui := tea.NewProgram(ui.NewModel(&c), tea.WithAltScreen())
+	// err = tui.Start()
+	// if err != nil {
+	// 	panic(err)
+	// }
 }
 
 func loadSystems(c *ctx.Ctx) []error {
@@ -81,6 +80,6 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		sugar.Errorln(err)
+		// LOG.Errorln(err)
 	}
 }
