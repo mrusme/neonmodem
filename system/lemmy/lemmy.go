@@ -6,6 +6,15 @@ import (
 )
 
 type System struct {
+	config map[string]interface{}
+}
+
+func (sys *System) GetConfig() map[string]interface{} {
+	return sys.config
+}
+
+func (sys *System) SetConfig(cfg *map[string]interface{}) {
+	sys.config = *cfg
 }
 
 func (sys *System) Load() error {
