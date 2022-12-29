@@ -1,8 +1,11 @@
 package config
 
 import (
+	"os"
+	"path"
 	"strings"
 
+	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/viper"
 )
 
@@ -16,25 +19,33 @@ var VERSION string
 
 type ServiceStatus int8
 
+type SystemConfig struct {
+	Type   string
+	Config map[string]interface{}
+}
+
 type Config struct {
 	Debug string
 
-	Systems []struct {
-		Type   string
-		Config map[string]interface{}
-	}
+	Systems []SystemConfig
 }
 
 func Load() (Config, error) {
+	cfgDir, err := os.UserConfigDir()
+	if err != nil {
+		return Config{}, err
+	}
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return Config{}, err
+	}
+
 	viper.SetDefault("Debug", "true")
 
-	viper.SetConfigName("gobbs.toml")
+	viper.SetConfigName("gobbs")
 	viper.SetConfigType("toml")
-	viper.AddConfigPath("/etc/")
-	viper.AddConfigPath("$XDG_CONFIG_HOME/")
-	viper.AddConfigPath("$HOME/.config/")
-	viper.AddConfigPath("$HOME/")
-	viper.AddConfigPath(".")
+	viper.AddConfigPath(cfgDir)
+	viper.AddConfigPath(homeDir)
 
 	viper.SetEnvPrefix("gobbs")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
@@ -43,6 +54,8 @@ func Load() (Config, error) {
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return Config{}, err
+		} else {
+			return Config{}, nil
 		}
 	}
 
@@ -52,4 +65,27 @@ func Load() (Config, error) {
 	}
 
 	return config, nil
+}
+
+func (cfg *Config) Save() error {
+	cfgFile := viper.ConfigFileUsed()
+	if cfgFile == "" {
+		cfgDir, err := os.UserConfigDir()
+		if err != nil {
+			return err
+		}
+		cfgFile = path.Join(cfgDir, "gobbs.toml")
+	}
+
+	fd, err := os.OpenFile(cfgFile, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+
+	if err := toml.NewEncoder(fd).Encode(cfg); err != nil {
+		return err
+	}
+
+	return nil
 }
