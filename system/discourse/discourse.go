@@ -21,10 +21,6 @@ import (
 
 type System struct {
 	config map[string]interface{}
-
-	privateKey   *rsa.PrivateKey
-	publicKeyPEM string
-	userAPIKey   string
 }
 
 type UserAPIKey struct {
@@ -47,26 +43,46 @@ func (sys *System) Load() error {
 	return nil
 }
 
-func (sys *System) Login(args map[string]string) error {
+func (sys *System) Connect(sysURL string) error {
 	var err error
 
-	sys.privateKey, err = rsa.GenerateKey(rand.Reader, 2048)
+	// Request input from user
+	scanner := bufio.NewScanner(os.Stdin)
+	var username string = ""
+	for username == "" {
+		fmt.Printf(
+			"Please enter your username: ",
+		)
+		scanner.Scan()
+		username = strings.ReplaceAll(scanner.Text(), " ", "")
+		if username == "" {
+			fmt.Println("Invalid input")
+		}
+	}
+
+	// Private key
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return err
 	}
+	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
+	privateKeyPEM := string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privateKeyBytes}))
 
-	publicKeyBytes, err := x509.MarshalPKIXPublicKey(sys.privateKey.PublicKey)
+	// Public key
+	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
 	if err != nil {
 		return err
 	}
-	sys.publicKeyPEM = string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicKeyBytes}))
+	publicKeyPEM := string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicKeyBytes}))
 
+	// Client ID
 	uuidV4, err := uuid.NewRandom()
 	if err != nil {
 		return err
 	}
 	clientID := uuidV4.String()
 
+	// Nonce
 	randomBytes := make([]byte, 20)
 	_, err = rand.Read(randomBytes)
 	if err != nil {
@@ -74,23 +90,28 @@ func (sys *System) Login(args map[string]string) error {
 	}
 	nonce := base64.URLEncoding.EncodeToString(randomBytes)
 
-	baseURL := fmt.Sprintf("https://%s/user-api-key/new", args["siteURL"])
+	// URL
+	baseURL := fmt.Sprintf("%s/user-api-key/new", sysURL)
 	values := url.Values{}
 	values.Set("application_name", "gobbs")
 	values.Set("client_id", clientID)
 	values.Set("scopes", "read,write,notifications")
-	values.Set("public_key", sys.publicKeyPEM)
+	values.Set("public_key", publicKeyPEM)
 	values.Set("nonce", nonce)
 
+	// Open in browser
 	openURL := baseURL + "?" + values.Encode()
 	if err := browser.OpenURL(openURL); err != nil {
 		return err
 	}
 
-	scanner := bufio.NewScanner(os.Stdin)
-
+	// Request input from user
+	scanner = bufio.NewScanner(os.Stdin)
 	var encodedUserAPIKey string = ""
 	for encodedUserAPIKey == "" {
+		fmt.Printf(
+			"\nPlease copy the user API key after authorizing and paste it here: ",
+		)
 		scanner.Scan()
 		encodedUserAPIKey = strings.ReplaceAll(scanner.Text(), " ", "")
 		if encodedUserAPIKey == "" {
@@ -98,14 +119,15 @@ func (sys *System) Login(args map[string]string) error {
 		}
 	}
 
-	textUserAPIKey, err := base64.StdEncoding.DecodeString(encodedUserAPIKey)
+	// API key
+	decodedUserAPIKey, err := base64.StdEncoding.DecodeString(encodedUserAPIKey)
 	if err != nil {
 		return err
 	}
 
-	decryptedUserAPIKey, err := sys.privateKey.Decrypt(
+	decryptedUserAPIKey, err := privateKey.Decrypt(
 		rand.Reader,
-		textUserAPIKey,
+		decodedUserAPIKey,
 		nil,
 	)
 	if err != nil {
@@ -118,7 +140,16 @@ func (sys *System) Login(args map[string]string) error {
 		return err
 	}
 
-	sys.userAPIKey = userAPIKey.Key
+	// Credentials
+	credentials := make(map[string]string)
+	credentials["pk"] = privateKeyPEM
+	credentials["username"] = username
+	credentials["key"] = userAPIKey.Key
+
+	if sys.config == nil {
+		sys.config = make(map[string]interface{})
+	}
+	sys.config["credentials"] = credentials
 
 	return nil
 }
