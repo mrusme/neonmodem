@@ -10,6 +10,8 @@ import (
 )
 
 type System interface {
+	GetConfig() map[string]interface{}
+	SetConfig(cfg *map[string]interface{})
 	GetCapabilities() []adapter.Capability
 
 	Load() error
@@ -29,6 +31,7 @@ func New(sysType string, sysConfig *map[string]interface{}) (System, error) {
 		return nil, errors.New("No such system")
 	}
 
+	sys.SetConfig(sysConfig)
 	err := sys.Load()
 	if err != nil {
 		return nil, err
