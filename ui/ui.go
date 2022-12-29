@@ -7,6 +7,7 @@ import (
 
 	"github.com/mrusme/gobbs/ui/ctx"
 	"github.com/mrusme/gobbs/ui/navigation"
+	"github.com/mrusme/gobbs/ui/views/posts"
 
 	"github.com/mrusme/gobbs/ui/views"
 
@@ -124,6 +125,16 @@ func NewModel(c *ctx.Ctx) Model {
 	}
 
 	m.nav = navigation.NewModel(m.ctx)
+	for _, capability := range (*m.ctx.Systems[0]).GetCapabilities() { // TODO
+		switch capability.ID {
+		case "posts":
+			m.views = append(m.views, posts.NewModel(m.ctx))
+			// case "groups":
+			// 	m.views = append(m.views, groups.NewModel(m.ctx))
+			// case "search":
+			// 	m.views = append(m.views, search.NewModel(m.ctx))
+		}
+	}
 
 	return m
 }
