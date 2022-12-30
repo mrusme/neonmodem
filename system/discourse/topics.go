@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-const TopicsBaseURL = "/topics"
+const TopicsBaseURL = "/t"
 
 type LatestTopicsResponse struct {
 	Users []struct {
@@ -94,7 +94,7 @@ func (a *TopicServiceHandler) Show(
 	ctx context.Context,
 	id string,
 ) (*SingleTopicResponse, error) {
-	uri := TopicsBaseURL + "/t/" + id + ".json"
+	uri := TopicsBaseURL + "/" + id + ".json"
 
 	req, err := a.client.NewRequest(ctx, http.MethodGet, uri, nil)
 	if err != nil {

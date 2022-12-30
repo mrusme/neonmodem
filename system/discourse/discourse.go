@@ -123,7 +123,7 @@ func (sys *System) ListPosts() ([]post.Post, error) {
 func (sys *System) LoadPost(p *post.Post) error {
 	item, err := sys.client.Topics.Show(context.Background(), p.ID)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	for idx, i := range item.PostStream.Posts {

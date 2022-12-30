@@ -83,6 +83,10 @@ var rootCmd = &cobra.Command{
 		fmt.Println("-----------------------")
 		fmt.Printf("%v\n", posts)
 		fmt.Printf("%v\n", err)
+
+		err = (*c.Systems[0]).LoadPost(&posts[4])
+		fmt.Printf("%v\n", posts[4].Replies[2])
+		fmt.Printf("%v\n", err)
 		os.Exit(0)
 
 		tui := tea.NewProgram(ui.NewModel(&c), tea.WithAltScreen())
