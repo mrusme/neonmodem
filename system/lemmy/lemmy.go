@@ -36,7 +36,7 @@ func (sys *System) Load() error {
 		return nil
 	}
 
-	sys.client, err = lemmy.New(sys.config["url"].(string))
+	sys.client, err = lemmy.New(url.(string))
 	if err != nil {
 		return err
 	}

@@ -12,6 +12,7 @@ import (
 type System struct {
 	config map[string]interface{}
 	logger *zap.SugaredLogger
+	client *Client
 }
 
 func (sys *System) GetConfig() map[string]interface{} {
@@ -27,6 +28,22 @@ func (sys *System) SetLogger(logger *zap.SugaredLogger) {
 }
 
 func (sys *System) Load() error {
+	url := sys.config["url"]
+	if url == nil {
+		return nil
+	}
+
+	credentials := make(map[string]string)
+	for k, v := range (sys.config["credentials"]).(map[string]interface{}) {
+		credentials[k] = v.(string)
+	}
+
+	sys.client = NewClient(&ClientConfig{
+		Endpoint:    url.(string),
+		Credentials: credentials,
+		HTTPClient:  http.DefaultClient,
+		Logger:      sys.logger,
+	})
 
 	return nil
 }
@@ -51,18 +68,7 @@ func (sys *System) GetCapabilities() []adapter.Capability {
 }
 
 func (sys *System) ListPosts() ([]post.Post, error) {
-	credentials := make(map[string]string)
-	for k, v := range (sys.config["credentials"]).(map[string]interface{}) {
-		credentials[k] = v.(string)
-	}
-	c := NewClient(&ClientConfig{
-		Endpoint:    sys.config["url"].(string),
-		Credentials: credentials,
-		HTTPClient:  http.DefaultClient,
-		Logger:      sys.logger,
-	})
-
-	items, err := c.Topics.ListLatest(context.Background())
+	items, err := sys.client.Topics.ListLatest(context.Background())
 	if err != nil {
 		return []post.Post{}, err
 	}
