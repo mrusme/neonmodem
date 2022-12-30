@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -110,7 +109,6 @@ func NewClient(cc *ClientConfig) *Client {
 	c.httpClient.HTTPClient = cc.HTTPClient
 	c.endpoint, _ = url.Parse(cc.Endpoint)
 	c.credentials = cc.Credentials
-	fmt.Printf("%v\n", c.credentials)
 
 	c.Posts = &PostServiceHandler{client: c}
 
@@ -149,10 +147,9 @@ func (c *Client) NewRequest(
 	req.Header.Add("User-Agent", "gobbs")
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Api-Username", c.credentials["username"])
-	req.Header.Add("Api-Key", c.credentials["key"])
+	req.Header.Add("User-Api-Client-Id", c.credentials["client_id"])
+	req.Header.Add("User-Api-Key", c.credentials["key"])
 
-	fmt.Printf("%v\n", req)
 	return req, nil
 }
 
@@ -185,8 +182,6 @@ func (c *Client) Do(
 			return err
 		}
 	}
-
-	fmt.Printf("%v\n", res)
 
 	if res.StatusCode < http.StatusOK ||
 		res.StatusCode > http.StatusNoContent {

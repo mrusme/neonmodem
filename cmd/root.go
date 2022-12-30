@@ -80,8 +80,8 @@ var rootCmd = &cobra.Command{
 		_ = loadSystems(&c) // TODO: Handle errs
 
 		posts, err := (*c.Systems[0]).ListPosts()
+		fmt.Println("-----------------------")
 		fmt.Printf("%v\n", posts)
-		fmt.Printf("%s\n", err)
 		os.Exit(0)
 
 		tui := tea.NewProgram(ui.NewModel(&c), tea.WithAltScreen())

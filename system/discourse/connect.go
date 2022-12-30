@@ -2,7 +2,6 @@ package discourse
 
 import (
 	"bufio"
-	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -10,13 +9,11 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"net/http"
 	"net/url"
 	"os"
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/mrusme/gobbs/models/post"
 	"github.com/pkg/browser"
 )
 
@@ -79,7 +76,7 @@ func (sys *System) Connect(sysURL string) error {
 	values := url.Values{}
 	values.Set("application_name", "gobbs")
 	values.Set("client_id", clientID)
-	values.Set("scopes", "read,write,notifications")
+	values.Set("scopes", "read,write")
 	values.Set("public_key", publicKeyPEM)
 	values.Set("nonce", nonce)
 
@@ -108,6 +105,7 @@ func (sys *System) Connect(sysURL string) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println(string(decodedUserAPIKey))
 
 	decryptedUserAPIKey, err := privateKey.Decrypt(
 		rand.Reader,
@@ -117,18 +115,21 @@ func (sys *System) Connect(sysURL string) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println(string(decryptedUserAPIKey))
 
 	var userAPIKey UserAPIKey
 	err = json.Unmarshal(decryptedUserAPIKey, &userAPIKey)
 	if err != nil {
 		return err
 	}
+	fmt.Printf("%v\n", userAPIKey)
 
 	// Credentials
 	credentials := make(map[string]string)
 	credentials["pk"] = privateKeyPEM
 	credentials["username"] = username
 	credentials["key"] = userAPIKey.Key
+	credentials["client_id"] = clientID
 
 	if sys.config == nil {
 		sys.config = make(map[string]interface{})
@@ -137,26 +138,4 @@ func (sys *System) Connect(sysURL string) error {
 	sys.config["credentials"] = credentials
 
 	return nil
-}
-
-func (sys *System) ListPosts() ([]post.Post, error) {
-	credentials := make(map[string]string)
-	for k, v := range (sys.config["credentials"]).(map[string]interface{}) {
-		credentials[k] = v.(string)
-	}
-	c := NewClient(&ClientConfig{
-		Endpoint:    sys.config["url"].(string),
-		Credentials: credentials,
-		HTTPClient:  http.DefaultClient,
-		Logger:      sys.logger,
-	})
-
-	posts, err := c.Posts.List(context.Background())
-	if err != nil {
-		return []post.Post{}, err
-	}
-
-	fmt.Printf("%v\n", posts)
-
-	return []post.Post{}, nil
 }

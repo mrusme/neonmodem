@@ -1,6 +1,10 @@
 package discourse
 
 import (
+	"context"
+	"net/http"
+
+	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/system/adapter"
 	"go.uber.org/zap"
 )
@@ -44,4 +48,32 @@ func (sys *System) GetCapabilities() []adapter.Capability {
 	})
 
 	return caps
+}
+
+func (sys *System) ListPosts() ([]post.Post, error) {
+	credentials := make(map[string]string)
+	for k, v := range (sys.config["credentials"]).(map[string]interface{}) {
+		credentials[k] = v.(string)
+	}
+	c := NewClient(&ClientConfig{
+		Endpoint:    sys.config["url"].(string),
+		Credentials: credentials,
+		HTTPClient:  http.DefaultClient,
+		Logger:      sys.logger,
+	})
+
+	posts, err := c.Posts.List(context.Background())
+	if err != nil {
+		return []post.Post{}, err
+	}
+
+	var mPosts []post.Post
+	for _, p := range posts {
+		mPosts = append(mPosts, post.Post{
+			ID:      string(p.ID),
+			Subject: p.TopicTitle,
+		})
+	}
+
+	return mPosts, nil
 }
