@@ -20,6 +20,7 @@ type System interface {
 	Load() error
 
 	ListPosts() ([]post.Post, error)
+	LoadPost(p *post.Post) error
 }
 
 func New(

@@ -8,6 +8,7 @@ import (
 	"github.com/araddon/dateparse"
 	"github.com/mrusme/gobbs/models/author"
 	"github.com/mrusme/gobbs/models/post"
+	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/system/adapter"
 	"go.arsenm.dev/go-lemmy"
 	"go.arsenm.dev/go-lemmy/types"
@@ -30,6 +31,25 @@ func (sys *System) SetConfig(cfg *map[string]interface{}) {
 
 func (sys *System) SetLogger(logger *zap.SugaredLogger) {
 	sys.logger = logger
+}
+
+func (sys *System) GetCapabilities() []adapter.Capability {
+	var caps []adapter.Capability
+
+	caps = append(caps, adapter.Capability{
+		ID:   "posts",
+		Name: "Posts",
+	})
+	caps = append(caps, adapter.Capability{
+		ID:   "groups",
+		Name: "Groups",
+	})
+	caps = append(caps, adapter.Capability{
+		ID:   "search",
+		Name: "Search",
+	})
+
+	return caps
 }
 
 func (sys *System) Load() error {
@@ -111,21 +131,37 @@ func (sys *System) ListPosts() ([]post.Post, error) {
 	return models, nil
 }
 
-func (sys *System) GetCapabilities() []adapter.Capability {
-	var caps []adapter.Capability
+func (sys *System) LoadPost(p *post.Post) error {
+	pid, err := strconv.Atoi(p.ID)
+	if err != nil {
+		return err
+	}
 
-	caps = append(caps, adapter.Capability{
-		ID:   "posts",
-		Name: "Posts",
+	resp, err := sys.client.Comments(context.Background(), types.GetComments{
+		PostID: types.NewOptional(pid),
 	})
-	caps = append(caps, adapter.Capability{
-		ID:   "groups",
-		Name: "Groups",
-	})
-	caps = append(caps, adapter.Capability{
-		ID:   "search",
-		Name: "Search",
-	})
+	if err != nil {
+		return err
+	}
 
-	return caps
+	for _, i := range resp.Comments {
+		createdAt, err := dateparse.ParseAny(i.Comment.Published)
+		if err != nil {
+			createdAt = time.Now() // TODO: Errrrr
+		}
+
+		p.Replies = append(p.Replies, reply.Reply{
+			ID: strconv.Itoa(i.Comment.ID),
+
+			Body: i.Comment.Content,
+
+			CreatedAt: createdAt,
+
+			Author: author.Author{
+				ID:   strconv.Itoa(i.Comment.CreatorID),
+				Name: i.Creator.Name,
+			},
+		})
+	}
+	return nil
 }

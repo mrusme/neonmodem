@@ -9,6 +9,7 @@ import (
 	"github.com/araddon/dateparse"
 	"github.com/mrusme/gobbs/models/author"
 	"github.com/mrusme/gobbs/models/post"
+	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/system/adapter"
 	"go.uber.org/zap"
 )
@@ -31,6 +32,25 @@ func (sys *System) SetLogger(logger *zap.SugaredLogger) {
 	sys.logger = logger
 }
 
+func (sys *System) GetCapabilities() []adapter.Capability {
+	var caps []adapter.Capability
+
+	caps = append(caps, adapter.Capability{
+		ID:   "posts",
+		Name: "Posts",
+	})
+	caps = append(caps, adapter.Capability{
+		ID:   "groups",
+		Name: "Groups",
+	})
+	caps = append(caps, adapter.Capability{
+		ID:   "search",
+		Name: "Search",
+	})
+
+	return caps
+}
+
 func (sys *System) Load() error {
 	url := sys.config["url"]
 	if url == nil {
@@ -50,25 +70,6 @@ func (sys *System) Load() error {
 	})
 
 	return nil
-}
-
-func (sys *System) GetCapabilities() []adapter.Capability {
-	var caps []adapter.Capability
-
-	caps = append(caps, adapter.Capability{
-		ID:   "posts",
-		Name: "Posts",
-	})
-	caps = append(caps, adapter.Capability{
-		ID:   "groups",
-		Name: "Groups",
-	})
-	caps = append(caps, adapter.Capability{
-		ID:   "search",
-		Name: "Search",
-	})
-
-	return caps
 }
 
 func (sys *System) ListPosts() ([]post.Post, error) {
@@ -117,4 +118,37 @@ func (sys *System) ListPosts() ([]post.Post, error) {
 	}
 
 	return models, nil
+}
+
+func (sys *System) LoadPost(p *post.Post) error {
+	item, err := sys.client.Topics.Show(context.Background(), p.ID)
+	if err != nil {
+		return nil
+	}
+
+	for idx, i := range item.PostStream.Posts {
+		if idx == 0 {
+			p.Body = i.Cooked // TODO: Clean Cooked
+			continue
+		}
+
+		createdAt, err := dateparse.ParseAny(i.CreatedAt)
+		if err != nil {
+			createdAt = time.Now() // TODO: Errrrrr
+		}
+		p.Replies = append(p.Replies, reply.Reply{
+			ID: strconv.Itoa(i.ID),
+
+			Body: i.Cooked, // TODO: Clean Cooked
+
+			CreatedAt: createdAt,
+
+			Author: author.Author{
+				ID:   strconv.Itoa(i.UserID),
+				Name: i.Name,
+			},
+		})
+	}
+
+	return nil
 }

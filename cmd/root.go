@@ -79,7 +79,7 @@ var rootCmd = &cobra.Command{
 		c := ctx.New(&CFG, LOG)
 		_ = loadSystems(&c) // TODO: Handle errs
 
-		posts, err := (*c.Systems[1]).ListPosts()
+		posts, err := (*c.Systems[0]).ListPosts()
 		fmt.Println("-----------------------")
 		fmt.Printf("%v\n", posts)
 		fmt.Printf("%v\n", err)

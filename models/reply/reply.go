@@ -1,11 +1,17 @@
 package reply
 
-import "github.com/mrusme/gobbs/models/author"
+import (
+	"time"
+
+	"github.com/mrusme/gobbs/models/author"
+)
 
 type Reply struct {
 	ID string
 
 	Body string
+
+	CreatedAt time.Time
 
 	Author author.Author
 }
