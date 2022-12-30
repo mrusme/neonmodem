@@ -62,18 +62,18 @@ func (sys *System) ListPosts() ([]post.Post, error) {
 		Logger:      sys.logger,
 	})
 
-	posts, err := c.Posts.List(context.Background())
+	items, err := c.Topics.ListLatest(context.Background())
 	if err != nil {
 		return []post.Post{}, err
 	}
 
-	var mPosts []post.Post
-	for _, p := range posts {
-		mPosts = append(mPosts, post.Post{
-			ID:      string(p.ID),
-			Subject: p.TopicTitle,
+	var models []post.Post
+	for _, i := range (*items).TopicList.Topics {
+		models = append(models, post.Post{
+			ID:      string(i.ID),
+			Subject: i.Title,
 		})
 	}
 
-	return mPosts, nil
+	return models, nil
 }

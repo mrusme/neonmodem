@@ -13,30 +13,16 @@ import (
 )
 
 type Response struct {
-	Type       string                 `json:"type"`
-	Timestamp  int64                  `json:"timestamp"`
-	Message    string                 `json:"message"`
-	Validation map[string]interface{} `json:"validation,omitempty"`
-
 	Post  PostModel   `json:"post,omitempty"`
 	Posts []PostModel `json:"latest_posts,omitempty"`
 }
 
 type RequestError struct {
-	Response Response
-	Err      error
+	Err error
 }
 
 func (re *RequestError) Error() string {
 	return re.Err.Error()
-}
-
-func (re *RequestError) Type() string {
-	return re.Response.Type
-}
-
-func (re *RequestError) Message() string {
-	return re.Response.Message
 }
 
 type Logger interface {
@@ -82,7 +68,9 @@ type Client struct {
 	endpoint    *url.URL
 	credentials map[string]string
 	logger      Logger
-	Posts       PostsService
+
+	Posts  PostsService
+	Topics TopicsService
 }
 
 func NewDefaultClientConfig(
@@ -111,6 +99,7 @@ func NewClient(cc *ClientConfig) *Client {
 	c.credentials = cc.Credentials
 
 	c.Posts = &PostServiceHandler{client: c}
+	c.Topics = &TopicServiceHandler{client: c}
 
 	return c
 }
@@ -156,7 +145,7 @@ func (c *Client) NewRequest(
 func (c *Client) Do(
 	ctx context.Context,
 	req *http.Request,
-	content *Response,
+	content interface{},
 ) error {
 	var rreq *retryablehttp.Request
 	var res *http.Response
@@ -186,8 +175,7 @@ func (c *Client) Do(
 	if res.StatusCode < http.StatusOK ||
 		res.StatusCode > http.StatusNoContent {
 		return &RequestError{
-			Err:      errors.New("Non-2xx status code"),
-			Response: *content,
+			Err: errors.New("Non-2xx status code"),
 		}
 	}
 
