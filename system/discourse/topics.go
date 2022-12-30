@@ -26,6 +26,14 @@ type LatestTopicsResponse struct {
 	} `json:"topic_list"`
 }
 
+type SingleTopicResponse struct {
+	PostStream struct {
+		Posts []PostModel `json:"posts"`
+	} `json:"post_stream"`
+
+	TopicModel
+}
+
 type TopicModel struct {
 	ID                 int    `json:"id"`
 	Title              string `json:"title"`
@@ -71,7 +79,7 @@ type TopicsService interface {
 	Show(
 		ctx context.Context,
 		id string,
-	) (*TopicModel, error)
+	) (*SingleTopicResponse, error)
 	ListLatest(
 		ctx context.Context,
 	) (*LatestTopicsResponse, error)
@@ -85,7 +93,7 @@ type TopicServiceHandler struct {
 func (a *TopicServiceHandler) Show(
 	ctx context.Context,
 	id string,
-) (*TopicModel, error) {
+) (*SingleTopicResponse, error) {
 	uri := TopicsBaseURL + "/t/" + id + ".json"
 
 	req, err := a.client.NewRequest(ctx, http.MethodGet, uri, nil)
@@ -93,7 +101,7 @@ func (a *TopicServiceHandler) Show(
 		return nil, err
 	}
 
-	response := new(TopicModel)
+	response := new(SingleTopicResponse)
 	if err = a.client.Do(ctx, req, response); err != nil {
 		return nil, err
 	}

@@ -2,7 +2,9 @@ package lemmy
 
 import (
 	"context"
+	"strconv"
 
+	"github.com/mrusme/gobbs/models/author"
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/system/adapter"
 	"go.arsenm.dev/go-lemmy"
@@ -67,9 +69,33 @@ func (sys *System) ListPosts() ([]post.Post, error) {
 
 	var models []post.Post
 	for _, i := range resp.Posts {
+		t := "post"
+		if i.Post.URL.IsValid() {
+			t = "url"
+		}
+
+		var userName string = ""
+		presp, err := sys.client.PersonDetails(context.Background(), types.GetPersonDetails{
+			PersonID: types.NewOptional(i.Post.CreatorID),
+		})
+		if err == nil {
+			userName = presp.PersonView.Person.Name
+		}
+
 		models = append(models, post.Post{
-			ID:      string(i.Post.ID),
+			ID: strconv.Itoa(i.Post.ID),
+
 			Subject: i.Post.Name,
+
+			Type: t,
+
+			Pinned: i.Post.Stickied,
+			Closed: i.Post.Locked,
+
+			Author: author.Author{
+				ID:   strconv.Itoa(i.Post.CreatorID),
+				Name: userName,
+			},
 		})
 	}
 

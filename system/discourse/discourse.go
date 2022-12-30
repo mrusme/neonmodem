@@ -3,7 +3,9 @@ package discourse
 import (
 	"context"
 	"net/http"
+	"strconv"
 
+	"github.com/mrusme/gobbs/models/author"
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/system/adapter"
 	"go.uber.org/zap"
@@ -75,9 +77,28 @@ func (sys *System) ListPosts() ([]post.Post, error) {
 
 	var models []post.Post
 	for _, i := range (*items).TopicList.Topics {
+		var userName string = ""
+		for _, u := range (*items).Users {
+			if u.ID == i.Posters[0].UserID {
+				userName = u.Name
+				break
+			}
+		}
+
 		models = append(models, post.Post{
-			ID:      string(i.ID),
+			ID: strconv.Itoa(i.ID),
+
 			Subject: i.Title,
+
+			Type: "post",
+
+			Pinned: i.Pinned,
+			Closed: i.Closed,
+
+			Author: author.Author{
+				ID:   strconv.Itoa(i.Posters[0].UserID),
+				Name: userName,
+			},
 		})
 	}
 
