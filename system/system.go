@@ -19,7 +19,7 @@ type System interface {
 	Connect(sysURL string) error
 	Load() error
 
-	ListPosts() ([]post.Post, error)
+	ListPosts(sysIdx int) ([]post.Post, error)
 	LoadPost(p *post.Post) error
 }
 

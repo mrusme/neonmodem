@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mrusme/gobbs/aggregator"
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/ui/ctx"
 )
@@ -171,9 +172,10 @@ func (m *Model) refresh() tea.Cmd {
 	return func() tea.Msg {
 		var items []list.Item
 
-		posts, err := (*m.ctx.Systems[0]).ListPosts()
-		if err != nil {
-			fmt.Printf("%s", err) // TODO: Implement error message
+		a, _ := aggregator.New(m.ctx)
+		posts, errs := a.ListPosts()
+		if len(errs) > 0 {
+			fmt.Printf("%s", errs) // TODO: Implement error message
 		}
 		for _, post := range posts {
 			items = append(items, post)

@@ -80,7 +80,7 @@ func (sys *System) Load() error {
 	return nil
 }
 
-func (sys *System) ListPosts() ([]post.Post, error) {
+func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
 	resp, err := sys.client.Posts(context.Background(), types.GetPosts{
 		Type: types.NewOptional(types.ListingLocal),
 		Sort: types.NewOptional(types.New),
@@ -125,6 +125,8 @@ func (sys *System) ListPosts() ([]post.Post, error) {
 				ID:   strconv.Itoa(i.Post.CreatorID),
 				Name: i.Creator.Name,
 			},
+
+			SysIDX: sysIdx,
 		})
 	}
 

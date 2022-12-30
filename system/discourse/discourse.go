@@ -72,7 +72,7 @@ func (sys *System) Load() error {
 	return nil
 }
 
-func (sys *System) ListPosts() ([]post.Post, error) {
+func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
 	items, err := sys.client.Topics.ListLatest(context.Background())
 	if err != nil {
 		return []post.Post{}, err
@@ -114,6 +114,8 @@ func (sys *System) ListPosts() ([]post.Post, error) {
 				ID:   strconv.Itoa(i.Posters[0].UserID),
 				Name: userName,
 			},
+
+			SysIDX: sysIdx,
 		})
 	}
 

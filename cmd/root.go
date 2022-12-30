@@ -5,6 +5,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/mrusme/gobbs/aggregator"
 	"github.com/mrusme/gobbs/config"
 	"github.com/mrusme/gobbs/system"
 	"github.com/mrusme/gobbs/ui"
@@ -79,12 +80,15 @@ var rootCmd = &cobra.Command{
 		c := ctx.New(&CFG, LOG)
 		_ = loadSystems(&c) // TODO: Handle errs
 
-		posts, err := (*c.Systems[0]).ListPosts()
+		a, _ := aggregator.New(&c)
+		posts, errs := a.ListPosts()
+		// posts, err := (*c.Systems[0]).ListPosts()
 		fmt.Println("-----------------------")
 		fmt.Printf("%v\n", posts)
-		fmt.Printf("%v\n", err)
+		fmt.Printf("%v\n", errs)
 
-		err = (*c.Systems[0]).LoadPost(&posts[4])
+		// err = s(*c.Systems[0]).LoadPost(&posts[4])
+		err := a.LoadPost(&posts[4])
 		fmt.Printf("%v\n", posts[4].Replies[2])
 		fmt.Printf("%v\n", err)
 		os.Exit(0)

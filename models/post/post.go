@@ -23,6 +23,8 @@ type Post struct {
 	Author author.Author
 
 	Replies []reply.Reply
+
+	SysIDX int
 }
 
 func (post Post) FilterValue() string {
