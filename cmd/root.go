@@ -1,11 +1,7 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mrusme/gobbs/aggregator"
 	"github.com/mrusme/gobbs/config"
 	"github.com/mrusme/gobbs/system"
 	"github.com/mrusme/gobbs/ui"
@@ -77,21 +73,23 @@ var rootCmd = &cobra.Command{
 		"in Go, supporting Discourse and Lemmy.\n" +
 		"More info available on https://xn--gckvb8fzb.com/projects/gobbs",
 	Run: func(cmd *cobra.Command, args []string) {
+		var err error
+
 		c := ctx.New(&CFG, LOG)
 		_ = loadSystems(&c) // TODO: Handle errs
 
-		a, _ := aggregator.New(&c)
-		posts, errs := a.ListPosts()
-		// posts, err := (*c.Systems[0]).ListPosts()
-		fmt.Println("-----------------------")
-		fmt.Printf("%v\n", posts)
-		fmt.Printf("%v\n", errs)
-
-		// err = s(*c.Systems[0]).LoadPost(&posts[4])
-		err := a.LoadPost(&posts[4])
-		fmt.Printf("%v\n", posts[4].Replies[2])
-		fmt.Printf("%v\n", err)
-		os.Exit(0)
+		// a, _ := aggregator.New(&c)
+		// posts, errs := a.ListPosts()
+		// // posts, err := (*c.Systems[0]).ListPosts()
+		// fmt.Println("-----------------------")
+		// fmt.Printf("%v\n", posts)
+		// fmt.Printf("%v\n", errs)
+		//
+		// // err = s(*c.Systems[0]).LoadPost(&posts[4])
+		// err := a.LoadPost(&posts[4])
+		// fmt.Printf("%v\n", posts[4].Replies[2])
+		// fmt.Printf("%v\n", err)
+		// os.Exit(0)
 
 		tui := tea.NewProgram(ui.NewModel(&c), tea.WithAltScreen())
 		err = tui.Start()

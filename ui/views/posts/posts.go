@@ -63,6 +63,7 @@ type Model struct {
 	items    []list.Item
 	viewport viewport.Model
 	ctx      *ctx.Ctx
+	a        *aggregator.Aggregator
 
 	focused    int
 	focusables [2]tea.Model
@@ -84,6 +85,7 @@ func NewModel(c *ctx.Ctx) Model {
 	m.list = list.New(m.items, list.NewDefaultDelegate(), 0, 0)
 	m.list.Title = "Posts"
 	m.ctx = c
+	m.a, _ = aggregator.New(m.ctx)
 
 	return m
 }
@@ -172,8 +174,7 @@ func (m *Model) refresh() tea.Cmd {
 	return func() tea.Msg {
 		var items []list.Item
 
-		a, _ := aggregator.New(m.ctx)
-		posts, errs := a.ListPosts()
+		posts, errs := m.a.ListPosts()
 		if len(errs) > 0 {
 			fmt.Printf("%s", errs) // TODO: Implement error message
 		}
@@ -188,9 +189,12 @@ func (m *Model) refresh() tea.Cmd {
 func (m *Model) renderViewport(post *post.Post) string {
 	var vp string = ""
 
+	m.a.LoadPost(post)
+
 	vp = fmt.Sprintf(
-		"%s\n",
+		"%s\n\n%s",
 		post.Subject,
+		post.Body,
 	)
 
 	return vp
