@@ -7,11 +7,13 @@ import (
 	"github.com/mrusme/gobbs/system/adapter"
 	"github.com/mrusme/gobbs/system/discourse"
 	"github.com/mrusme/gobbs/system/lemmy"
+	"go.uber.org/zap"
 )
 
 type System interface {
 	GetConfig() map[string]interface{}
 	SetConfig(cfg *map[string]interface{})
+	SetLogger(logger *zap.SugaredLogger)
 	GetCapabilities() []adapter.Capability
 
 	Connect(sysURL string) error
@@ -20,7 +22,11 @@ type System interface {
 	ListPosts() ([]post.Post, error)
 }
 
-func New(sysType string, sysConfig *map[string]interface{}) (System, error) {
+func New(
+	sysType string,
+	sysConfig *map[string]interface{},
+	logger *zap.SugaredLogger,
+) (System, error) {
 	var sys System
 
 	switch sysType {
@@ -33,6 +39,7 @@ func New(sysType string, sysConfig *map[string]interface{}) (System, error) {
 	}
 
 	sys.SetConfig(sysConfig)
+	sys.SetLogger(logger)
 	err := sys.Load()
 	if err != nil {
 		return nil, err

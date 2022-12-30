@@ -3,10 +3,12 @@ package lemmy
 import (
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/system/adapter"
+	"go.uber.org/zap"
 )
 
 type System struct {
 	config map[string]interface{}
+	logger *zap.SugaredLogger
 }
 
 func (sys *System) GetConfig() map[string]interface{} {
@@ -15,6 +17,10 @@ func (sys *System) GetConfig() map[string]interface{} {
 
 func (sys *System) SetConfig(cfg *map[string]interface{}) {
 	sys.config = *cfg
+}
+
+func (sys *System) SetLogger(logger *zap.SugaredLogger) {
+	sys.logger = logger
 }
 
 func (sys *System) Connect(sysURL string) error {
