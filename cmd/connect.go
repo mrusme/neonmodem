@@ -24,7 +24,7 @@ func connectBase() *cobra.Command {
 		Long:  "Add a new connection to a BBS.",
 		Run: func(cmd *cobra.Command, args []string) {
 			sysConfig = make(map[string]interface{})
-			sys, err := system.New(sysType, &sysConfig)
+			sys, err := system.New(sysType, &sysConfig, LOG)
 			if err != nil {
 				LOG.Panicln(err)
 			}
