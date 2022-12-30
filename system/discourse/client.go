@@ -13,8 +13,7 @@ import (
 )
 
 type Response struct {
-	Post  PostModel   `json:"post,omitempty"`
-	Posts []PostModel `json:"latest_posts,omitempty"`
+	Post PostModel `json:"post,omitempty"`
 }
 
 type RequestError struct {

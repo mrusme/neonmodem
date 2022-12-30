@@ -7,6 +7,10 @@ import (
 
 const PostsBaseURL = "/posts"
 
+type ListPostsResponse struct {
+	LatestPosts []PostModel `json:"latest_posts,omitempty"`
+}
+
 type PostModel struct {
 	ID                int     `json:"id"`
 	Name              string  `json:"name"`
@@ -68,7 +72,7 @@ type PostsService interface {
 	) (PostModel, error)
 	List(
 		ctx context.Context,
-	) ([]PostModel, error)
+	) (*ListPostsResponse, error)
 }
 
 type PostServiceHandler struct {
@@ -98,18 +102,18 @@ func (a *PostServiceHandler) Show(
 // List
 func (a *PostServiceHandler) List(
 	ctx context.Context,
-) ([]PostModel, error) {
+) (*ListPostsResponse, error) {
 	uri := PostsBaseURL + ".json"
 
 	req, err := a.client.NewRequest(ctx, http.MethodGet, uri, nil)
 	if err != nil {
-		return []PostModel{}, err
+		return nil, err
 	}
 
-	response := new(Response)
+	response := new(ListPostsResponse)
 	if err = a.client.Do(ctx, req, response); err != nil {
-		return []PostModel{}, err
+		return nil, err
 	}
 
-	return response.Posts, nil
+	return response, nil
 }
