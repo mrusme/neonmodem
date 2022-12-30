@@ -1,6 +1,8 @@
 package post
 
 import (
+	"time"
+
 	"github.com/mrusme/gobbs/models/author"
 	"github.com/mrusme/gobbs/models/reply"
 )
@@ -14,6 +16,9 @@ type Post struct {
 
 	Pinned bool
 	Closed bool
+
+	CreatedAt       time.Time
+	LastCommentedAt time.Time
 
 	Author author.Author
 

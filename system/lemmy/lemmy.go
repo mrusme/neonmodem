@@ -3,7 +3,9 @@ package lemmy
 import (
 	"context"
 	"strconv"
+	"time"
 
+	"github.com/araddon/dateparse"
 	"github.com/mrusme/gobbs/models/author"
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/system/adapter"
@@ -70,31 +72,38 @@ func (sys *System) ListPosts() ([]post.Post, error) {
 	var models []post.Post
 	for _, i := range resp.Posts {
 		t := "post"
+		body := i.Post.Body.ValueOr("")
 		if i.Post.URL.IsValid() {
 			t = "url"
+			body = i.Post.URL.ValueOr("")
 		}
 
-		var userName string = ""
-		presp, err := sys.client.PersonDetails(context.Background(), types.GetPersonDetails{
-			PersonID: types.NewOptional(i.Post.CreatorID),
-		})
-		if err == nil {
-			userName = presp.PersonView.Person.Name
+		createdAt, err := dateparse.ParseAny(i.Post.Published)
+		if err != nil {
+			createdAt = time.Now() // TODO: Errrr
+		}
+		lastCommentedAt, err := dateparse.ParseAny(i.Counts.NewestCommentTime)
+		if err != nil {
+			lastCommentedAt = time.Now() // TODO: Errrrr
 		}
 
 		models = append(models, post.Post{
 			ID: strconv.Itoa(i.Post.ID),
 
 			Subject: i.Post.Name,
+			Body:    body,
 
 			Type: t,
 
 			Pinned: i.Post.Stickied,
 			Closed: i.Post.Locked,
 
+			CreatedAt:       createdAt,
+			LastCommentedAt: lastCommentedAt,
+
 			Author: author.Author{
 				ID:   strconv.Itoa(i.Post.CreatorID),
-				Name: userName,
+				Name: i.Creator.Name,
 			},
 		})
 	}

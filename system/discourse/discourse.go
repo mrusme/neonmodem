@@ -4,7 +4,9 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/araddon/dateparse"
 	"github.com/mrusme/gobbs/models/author"
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/system/adapter"
@@ -85,6 +87,15 @@ func (sys *System) ListPosts() ([]post.Post, error) {
 			}
 		}
 
+		createdAt, err := dateparse.ParseAny(i.CreatedAt)
+		if err != nil {
+			createdAt = time.Now() // TODO: Errrr
+		}
+		lastCommentedAt, err := dateparse.ParseAny(i.LastPostedAt)
+		if err != nil {
+			lastCommentedAt = time.Now() // TODO: Errrrr
+		}
+
 		models = append(models, post.Post{
 			ID: strconv.Itoa(i.ID),
 
@@ -94,6 +105,9 @@ func (sys *System) ListPosts() ([]post.Post, error) {
 
 			Pinned: i.Pinned,
 			Closed: i.Closed,
+
+			CreatedAt:       createdAt,
+			LastCommentedAt: lastCommentedAt,
 
 			Author: author.Author{
 				ID:   strconv.Itoa(i.Posters[0].UserID),
