@@ -11,7 +11,11 @@ type Reply struct {
 
 	Body string
 
+	Deleted bool
+
 	CreatedAt time.Time
 
 	Author author.Author
+
+	Replies []Reply
 }

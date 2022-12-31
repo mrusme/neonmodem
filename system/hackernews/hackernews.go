@@ -57,7 +57,7 @@ func (sys *System) Load() error {
 }
 
 func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
-	stories, err := sys.client.NewStories(context.Background())
+	stories, err := sys.client.TopStories(context.Background())
 	if err != nil {
 		return []post.Post{}, err
 	}
@@ -121,10 +121,18 @@ func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
 }
 
 func (sys *System) LoadPost(p *post.Post) error {
-	for r := 0; r < len(p.Replies); r++ {
-		reply := &p.Replies[r]
+	sys.logger.Debug(p.Replies)
+	err := sys.loadReplies(&p.Replies)
+	sys.logger.Debug(p.Replies)
+	return err
+}
 
-		id, err := strconv.Atoi(reply.ID)
+func (sys *System) loadReplies(replies *[]reply.Reply) error {
+	sys.logger.Debug("loading replies")
+	for r := 0; r < len(*replies); r++ {
+		re := &(*replies)[r]
+
+		id, err := strconv.Atoi(re.ID)
 		if err != nil {
 			sys.logger.Error(err)
 			continue
@@ -136,16 +144,31 @@ func (sys *System) LoadPost(p *post.Post) error {
 			continue
 		}
 
+		if i.Deleted || i.Dead {
+			re.Deleted = true
+		}
+
 		createdAt := time.Unix(int64(i.Time), 0)
 
-		reply.Body = i.Text
+		re.Body = i.Text
 
-		reply.CreatedAt = createdAt
+		re.CreatedAt = createdAt
 
-		reply.Author = author.Author{
+		re.Author = author.Author{
 			ID:   i.By,
 			Name: i.By,
 		}
+
+		for _, commentID := range i.Kids {
+			re.Replies = append(re.Replies, reply.Reply{
+				ID: strconv.Itoa(commentID),
+			})
+		}
+
+		if err := sys.loadReplies(&re.Replies); err != nil {
+			sys.logger.Error(err)
+		}
 	}
+
 	return nil
 }

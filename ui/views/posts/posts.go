@@ -1,6 +1,7 @@
 package posts
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mrusme/gobbs/aggregator"
 	"github.com/mrusme/gobbs/models/post"
+	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/ui/ctx"
 	"github.com/mrusme/gobbs/ui/helpers"
 )
@@ -147,10 +149,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, m.refresh())
 
 		case key.Matches(msg, m.keymap.Select):
+			m.ctx.Loading = true
 			i, ok := m.list.SelectedItem().(post.Post)
 			if ok {
-				m.viewport.SetContent(m.renderViewport(&i))
-				return m, nil
+				cmds = append(cmds, m.loadItem(&i))
 			}
 
 		case key.Matches(msg, m.keymap.Close):
@@ -184,6 +186,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.items = msg
 		m.list.SetItems(m.items)
 		m.ctx.Loading = false
+
+	case *post.Post:
+		m.viewport.SetContent(m.renderViewport(msg))
+		m.ctx.Loading = false
+		return m, nil
+
 	}
 
 	var cmd tea.Cmd
@@ -249,10 +257,15 @@ func (m *Model) refresh() tea.Cmd {
 	}
 }
 
-func (m *Model) renderViewport(post *post.Post) string {
-	var vp string = ""
+func (m *Model) loadItem(p *post.Post) tea.Cmd {
+	return func() tea.Msg {
+		m.a.LoadPost(p)
+		return p
+	}
+}
 
-	m.a.LoadPost(post)
+func (m *Model) renderViewport(p *post.Post) string {
+	var out string = ""
 
 	var err error
 	m.glam, err = glamour.NewTermRenderer(
@@ -265,41 +278,73 @@ func (m *Model) renderViewport(post *post.Post) string {
 	}
 
 	adj := "writes"
-	if post.Subject[len(post.Subject)-1:] == "?" {
+	if p.Subject[len(p.Subject)-1:] == "?" {
 		adj = "asks"
 	}
 
-	body, err := m.glam.Render(post.Body)
+	body, err := m.glam.Render(p.Body)
 	if err != nil {
 		m.ctx.Logger.Error(err)
-		body = post.Body
+		body = p.Body
 	}
-	vp = fmt.Sprintf(
+	out += fmt.Sprintf(
 		" %s\n %s\n%s",
 		postAuthorStyle.Render(
-			fmt.Sprintf("%s %s:", post.Author.Name, adj),
+			fmt.Sprintf("%s %s:", p.Author.Name, adj),
 		),
-		postSubjectStyle.Render(post.Subject),
+		postSubjectStyle.Render(p.Subject),
 		body,
 	)
 
-	for _, reply := range post.Replies {
-		body, err := m.glam.Render(reply.Body)
-		if err != nil {
-			m.ctx.Logger.Error(err)
-			body = reply.Body
-		}
-		vp = fmt.Sprintf(
-			"%s\n\n %s %s\n%s",
-			vp,
-			replyAuthorStyle.Render(
-				reply.Author.Name,
-			),
-			lipgloss.NewStyle().Foreground(lipgloss.Color("#874BFD")).Render("writes:"),
-			body,
-		)
-	}
+	bla, _ := json.Marshal(p.Replies)
+	m.ctx.Logger.Debugf("%s", bla)
+	out += m.renderReplies(0, p.Author.Name, &p.Replies)
 
 	m.viewportOpen = true
-	return vp
+	return out
+}
+
+func (m *Model) renderReplies(
+	level int,
+	inReplyTo string,
+	replies *[]reply.Reply,
+) string {
+	var out string = ""
+
+	if replies == nil {
+		return ""
+	}
+
+	for _, re := range *replies {
+		var err error = nil
+		var body string = ""
+		var author string = ""
+
+		if re.Deleted {
+			body = "\n  DELETED"
+			author = "DELETED"
+		} else {
+			body, err = m.glam.Render(re.Body)
+			if err != nil {
+				m.ctx.Logger.Error(err)
+				body = re.Body
+			}
+
+			author = re.Author.Name
+		}
+		out += fmt.Sprintf(
+			"\n\n %s %s\n%s",
+			replyAuthorStyle.Render(
+				author,
+			),
+			lipgloss.NewStyle().Foreground(lipgloss.Color("#874BFD")).Render(
+				fmt.Sprintf("writes in reply to %s:", inReplyTo),
+			),
+			body,
+		)
+
+		out += m.renderReplies(level+1, re.Author.Name, &re.Replies)
+	}
+
+	return out
 }

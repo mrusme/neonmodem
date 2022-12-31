@@ -82,12 +82,13 @@ func loadSystems(c *ctx.Ctx) []error {
 	var errs []error
 
 	for _, sysCfg := range c.Config.Systems {
+		c.Logger.Debugf("loading system of type %s ...", sysCfg.Type)
 		sys, err := system.New(sysCfg.Type, &sysCfg.Config, LOG)
 		if err != nil {
 			c.Logger.Errorf("error loading system: %s", err)
 			errs = append(errs, err)
 		} else {
-			c.Logger.Debugln("loaded system")
+			c.Logger.Debugf("loaded %s system", sysCfg.Type)
 		}
 
 		c.AddSystem(&sys)
@@ -108,19 +109,6 @@ var rootCmd = &cobra.Command{
 
 		c := ctx.New(&CFG, LOG)
 		_ = loadSystems(&c) // TODO: Handle errs
-
-		// a, _ := aggregator.New(&c)
-		// posts, errs := a.ListPosts()
-		// // posts, err := (*c.Systems[0]).ListPosts()
-		// fmt.Println("-----------------------")
-		// fmt.Printf("%v\n", posts)
-		// fmt.Printf("%v\n", errs)
-		//
-		// // err = s(*c.Systems[0]).LoadPost(&posts[4])
-		// err := a.LoadPost(&posts[4])
-		// fmt.Printf("%v\n", posts[4].Replies[2])
-		// fmt.Printf("%v\n", err)
-		// os.Exit(0)
 
 		tui := tea.NewProgram(ui.NewModel(&c), tea.WithAltScreen())
 		err = tui.Start()
