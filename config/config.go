@@ -93,6 +93,57 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	SetDefaults(cacheDir)
+
+	viper.SetConfigName("gobbs")
+	viper.SetConfigType("toml")
+	viper.AddConfigPath(cfgDir)
+	viper.AddConfigPath(homeDir)
+
+	viper.SetEnvPrefix("gobbs")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
+
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return Config{}, err
+		} else {
+			return Config{}, nil
+		}
+	}
+
+	var config Config
+	if err := viper.Unmarshal(&config); err != nil {
+		return Config{}, err
+	}
+
+	return config, nil
+}
+
+func (cfg *Config) Save() error {
+	cfgFile := viper.ConfigFileUsed()
+	if cfgFile == "" {
+		cfgDir, err := os.UserConfigDir()
+		if err != nil {
+			return err
+		}
+		cfgFile = path.Join(cfgDir, "gobbs.toml")
+	}
+
+	fd, err := os.OpenFile(cfgFile, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+
+	if err := toml.NewEncoder(fd).Encode(cfg); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func SetDefaults(cacheDir string) {
 	viper.SetDefault("Debug", "true")
 	viper.SetDefault("Log", path.Join(cacheDir, "gobbs.log"))
 
@@ -224,51 +275,4 @@ func Load() (Config, error) {
 		lipgloss.AdaptiveColor{Light: "#000000", Dark: "#00000"})
 	viper.SetDefault("Theme.Reply.Author.Foreground",
 		lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#874BFD"})
-
-	viper.SetConfigName("gobbs")
-	viper.SetConfigType("toml")
-	viper.AddConfigPath(cfgDir)
-	viper.AddConfigPath(homeDir)
-
-	viper.SetEnvPrefix("gobbs")
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	viper.AutomaticEnv()
-
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return Config{}, err
-		} else {
-			return Config{}, nil
-		}
-	}
-
-	var config Config
-	if err := viper.Unmarshal(&config); err != nil {
-		return Config{}, err
-	}
-
-	return config, nil
-}
-
-func (cfg *Config) Save() error {
-	cfgFile := viper.ConfigFileUsed()
-	if cfgFile == "" {
-		cfgDir, err := os.UserConfigDir()
-		if err != nil {
-			return err
-		}
-		cfgFile = path.Join(cfgDir, "gobbs.toml")
-	}
-
-	fd, err := os.OpenFile(cfgFile, os.O_WRONLY|os.O_CREATE, 0600)
-	if err != nil {
-		return err
-	}
-	defer fd.Close()
-
-	if err := toml.NewEncoder(fd).Encode(cfg); err != nil {
-		return err
-	}
-
-	return nil
 }
