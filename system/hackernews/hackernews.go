@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	md "github.com/JohannesKaufmann/html-to-markdown"
 	hn "github.com/hermanschaaf/hackernews"
 	"github.com/mrusme/gobbs/models/author"
 	"github.com/mrusme/gobbs/models/forum"
@@ -62,6 +63,8 @@ func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
 		return []post.Post{}, err
 	}
 
+	converter := md.NewConverter("", true, nil)
+
 	var models []post.Post
 	for _, story := range stories[0:10] {
 		i, err := sys.client.GetItem(context.Background(), story)
@@ -75,6 +78,11 @@ func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
 		if i.URL != "" {
 			t = "url"
 			body = i.URL
+		} else {
+			bodyMd, err := converter.ConvertString(i.Text)
+			if err == nil {
+				body = bodyMd
+			}
 		}
 
 		createdAt := time.Unix(int64(i.Time), 0)
@@ -121,14 +129,11 @@ func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
 }
 
 func (sys *System) LoadPost(p *post.Post) error {
-	sys.logger.Debug(p.Replies)
-	err := sys.loadReplies(&p.Replies)
-	sys.logger.Debug(p.Replies)
-	return err
+	return sys.loadReplies(&p.Replies)
 }
 
 func (sys *System) loadReplies(replies *[]reply.Reply) error {
-	sys.logger.Debug("loading replies")
+	converter := md.NewConverter("", true, nil)
 	for r := 0; r < len(*replies); r++ {
 		re := &(*replies)[r]
 
@@ -151,6 +156,10 @@ func (sys *System) loadReplies(replies *[]reply.Reply) error {
 		createdAt := time.Unix(int64(i.Time), 0)
 
 		re.Body = i.Text
+		bodyMd, err := converter.ConvertString(i.Text)
+		if err == nil {
+			re.Body = bodyMd
+		}
 
 		re.CreatedAt = createdAt
 
