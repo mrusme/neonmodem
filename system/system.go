@@ -6,6 +6,7 @@ import (
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/system/adapter"
 	"github.com/mrusme/gobbs/system/discourse"
+	"github.com/mrusme/gobbs/system/hackernews"
 	"github.com/mrusme/gobbs/system/lemmy"
 	"go.uber.org/zap"
 )
@@ -35,6 +36,8 @@ func New(
 		sys = new(discourse.System)
 	case "lemmy":
 		sys = new(lemmy.System)
+	case "hackernews":
+		sys = new(hackernews.System)
 	default:
 		return nil, errors.New("No such system")
 	}

@@ -22,6 +22,12 @@ func connectBase() *cobra.Command {
 		Use:   "connect",
 		Short: "Connect to BBS",
 		Long:  "Add a new connection to a BBS.",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			sysType, _ := cmd.Flags().GetString("type")
+			if sysType != "hackernews" {
+				cmd.MarkFlagRequired("url")
+			}
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			sysConfig = make(map[string]interface{})
 			sys, err := system.New(sysType, &sysConfig, LOG)
@@ -52,7 +58,7 @@ func connectBase() *cobra.Command {
 			&sysType,
 			"type",
 			"",
-			"Type of system to connect to (discourse, lemmy)",
+			"Type of system to connect to (discourse, lemmy, hackernews)",
 		)
 	cmd.MarkFlagRequired("type")
 
@@ -64,7 +70,6 @@ func connectBase() *cobra.Command {
 			"",
 			"URL of system (e.g. https://www.keebtalk.com)",
 		)
-	cmd.MarkFlagRequired("url")
 
 	return cmd
 }
