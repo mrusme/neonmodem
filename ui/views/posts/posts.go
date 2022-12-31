@@ -67,14 +67,22 @@ func (m Model) Init() tea.Cmd {
 
 func NewModel(c *ctx.Ctx) Model {
 	m := Model{
+		ctx:     c,
 		keymap:  DefaultKeyMap,
 		focused: "list",
 	}
 
-	m.list = list.New(m.items, list.NewDefaultDelegate(), 0, 0)
+	listDelegate := list.NewDefaultDelegate()
+	listDelegate.Styles.NormalTitle = m.ctx.Theme.PostsList.Item.Focused
+	listDelegate.Styles.DimmedTitle = m.ctx.Theme.PostsList.Item.Blurred
+	listDelegate.Styles.SelectedTitle = m.ctx.Theme.PostsList.Item.Selected
+	listDelegate.Styles.NormalDesc = m.ctx.Theme.PostsList.ItemDetail.Focused
+	listDelegate.Styles.DimmedDesc = m.ctx.Theme.PostsList.ItemDetail.Blurred
+	listDelegate.Styles.SelectedDesc = m.ctx.Theme.PostsList.ItemDetail.Selected
+
+	m.list = list.New(m.items, listDelegate, 0, 0)
 	m.list.SetShowTitle(false)
 	m.list.SetShowStatusBar(false)
-	m.ctx = c
 	m.a, _ = aggregator.New(m.ctx)
 
 	return m

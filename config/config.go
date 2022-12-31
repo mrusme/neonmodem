@@ -57,8 +57,14 @@ type Config struct {
 				Blurred ThemeItemConfig
 			}
 			Item struct {
-				Focused ThemeItemConfig
-				Blurred ThemeItemConfig
+				Focused  ThemeItemConfig
+				Blurred  ThemeItemConfig
+				Selected ThemeItemConfig
+			}
+			ItemDetail struct {
+				Focused  ThemeItemConfig
+				Blurred  ThemeItemConfig
+				Selected ThemeItemConfig
 			}
 		}
 
@@ -117,30 +123,54 @@ func Load() (Config, error) {
 		lipgloss.AdaptiveColor{Light: "#cccccc", Dark: "#333333"})
 
 	// PostsList Item:Focused
-	viper.SetDefault("Theme.PostsList.Item.Focused.Margin",
-		[]int{0, 0, 0, 0})
 	viper.SetDefault("Theme.PostsList.Item.Focused.Padding",
-		[]int{1, 1, 1, 1})
-	viper.SetDefault("Theme.PostsList.Item.Focused.Border.Border",
-		lipgloss.RoundedBorder())
-	viper.SetDefault("Theme.PostsList.Item.Focused.Border.Sides",
-		[]bool{true, true, true, true},
-	)
-	viper.SetDefault("Theme.PostsList.Item.Focused.Border.Foreground",
+		[]int{0, 0, 0, 2})
+	viper.SetDefault("Theme.PostsList.Item.Focused.Foreground",
 		lipgloss.AdaptiveColor{Light: "#333333", Dark: "#cccccc"})
 
 	// PostsList Item:Blurred
-	viper.SetDefault("Theme.PostsList.Item.Blurred.Margin",
-		[]int{0, 0, 0, 0})
 	viper.SetDefault("Theme.PostsList.Item.Blurred.Padding",
-		[]int{1, 1, 1, 1})
-	viper.SetDefault("Theme.PostsList.Item.Blurred.Border.Border",
-		lipgloss.RoundedBorder())
-	viper.SetDefault("Theme.PostsList.Item.Blurred.Border.Sides",
-		[]bool{true, true, true, true},
-	)
-	viper.SetDefault("Theme.PostsList.Item.Blurred.Border.Foreground",
+		[]int{0, 0, 0, 2})
+	viper.SetDefault("Theme.PostsList.Item.Blurred.Foreground",
 		lipgloss.AdaptiveColor{Light: "#cccccc", Dark: "#333333"})
+
+	// PostsList Item:Selected
+	viper.SetDefault("Theme.PostsList.Item.Selected.Padding",
+		[]int{0, 0, 0, 1})
+	viper.SetDefault("Theme.PostsList.Item.Selected.Border.Border",
+		lipgloss.NormalBorder())
+	viper.SetDefault("Theme.PostsList.Item.Selected.Border.Sides",
+		[]bool{false, false, false, true},
+	)
+	viper.SetDefault("Theme.PostsList.Item.Selected.Border.Foreground",
+		lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
+	viper.SetDefault("Theme.PostsList.Item.Selected.Foreground",
+		lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
+
+	// PostsList ItemDetail:Focused
+	viper.SetDefault("Theme.PostsList.ItemDetail.Focused.Padding",
+		[]int{0, 0, 0, 2})
+	viper.SetDefault("Theme.PostsList.ItemDetail.Focused.Foreground",
+		lipgloss.AdaptiveColor{Light: "#333333", Dark: "#cccccc"})
+
+	// PostsList ItemDetail:Blurred
+	viper.SetDefault("Theme.PostsList.ItemDetail.Blurred.Padding",
+		[]int{0, 0, 0, 2})
+	viper.SetDefault("Theme.PostsList.ItemDetail.Blurred.Foreground",
+		lipgloss.AdaptiveColor{Light: "#cccccc", Dark: "#333333"})
+
+	// PostsList ItemDetail:Selected
+	viper.SetDefault("Theme.PostsList.ItemDetail.Selected.Padding",
+		[]int{0, 0, 0, 1})
+	viper.SetDefault("Theme.PostsList.ItemDetail.Selected.Border.Border",
+		lipgloss.NormalBorder())
+	viper.SetDefault("Theme.PostsList.ItemDetail.Selected.Border.Sides",
+		[]bool{false, false, false, true},
+	)
+	viper.SetDefault("Theme.PostsList.ItemDetail.Selected.Border.Foreground",
+		lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
+	viper.SetDefault("Theme.PostsList.ItemDetail.Selected.Foreground",
+		lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
 
 	// DialogBox Window
 	viper.SetDefault("Theme.DialogBox.Window.Margin",
