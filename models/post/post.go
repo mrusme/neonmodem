@@ -41,7 +41,8 @@ func (post Post) Title() string {
 
 func (post Post) Description() string {
 	return fmt.Sprintf(
-		"%s in %s on %s",
+		"[%s] %s in %s on %s",
+		post.ID,
 		post.Author.Name,
 		post.Forum.Name,
 		post.CreatedAt.Format("Jan 2 2006"),

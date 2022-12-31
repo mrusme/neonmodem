@@ -83,8 +83,9 @@ func (sys *System) Load() error {
 
 func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
 	resp, err := sys.client.Posts(context.Background(), types.GetPosts{
-		Type: types.NewOptional(types.ListingLocal),
-		Sort: types.NewOptional(types.New),
+		Type:  types.NewOptional(types.ListingSubscribed),
+		Sort:  types.NewOptional(types.New),
+		Limit: types.NewOptional(int64(50)),
 	})
 	if err != nil {
 		return []post.Post{}, err
@@ -144,8 +145,15 @@ func (sys *System) LoadPost(p *post.Post) error {
 	if err != nil {
 		return err
 	}
+	// cid, err := strconv.Atoi(p.Forum.ID)
+	// if err != nil {
+	// 	return err
+	// }
 
 	resp, err := sys.client.Comments(context.Background(), types.GetComments{
+		Type: types.NewOptional(types.ListingLocal),
+		Sort: types.NewOptional(types.CommentSortHot),
+		// CommunityID: types.NewOptional(cid),
 		PostID: types.NewOptional(pid),
 	})
 	if err != nil {
