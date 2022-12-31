@@ -18,71 +18,13 @@ import (
 )
 
 var (
-	ViewBorderColor = lipgloss.AdaptiveColor{
-		Light: "#b0c4de",
-		Dark:  "#b0c4de",
-	}
-
-	DialogBorderColor = lipgloss.AdaptiveColor{
-		Light: "#b0c4de",
-		Dark:  "#b0c4de",
-	}
-)
-
-var (
-	listStyle = lipgloss.NewStyle().
-			Margin(0, 0, 0, 0).
-			Padding(1, 1).
-			Border(lipgloss.DoubleBorder()).
-			BorderForeground(ViewBorderColor).
-			BorderTop(true).
-			BorderLeft(true).
-			BorderRight(true).
-			BorderBottom(true)
-
 	viewportStyle = lipgloss.NewStyle().
-			Margin(0, 0, 0, 0).
-			Padding(0, 0).
-			BorderTop(false).
-			BorderLeft(false).
-			BorderRight(false).
-			BorderBottom(false)
-
-	dialogBoxStyle = lipgloss.NewStyle().
-			Border(lipgloss.ThickBorder()).
-			BorderForeground(DialogBorderColor).
-			Padding(0, 0).
-			Margin(0, 0, 0, 0).
-			BorderTop(false).
-			BorderLeft(true).
-			BorderRight(true).
-			BorderBottom(true)
-
-	dialogBoxTitlebarStyle = lipgloss.NewStyle().
-				Align(lipgloss.Center).
-				Background(lipgloss.Color("#87cefa")).
-				Foreground(lipgloss.Color("#000000")).
-				Padding(0, 1).
-				Margin(0, 0, 1, 0)
-
-	dialogBoxBottombarStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#999999")).
-				Padding(0, 1).
-				Margin(1, 0, 0, 0)
-
-	postAuthorStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#F25D94")).
-			Padding(0, 1)
-
-	postSubjectStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#FFFFFF")).
-				Background(lipgloss.Color("#F25D94")).
-				Padding(0, 1)
-
-	replyAuthorStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#000000")).
-				Background(lipgloss.Color("#874BFD")).
-				Padding(0, 1)
+		Margin(0, 0, 0, 0).
+		Padding(0, 0).
+		BorderTop(false).
+		BorderLeft(false).
+		BorderRight(false).
+		BorderBottom(false)
 )
 
 type KeyMap struct {
@@ -130,7 +72,8 @@ func NewModel(c *ctx.Ctx) Model {
 	}
 
 	m.list = list.New(m.items, list.NewDefaultDelegate(), 0, 0)
-	m.list.Title = "Posts"
+	m.list.SetShowTitle(false)
+	m.list.SetShowStatusBar(false)
 	m.ctx = c
 	m.a, _ = aggregator.New(m.ctx)
 
@@ -167,8 +110,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		viewportWidth := m.ctx.Content[0] - 9
 		viewportHeight := m.ctx.Content[1] - 10
 
-		listStyle.Width(listWidth)
-		listStyle.Height(listHeight)
+		m.ctx.Theme.PostsList.List.Width(listWidth)
+		m.ctx.Theme.PostsList.List.Height(listHeight)
 		m.list.SetSize(
 			listWidth-2,
 			listHeight-2,
@@ -196,12 +139,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	if m.viewportOpen == false {
-		// listStyle.BorderForeground(lipgloss.Color("#FFFFFF"))
+		// m.ctx.Theme.PostsList.List.BorderForeground(lipgloss.Color("#FFFFFF"))
 		// viewportStyle.BorderForeground(lipgloss.Color("#874BFD"))
 		m.list, cmd = m.list.Update(msg)
 		cmds = append(cmds, cmd)
 	} else if m.viewportOpen == true {
-		// listStyle.BorderForeground(lipgloss.Color("#874BFD"))
+		// m.ctx.Theme.PostsList.List.BorderForeground(lipgloss.Color("#874BFD"))
 		// viewportStyle.BorderForeground(lipgloss.Color("#FFFFFF"))
 		m.viewport, cmd = m.viewport.Update(msg)
 		cmds = append(cmds, cmd)
@@ -215,15 +158,16 @@ func (m Model) View() string {
 
 	view.WriteString(lipgloss.JoinHorizontal(
 		lipgloss.Top,
-		listStyle.Render(m.list.View()),
+		m.ctx.Theme.PostsList.List.Render(m.list.View()),
 	))
 
 	if m.viewportOpen {
-		titlebar := dialogBoxTitlebarStyle.
+		titlebar := m.ctx.Theme.DialogBox.Titlebar.
+			Align(lipgloss.Center).
 			Width(m.viewport.Width + 4).
 			Render("Post")
 
-		bottombar := dialogBoxBottombarStyle.
+		bottombar := m.ctx.Theme.DialogBox.Bottombar.
 			Width(m.viewport.Width + 4).
 			Render("r reply · esc close")
 
@@ -234,7 +178,9 @@ func (m Model) View() string {
 			bottombar,
 		)
 
-		return helpers.PlaceOverlay(3, 2, dialogBoxStyle.Render(ui), view.String(), true)
+		return helpers.PlaceOverlay(3, 2,
+			m.ctx.Theme.DialogBox.Window.Render(ui),
+			view.String(), true)
 	}
 
 	return view.String()
@@ -288,10 +234,10 @@ func (m *Model) renderViewport(p *post.Post) string {
 	}
 	out += fmt.Sprintf(
 		" %s\n %s\n%s",
-		postAuthorStyle.Render(
+		m.ctx.Theme.Post.Author.Render(
 			fmt.Sprintf("%s %s:", p.Author.Name, adj),
 		),
-		postSubjectStyle.Render(p.Subject),
+		m.ctx.Theme.Post.Subject.Render(p.Subject),
 		body,
 	)
 
@@ -331,7 +277,7 @@ func (m *Model) renderReplies(
 		}
 		out += fmt.Sprintf(
 			"\n\n %s %s\n%s",
-			replyAuthorStyle.Render(
+			m.ctx.Theme.Reply.Author.Render(
 				author,
 			),
 			lipgloss.NewStyle().Foreground(lipgloss.Color("#874BFD")).Render(

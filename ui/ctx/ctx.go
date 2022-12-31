@@ -3,6 +3,7 @@ package ctx
 import (
 	"github.com/mrusme/gobbs/config"
 	"github.com/mrusme/gobbs/system"
+	"github.com/mrusme/gobbs/ui/theme"
 	"go.uber.org/zap"
 )
 
@@ -13,6 +14,7 @@ type Ctx struct {
 	Systems []*system.System
 	Loading bool
 	Logger  *zap.SugaredLogger
+	Theme   *theme.Theme
 }
 
 func New(
@@ -25,6 +27,7 @@ func New(
 		Config:  cfg,
 		Loading: false,
 		Logger:  logger,
+		Theme:   theme.New(cfg),
 	}
 }
 
