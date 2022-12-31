@@ -36,7 +36,7 @@ var (
 			BorderBottom(false)
 
 	dialogBoxStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
+			Border(lipgloss.NormalBorder()).
 			BorderForeground(lipgloss.Color("#874BFD")).
 			Padding(1, 0).
 			BorderTop(true).
@@ -66,8 +66,8 @@ var (
 				Padding(0, 1)
 
 	replyAuthorStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#FFFFFF")).
-				Background(lipgloss.Color("#888B7E")).
+				Foreground(lipgloss.Color("#000000")).
+				Background(lipgloss.Color("#874BFD")).
 				Padding(0, 1)
 )
 
@@ -194,14 +194,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 
-	if m.focused == 0 {
-		listStyle.BorderForeground(lipgloss.Color("#FFFFFF"))
-		viewportStyle.BorderForeground(lipgloss.Color("#874BFD"))
+	if m.viewportOpen == false {
+		// listStyle.BorderForeground(lipgloss.Color("#FFFFFF"))
+		// viewportStyle.BorderForeground(lipgloss.Color("#874BFD"))
 		m.list, cmd = m.list.Update(msg)
 		cmds = append(cmds, cmd)
-	} else if m.focused == 1 {
-		listStyle.BorderForeground(lipgloss.Color("#874BFD"))
-		viewportStyle.BorderForeground(lipgloss.Color("#FFFFFF"))
+	} else if m.viewportOpen == true {
+		// listStyle.BorderForeground(lipgloss.Color("#874BFD"))
+		// viewportStyle.BorderForeground(lipgloss.Color("#FFFFFF"))
 		m.viewport, cmd = m.viewport.Update(msg)
 		cmds = append(cmds, cmd)
 	}
@@ -291,11 +291,12 @@ func (m *Model) renderViewport(post *post.Post) string {
 			body = reply.Body
 		}
 		vp = fmt.Sprintf(
-			"%s\n\n %s\n%s",
+			"%s\n\n %s %s\n%s",
 			vp,
 			replyAuthorStyle.Render(
-				fmt.Sprintf("%s writes:", reply.Author.Name),
+				reply.Author.Name,
 			),
+			lipgloss.NewStyle().Foreground(lipgloss.Color("#874BFD")).Render("writes:"),
 			body,
 		)
 	}
