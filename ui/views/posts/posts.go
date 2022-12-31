@@ -17,11 +17,23 @@ import (
 )
 
 var (
+	ViewBorderColor = lipgloss.AdaptiveColor{
+		Light: "#b0c4de",
+		Dark:  "#b0c4de",
+	}
+
+	DialogBorderColor = lipgloss.AdaptiveColor{
+		Light: "#b0c4de",
+		Dark:  "#b0c4de",
+	}
+)
+
+var (
 	listStyle = lipgloss.NewStyle().
 			Margin(0, 0, 0, 0).
 			Padding(1, 1).
 			Border(lipgloss.DoubleBorder()).
-			BorderForeground(lipgloss.Color("#874BFD")).
+			BorderForeground(ViewBorderColor).
 			BorderTop(true).
 			BorderLeft(true).
 			BorderRight(true).
@@ -36,25 +48,26 @@ var (
 			BorderBottom(false)
 
 	dialogBoxStyle = lipgloss.NewStyle().
-			Border(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("#874BFD")).
-			Padding(1, 0).
-			BorderTop(true).
+			Border(lipgloss.ThickBorder()).
+			BorderForeground(DialogBorderColor).
+			Padding(0, 0).
+			Margin(0, 0, 0, 0).
+			BorderTop(false).
 			BorderLeft(true).
 			BorderRight(true).
 			BorderBottom(true)
 
-	buttonStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFF7DB")).
-			Background(lipgloss.Color("#888B7E")).
-			Padding(0, 3).
-			MarginTop(1)
+	dialogBoxTitlebarStyle = lipgloss.NewStyle().
+				Align(lipgloss.Center).
+				Background(lipgloss.Color("#87cefa")).
+				Foreground(lipgloss.Color("#000000")).
+				Padding(0, 1).
+				Margin(0, 0, 1, 0)
 
-	activeButtonStyle = buttonStyle.Copy().
-				Foreground(lipgloss.Color("#FFF7DB")).
-				Background(lipgloss.Color("#F25D94")).
-				MarginRight(2).
-				Underline(true)
+	dialogBoxBottombarStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#999999")).
+				Padding(0, 1).
+				Margin(1, 0, 0, 0)
 
 	postAuthorStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#F25D94")).
@@ -199,14 +212,19 @@ func (m Model) View() string {
 	))
 
 	if m.viewportOpen {
-		okButton := activeButtonStyle.Render("[R]eply")
-		cancelButton := buttonStyle.Render("Close")
+		titlebar := dialogBoxTitlebarStyle.
+			Width(m.viewport.Width + 4).
+			Render("Post")
 
-		buttons := lipgloss.JoinHorizontal(lipgloss.Top, okButton, cancelButton)
+		bottombar := dialogBoxBottombarStyle.
+			Width(m.viewport.Width + 4).
+			Render("r reply · esc close")
+
 		ui := lipgloss.JoinVertical(
 			lipgloss.Center,
+			titlebar,
 			viewportStyle.Render(m.viewport.View()),
-			buttons,
+			bottombar,
 		)
 
 		return helpers.PlaceOverlay(3, 2, dialogBoxStyle.Render(ui), view.String())
