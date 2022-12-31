@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/araddon/dateparse"
 	"github.com/mrusme/gobbs/models/author"
 	"github.com/mrusme/gobbs/models/post"
@@ -128,9 +129,16 @@ func (sys *System) LoadPost(p *post.Post) error {
 		return err
 	}
 
+	converter := md.NewConverter("", true, nil)
+
 	for idx, i := range item.PostStream.Posts {
+		cookedMd, err := converter.ConvertString(i.Cooked)
+		if err != nil {
+			cookedMd = i.Cooked
+		}
+
 		if idx == 0 {
-			p.Body = i.Cooked // TODO: Clean Cooked
+			p.Body = cookedMd
 			continue
 		}
 
@@ -141,7 +149,7 @@ func (sys *System) LoadPost(p *post.Post) error {
 		p.Replies = append(p.Replies, reply.Reply{
 			ID: strconv.Itoa(i.ID),
 
-			Body: i.Cooked, // TODO: Clean Cooked
+			Body: cookedMd,
 
 			CreatedAt: createdAt,
 
