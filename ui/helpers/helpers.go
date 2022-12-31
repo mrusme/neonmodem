@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 	"github.com/muesli/ansi"
 	"github.com/muesli/reflow/truncate"
@@ -12,7 +13,7 @@ import (
 
 // Most of this code is borrowed from
 // https://github.com/charmbracelet/lipgloss/pull/102
-// as well as the lipgloss library.
+// as well as the lipgloss library, with some modification for what I needed.
 
 // Split a string into lines, additionally returning the size of the widest
 // line.
@@ -30,11 +31,29 @@ func getLines(s string) (lines []string, widest int) {
 }
 
 // PlaceOverlay places fg on top of bg.
-func PlaceOverlay(x, y int, fg, bg string, opts ...WhitespaceOption) string {
+func PlaceOverlay(x, y int, fg, bg string, shadow bool, opts ...WhitespaceOption) string {
 	fgLines, fgWidth := getLines(fg)
 	bgLines, bgWidth := getLines(bg)
 	bgHeight := len(bgLines)
 	fgHeight := len(fgLines)
+
+	if shadow {
+		var shadowbg string = ""
+		shadowchar := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#333333")).
+			Render("░")
+		for i := 0; i <= fgHeight; i++ {
+			if i == 0 {
+				shadowbg += " " + strings.Repeat(" ", fgWidth) + "\n"
+			} else {
+				shadowbg += " " + strings.Repeat(shadowchar, fgWidth) + "\n"
+			}
+		}
+
+		fg = PlaceOverlay(0, 0, fg, shadowbg, false, opts...)
+		fgLines, fgWidth = getLines(fg)
+		fgHeight = len(fgLines)
+	}
 
 	if fgWidth >= bgWidth && fgHeight >= bgHeight {
 		// FIXME: return fg or bg?

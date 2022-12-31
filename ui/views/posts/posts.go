@@ -235,7 +235,7 @@ func (m Model) View() string {
 			bottombar,
 		)
 
-		return helpers.PlaceOverlay(3, 2, dialogBoxStyle.Render(ui), view.String())
+		return helpers.PlaceOverlay(3, 2, dialogBoxStyle.Render(ui), view.String(), true)
 	}
 
 	return view.String()
