@@ -72,10 +72,9 @@ var (
 )
 
 type KeyMap struct {
-	Refresh     key.Binding
-	Select      key.Binding
-	SwitchFocus key.Binding
-	Close       key.Binding
+	Refresh key.Binding
+	Select  key.Binding
+	Close   key.Binding
 }
 
 var DefaultKeyMap = KeyMap{
@@ -86,10 +85,6 @@ var DefaultKeyMap = KeyMap{
 	Select: key.NewBinding(
 		key.WithKeys("enter"),
 		key.WithHelp("enter", "select"),
-	),
-	SwitchFocus: key.NewBinding(
-		key.WithKeys("tab"),
-		key.WithHelp("tab", "switch focus"),
 	),
 	Close: key.NewBinding(
 		key.WithKeys("esc"),
@@ -107,9 +102,6 @@ type Model struct {
 
 	glam *glamour.TermRenderer
 
-	focused    int
-	focusables [2]tea.Model
-
 	viewportOpen bool
 }
 
@@ -120,12 +112,8 @@ func (m Model) Init() tea.Cmd {
 func NewModel(c *ctx.Ctx) Model {
 	m := Model{
 		keymap:       DefaultKeyMap,
-		focused:      0,
 		viewportOpen: false,
 	}
-
-	// m.focusables = append(m.focusables, m.list)
-	// m.focusables = append(m.focusables, m.viewport)
 
 	m.list = list.New(m.items, list.NewDefaultDelegate(), 0, 0)
 	m.list.Title = "Posts"
@@ -144,13 +132,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keymap.Refresh):
 			m.ctx.Loading = true
 			cmds = append(cmds, m.refresh())
-
-		case key.Matches(msg, m.keymap.SwitchFocus):
-			m.focused++
-			if m.focused >= len(m.focusables) {
-				m.focused = 0
-			}
-			// return m, nil
 
 		case key.Matches(msg, m.keymap.Select):
 			i, ok := m.list.SelectedItem().(post.Post)

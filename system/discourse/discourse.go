@@ -9,6 +9,7 @@ import (
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/araddon/dateparse"
 	"github.com/mrusme/gobbs/models/author"
+	"github.com/mrusme/gobbs/models/forum"
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/system/adapter"
@@ -74,6 +75,11 @@ func (sys *System) Load() error {
 }
 
 func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
+	cats, err := sys.client.Categories.List(context.Background())
+	if err != nil {
+		return []post.Post{}, err
+	}
+
 	items, err := sys.client.Topics.ListLatest(context.Background())
 	if err != nil {
 		return []post.Post{}, err
@@ -98,6 +104,21 @@ func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
 			lastCommentedAt = time.Now() // TODO: Errrrr
 		}
 
+		var forumName string = ""
+		for _, cat := range cats.CategoryList.Categories {
+			if cat.ID == i.CategoryID {
+				forumName = cat.Name
+				break
+			}
+
+			for _, subcat := range cat.SubcategoryList {
+				if subcat.ID == i.CategoryID {
+					forumName = subcat.Name
+					break
+				}
+			}
+		}
+
 		models = append(models, post.Post{
 			ID: strconv.Itoa(i.ID),
 
@@ -114,6 +135,11 @@ func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
 			Author: author.Author{
 				ID:   strconv.Itoa(i.Posters[0].UserID),
 				Name: userName,
+			},
+
+			Forum: forum.Forum{
+				ID:   strconv.Itoa(i.CategoryID),
+				Name: forumName,
 			},
 
 			SysIDX: sysIdx,

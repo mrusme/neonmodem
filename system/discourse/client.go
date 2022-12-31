@@ -68,8 +68,9 @@ type Client struct {
 	credentials map[string]string
 	logger      Logger
 
-	Posts  PostsService
-	Topics TopicsService
+	Posts      PostsService
+	Topics     TopicsService
+	Categories CategoriesService
 }
 
 func NewDefaultClientConfig(
@@ -99,6 +100,7 @@ func NewClient(cc *ClientConfig) *Client {
 
 	c.Posts = &PostServiceHandler{client: c}
 	c.Topics = &TopicServiceHandler{client: c}
+	c.Categories = &CategoryServiceHandler{client: c}
 
 	return c
 }

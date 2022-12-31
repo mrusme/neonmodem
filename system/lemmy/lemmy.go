@@ -7,6 +7,7 @@ import (
 
 	"github.com/araddon/dateparse"
 	"github.com/mrusme/gobbs/models/author"
+	"github.com/mrusme/gobbs/models/forum"
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/system/adapter"
@@ -124,6 +125,11 @@ func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
 			Author: author.Author{
 				ID:   strconv.Itoa(i.Post.CreatorID),
 				Name: i.Creator.Name,
+			},
+
+			Forum: forum.Forum{
+				ID:   strconv.Itoa(i.Post.CommunityID),
+				Name: i.Community.Name,
 			},
 
 			SysIDX: sysIdx,

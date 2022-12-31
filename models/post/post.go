@@ -1,9 +1,11 @@
 package post
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/mrusme/gobbs/models/author"
+	"github.com/mrusme/gobbs/models/forum"
 	"github.com/mrusme/gobbs/models/reply"
 )
 
@@ -22,6 +24,8 @@ type Post struct {
 
 	Author author.Author
 
+	Forum forum.Forum
+
 	Replies []reply.Reply
 
 	SysIDX int
@@ -36,5 +40,10 @@ func (post Post) Title() string {
 }
 
 func (post Post) Description() string {
-	return post.ID
+	return fmt.Sprintf(
+		"%s in %s on %s",
+		post.Author.Name,
+		post.Forum.Name,
+		post.CreatedAt.Format("Jan 2 2006"),
+	)
 }
