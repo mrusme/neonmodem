@@ -1,7 +1,6 @@
 package posts
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -296,8 +295,6 @@ func (m *Model) renderViewport(p *post.Post) string {
 		body,
 	)
 
-	bla, _ := json.Marshal(p.Replies)
-	m.ctx.Logger.Debugf("%s", bla)
 	out += m.renderReplies(0, p.Author.Name, &p.Replies)
 
 	m.viewportOpen = true
