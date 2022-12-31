@@ -1,6 +1,8 @@
 package aggregator
 
 import (
+	"encoding/json"
+	"os"
 	"sort"
 
 	"github.com/mrusme/gobbs/models/post"
@@ -22,6 +24,17 @@ func (a *Aggregator) ListPosts() ([]post.Post, []error) {
 	var errs []error = make([]error, len(a.ctx.Systems))
 	var posts []post.Post
 
+	// TODO: Clean up implementation
+	if os.Getenv("GOBBS_TEST") == "true" {
+		jsonPosts, err := os.ReadFile("posts.db")
+		if err == nil {
+			err = json.Unmarshal(jsonPosts, &posts)
+			if err == nil {
+				return posts, nil
+			}
+		}
+	}
+
 	for idx, sys := range a.ctx.Systems {
 		sysPosts, err := (*sys).ListPosts(idx)
 		if err != nil {
@@ -34,6 +47,12 @@ func (a *Aggregator) ListPosts() ([]post.Post, []error) {
 	sort.SliceStable(posts, func(i, j int) bool {
 		return posts[i].CreatedAt.After(posts[j].CreatedAt)
 	})
+
+	// TODO: Clean up implementation
+	jsonPosts, err := json.Marshal(posts)
+	if err == nil {
+		os.WriteFile("posts.db", jsonPosts, 0600)
+	}
 
 	return posts, errs
 }
