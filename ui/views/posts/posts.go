@@ -2,23 +2,25 @@ package posts
 
 import (
 	"fmt"
-	"math"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mrusme/gobbs/aggregator"
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/ui/ctx"
+	"github.com/mrusme/gobbs/ui/helpers"
 )
 
 var (
 	listStyle = lipgloss.NewStyle().
 			Margin(0, 0, 0, 0).
 			Padding(1, 1).
-			Border(lipgloss.RoundedBorder()).
+			Border(lipgloss.DoubleBorder()).
 			BorderForeground(lipgloss.Color("#874BFD")).
 			BorderTop(true).
 			BorderLeft(true).
@@ -27,19 +29,39 @@ var (
 
 	viewportStyle = lipgloss.NewStyle().
 			Margin(0, 0, 0, 0).
-			Padding(1, 1).
+			Padding(0, 0).
+			BorderTop(false).
+			BorderLeft(false).
+			BorderRight(false).
+			BorderBottom(false)
+
+	dialogBoxStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#874BFD")).
+			Padding(1, 0).
 			BorderTop(true).
 			BorderLeft(true).
 			BorderRight(true).
 			BorderBottom(true)
+
+	buttonStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFF7DB")).
+			Background(lipgloss.Color("#888B7E")).
+			Padding(0, 3).
+			MarginTop(1)
+
+	activeButtonStyle = buttonStyle.Copy().
+				Foreground(lipgloss.Color("#FFF7DB")).
+				Background(lipgloss.Color("#F25D94")).
+				MarginRight(2).
+				Underline(true)
 )
 
 type KeyMap struct {
 	Refresh     key.Binding
 	Select      key.Binding
 	SwitchFocus key.Binding
+	Close       key.Binding
 }
 
 var DefaultKeyMap = KeyMap{
@@ -55,6 +77,10 @@ var DefaultKeyMap = KeyMap{
 		key.WithKeys("tab"),
 		key.WithHelp("tab", "switch focus"),
 	),
+	Close: key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("esc", "close"),
+	),
 }
 
 type Model struct {
@@ -65,8 +91,12 @@ type Model struct {
 	ctx      *ctx.Ctx
 	a        *aggregator.Aggregator
 
+	glam *glamour.TermRenderer
+
 	focused    int
 	focusables [2]tea.Model
+
+	viewportOpen bool
 }
 
 func (m Model) Init() tea.Cmd {
@@ -75,8 +105,9 @@ func (m Model) Init() tea.Cmd {
 
 func NewModel(c *ctx.Ctx) Model {
 	m := Model{
-		keymap:  DefaultKeyMap,
-		focused: 0,
+		keymap:       DefaultKeyMap,
+		focused:      0,
+		viewportOpen: false,
 	}
 
 	// m.focusables = append(m.focusables, m.list)
@@ -113,13 +144,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.viewport.SetContent(m.renderViewport(&i))
 				return m, nil
 			}
+
+		case key.Matches(msg, m.keymap.Close):
+			if m.viewportOpen {
+				m.viewportOpen = false
+				return m, nil
+			}
 		}
 
 	case tea.WindowSizeMsg:
-		listWidth := int(math.Floor(float64(m.ctx.Content[0]) / 4.0))
+		listWidth := m.ctx.Content[0] - 2
 		listHeight := m.ctx.Content[1] - 1
-		viewportWidth := m.ctx.Content[0] - listWidth - 4
-		viewportHeight := m.ctx.Content[1] - 1
+		viewportWidth := m.ctx.Content[0] - 9
+		viewportHeight := m.ctx.Content[1] - 10
 
 		listStyle.Width(listWidth)
 		listStyle.Height(listHeight)
@@ -159,15 +196,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	var view string
+	var view strings.Builder = strings.Builder{}
 
-	view = lipgloss.JoinHorizontal(
+	view.WriteString(lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		listStyle.Render(m.list.View()),
-		viewportStyle.Render(m.viewport.View()),
-	)
+	))
 
-	return view
+	if m.viewportOpen {
+		okButton := activeButtonStyle.Render("[R]eply")
+		cancelButton := buttonStyle.Render("Close")
+
+		buttons := lipgloss.JoinHorizontal(lipgloss.Top, okButton, cancelButton)
+		ui := lipgloss.JoinVertical(
+			lipgloss.Center,
+			viewportStyle.Render(m.viewport.View()),
+			buttons,
+		)
+
+		return helpers.PlaceOverlay(3, 2, dialogBoxStyle.Render(ui), view.String())
+	}
+
+	return view.String()
 }
 
 func (m *Model) refresh() tea.Cmd {
@@ -191,11 +241,27 @@ func (m *Model) renderViewport(post *post.Post) string {
 
 	m.a.LoadPost(post)
 
+	var err error
+	m.glam, err = glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(m.viewport.Width),
+	)
+	if err != nil {
+		m.ctx.Logger.Error(err)
+		m.glam = nil
+	}
 	vp = fmt.Sprintf(
-		"%s\n\n%s",
+		"# %s\n\n%s",
 		post.Subject,
 		post.Body,
 	)
 
-	return vp
+	out, err := m.glam.Render(vp)
+	if err != nil {
+		m.ctx.Logger.Error(err)
+		out = vp
+	}
+
+	m.viewportOpen = true
+	return out
 }
