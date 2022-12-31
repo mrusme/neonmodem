@@ -55,6 +55,20 @@ var (
 				Background(lipgloss.Color("#F25D94")).
 				MarginRight(2).
 				Underline(true)
+
+	postAuthorStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#F25D94")).
+			Padding(0, 1)
+
+	postSubjectStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#FFFFFF")).
+				Background(lipgloss.Color("#F25D94")).
+				Padding(0, 1)
+
+	replyAuthorStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#FFFFFF")).
+				Background(lipgloss.Color("#888B7E")).
+				Padding(0, 1)
 )
 
 type KeyMap struct {
@@ -250,18 +264,42 @@ func (m *Model) renderViewport(post *post.Post) string {
 		m.ctx.Logger.Error(err)
 		m.glam = nil
 	}
-	vp = fmt.Sprintf(
-		"# %s\n\n%s",
-		post.Subject,
-		post.Body,
-	)
 
-	out, err := m.glam.Render(vp)
+	adj := "writes"
+	if post.Subject[len(post.Subject)-1:] == "?" {
+		adj = "asks"
+	}
+
+	body, err := m.glam.Render(post.Body)
 	if err != nil {
 		m.ctx.Logger.Error(err)
-		out = vp
+		body = post.Body
+	}
+	vp = fmt.Sprintf(
+		" %s\n %s\n%s",
+		postAuthorStyle.Render(
+			fmt.Sprintf("%s %s:", post.Author.Name, adj),
+		),
+		postSubjectStyle.Render(post.Subject),
+		body,
+	)
+
+	for _, reply := range post.Replies {
+		body, err := m.glam.Render(reply.Body)
+		if err != nil {
+			m.ctx.Logger.Error(err)
+			body = reply.Body
+		}
+		vp = fmt.Sprintf(
+			"%s\n\n %s\n%s",
+			vp,
+			replyAuthorStyle.Render(
+				fmt.Sprintf("%s writes:", reply.Author.Name),
+			),
+			body,
+		)
 	}
 
 	m.viewportOpen = true
-	return out
+	return vp
 }
