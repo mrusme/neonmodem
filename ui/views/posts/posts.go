@@ -110,8 +110,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		viewportWidth := m.ctx.Content[0] - 9
 		viewportHeight := m.ctx.Content[1] - 10
 
-		m.ctx.Theme.PostsList.List.Width(listWidth)
-		m.ctx.Theme.PostsList.List.Height(listHeight)
+		m.ctx.Theme.PostsList.List.Focused.Width(listWidth)
+		m.ctx.Theme.PostsList.List.Blurred.Width(listWidth)
+		m.ctx.Theme.PostsList.List.Focused.Height(listHeight)
+		m.ctx.Theme.PostsList.List.Blurred.Height(listHeight)
 		m.list.SetSize(
 			listWidth-2,
 			listHeight-2,
@@ -138,17 +140,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 
-	if m.viewportOpen == false {
-		// m.ctx.Theme.PostsList.List.BorderForeground(lipgloss.Color("#FFFFFF"))
-		// viewportStyle.BorderForeground(lipgloss.Color("#874BFD"))
-		m.list, cmd = m.list.Update(msg)
-		cmds = append(cmds, cmd)
-	} else if m.viewportOpen == true {
-		// m.ctx.Theme.PostsList.List.BorderForeground(lipgloss.Color("#874BFD"))
-		// viewportStyle.BorderForeground(lipgloss.Color("#FFFFFF"))
+	if m.viewportOpen {
 		m.viewport, cmd = m.viewport.Update(msg)
-		cmds = append(cmds, cmd)
+	} else if m.viewportOpen == true {
+		m.list, cmd = m.list.Update(msg)
 	}
+	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
 }
@@ -156,9 +153,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 	var view strings.Builder = strings.Builder{}
 
+	var l string = ""
+	if m.viewportOpen {
+		l = m.ctx.Theme.PostsList.List.Blurred.Render(m.list.View())
+	} else {
+		l = m.ctx.Theme.PostsList.List.Focused.Render(m.list.View())
+	}
 	view.WriteString(lipgloss.JoinHorizontal(
 		lipgloss.Top,
-		m.ctx.Theme.PostsList.List.Render(m.list.View()),
+		l,
 	))
 
 	if m.viewportOpen {

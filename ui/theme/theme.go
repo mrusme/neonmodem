@@ -13,8 +13,14 @@ type Theme struct {
 	}
 
 	PostsList struct {
-		List lipgloss.Style
-		Item lipgloss.Style
+		List struct {
+			Focused lipgloss.Style
+			Blurred lipgloss.Style
+		}
+		Item struct {
+			Focused lipgloss.Style
+			Blurred lipgloss.Style
+		}
 	}
 
 	Post struct {
@@ -38,23 +44,41 @@ func New(cfg *config.Config) (*Theme) {
 	// 		BorderBottom(false)
 	//
 
-	t.PostsList.List = lipgloss.NewStyle().
-		Margin(cfg.Theme.PostsList.List.Margin...).
-		Padding(cfg.Theme.PostsList.List.Padding...).
-		Border(cfg.Theme.PostsList.List.Border.Border, cfg.Theme.PostsList.List.Border.Sides...).
-		BorderForeground(cfg.Theme.PostsList.List.Border.Foreground).
-		BorderBackground(cfg.Theme.PostsList.List.Border.Background).
-		Foreground(cfg.Theme.PostsList.List.Foreground).
-		Background(cfg.Theme.PostsList.List.Background)
+	t.PostsList.List.Focused = lipgloss.NewStyle().
+		Margin(cfg.Theme.PostsList.List.Focused.Margin...).
+		Padding(cfg.Theme.PostsList.List.Focused.Padding...).
+		Border(cfg.Theme.PostsList.List.Focused.Border.Border, cfg.Theme.PostsList.List.Focused.Border.Sides...).
+		BorderForeground(cfg.Theme.PostsList.List.Focused.Border.Foreground).
+		BorderBackground(cfg.Theme.PostsList.List.Focused.Border.Background).
+		Foreground(cfg.Theme.PostsList.List.Focused.Foreground).
+		Background(cfg.Theme.PostsList.List.Focused.Background)
 
-	t.PostsList.Item = lipgloss.NewStyle().
-		Margin(cfg.Theme.PostsList.Item.Margin...).
-		Padding(cfg.Theme.PostsList.Item.Padding...).
-		Border(cfg.Theme.PostsList.Item.Border.Border, cfg.Theme.PostsList.Item.Border.Sides...).
-		BorderForeground(cfg.Theme.PostsList.Item.Border.Foreground).
-		BorderBackground(cfg.Theme.PostsList.Item.Border.Background).
-		Foreground(cfg.Theme.PostsList.Item.Foreground).
-		Background(cfg.Theme.PostsList.Item.Background)
+	t.PostsList.List.Blurred = lipgloss.NewStyle().
+		Margin(cfg.Theme.PostsList.List.Blurred.Margin...).
+		Padding(cfg.Theme.PostsList.List.Blurred.Padding...).
+		Border(cfg.Theme.PostsList.List.Blurred.Border.Border, cfg.Theme.PostsList.List.Blurred.Border.Sides...).
+		BorderForeground(cfg.Theme.PostsList.List.Blurred.Border.Foreground).
+		BorderBackground(cfg.Theme.PostsList.List.Blurred.Border.Background).
+		Foreground(cfg.Theme.PostsList.List.Blurred.Foreground).
+		Background(cfg.Theme.PostsList.List.Blurred.Background)
+
+	t.PostsList.Item.Focused = lipgloss.NewStyle().
+		Margin(cfg.Theme.PostsList.Item.Focused.Margin...).
+		Padding(cfg.Theme.PostsList.Item.Focused.Padding...).
+		Border(cfg.Theme.PostsList.Item.Focused.Border.Border, cfg.Theme.PostsList.Item.Focused.Border.Sides...).
+		BorderForeground(cfg.Theme.PostsList.Item.Focused.Border.Foreground).
+		BorderBackground(cfg.Theme.PostsList.Item.Focused.Border.Background).
+		Foreground(cfg.Theme.PostsList.Item.Focused.Foreground).
+		Background(cfg.Theme.PostsList.Item.Focused.Background)
+
+	t.PostsList.Item.Blurred = lipgloss.NewStyle().
+		Margin(cfg.Theme.PostsList.Item.Blurred.Margin...).
+		Padding(cfg.Theme.PostsList.Item.Blurred.Padding...).
+		Border(cfg.Theme.PostsList.Item.Blurred.Border.Border, cfg.Theme.PostsList.Item.Blurred.Border.Sides...).
+		BorderForeground(cfg.Theme.PostsList.Item.Blurred.Border.Foreground).
+		BorderBackground(cfg.Theme.PostsList.Item.Blurred.Border.Background).
+		Foreground(cfg.Theme.PostsList.Item.Blurred.Foreground).
+		Background(cfg.Theme.PostsList.Item.Blurred.Background)
 
 	t.DialogBox.Window = lipgloss.NewStyle().
 		Margin(cfg.Theme.DialogBox.Window.Margin...).
