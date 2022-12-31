@@ -25,7 +25,8 @@ type SystemConfig struct {
 }
 
 type Config struct {
-	Debug string
+	Debug bool
+	Log   string
 
 	Systems []SystemConfig
 }
@@ -39,8 +40,13 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		return Config{}, err
+	}
 
 	viper.SetDefault("Debug", "true")
+	viper.SetDefault("Log", path.Join(cacheDir, "gobbs.log"))
 
 	viper.SetConfigName("gobbs")
 	viper.SetConfigType("toml")

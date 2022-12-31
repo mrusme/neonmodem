@@ -1,6 +1,10 @@
 package cmd
 
 import (
+	"net/url"
+	"os"
+	"runtime"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mrusme/gobbs/config"
 	"github.com/mrusme/gobbs/system"
@@ -29,6 +33,34 @@ func init() {
 	)
 }
 
+func loadLogger(filename string, debug bool) (*zap.Logger, error) {
+	if runtime.GOOS == "windows" {
+		zap.RegisterSink("winfile", func(u *url.URL) (zap.Sink, error) {
+			return os.OpenFile(u.Path[1:], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+		})
+	}
+
+	var cfg zap.Config
+	if debug {
+		cfg = zap.NewDevelopmentConfig()
+	} else {
+		cfg = zap.NewProductionConfig()
+	}
+
+	if runtime.GOOS == "windows" {
+		cfg.OutputPaths = []string{
+			"stdout",
+			"winfile:///" + filename,
+		}
+	} else {
+		cfg.OutputPaths = []string{
+			filename,
+		}
+	}
+
+	return cfg.Build()
+}
+
 func load() {
 	var err error
 	var logger *zap.Logger
@@ -38,10 +70,9 @@ func load() {
 		panic(err)
 	}
 
-	if CFG.Debug == "true" {
-		logger, _ = zap.NewDevelopment()
-	} else {
-		logger, _ = zap.NewProduction()
+	logger, err = loadLogger(CFG.Log, CFG.Debug)
+	if err != nil {
+		panic(err)
 	}
 	defer logger.Sync()
 	LOG = logger.Sugar()
