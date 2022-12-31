@@ -58,7 +58,7 @@ type Model struct {
 
 	glam *glamour.TermRenderer
 
-	viewportOpen bool
+	focused string
 }
 
 func (m Model) Init() tea.Cmd {
@@ -67,8 +67,8 @@ func (m Model) Init() tea.Cmd {
 
 func NewModel(c *ctx.Ctx) Model {
 	m := Model{
-		keymap:       DefaultKeyMap,
-		viewportOpen: false,
+		keymap:  DefaultKeyMap,
+		focused: "list",
 	}
 
 	m.list = list.New(m.items, list.NewDefaultDelegate(), 0, 0)
@@ -98,8 +98,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case key.Matches(msg, m.keymap.Close):
-			if m.viewportOpen {
-				m.viewportOpen = false
+			if m.focused == "post" {
+				m.focused = "list"
 				return m, nil
 			}
 		}
@@ -140,10 +140,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 
-	if m.viewportOpen {
-		m.viewport, cmd = m.viewport.Update(msg)
-	} else if m.viewportOpen == true {
+	if m.focused == "list" {
 		m.list, cmd = m.list.Update(msg)
+	} else if m.focused == "post" {
+		m.viewport, cmd = m.viewport.Update(msg)
 	}
 	cmds = append(cmds, cmd)
 
@@ -154,17 +154,17 @@ func (m Model) View() string {
 	var view strings.Builder = strings.Builder{}
 
 	var l string = ""
-	if m.viewportOpen {
-		l = m.ctx.Theme.PostsList.List.Blurred.Render(m.list.View())
-	} else {
+	if m.focused == "list" {
 		l = m.ctx.Theme.PostsList.List.Focused.Render(m.list.View())
+	} else {
+		l = m.ctx.Theme.PostsList.List.Blurred.Render(m.list.View())
 	}
 	view.WriteString(lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		l,
 	))
 
-	if m.viewportOpen {
+	if m.focused == "post" {
 		titlebar := m.ctx.Theme.DialogBox.Titlebar.
 			Align(lipgloss.Center).
 			Width(m.viewport.Width + 4).
@@ -246,7 +246,7 @@ func (m *Model) renderViewport(p *post.Post) string {
 
 	out += m.renderReplies(0, p.Author.Name, &p.Replies)
 
-	m.viewportOpen = true
+	m.focused = "post"
 	return out
 }
 
