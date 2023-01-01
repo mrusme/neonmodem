@@ -234,7 +234,7 @@ func SetDefaults(cacheDir string) {
 		[]bool{false, true, true, true},
 	)
 	viper.SetDefault("Theme.DialogBox.Window.Border.Foreground",
-		lipgloss.AdaptiveColor{Light: "#ba55d3", Dark: "#ba55d3"})
+		lipgloss.AdaptiveColor{Light: "#00ffff", Dark: "#00ffff"})
 
 	// DialogBox Titlebar
 	viper.SetDefault("Theme.DialogBox.Titlebar.Margin",
@@ -244,7 +244,7 @@ func SetDefaults(cacheDir string) {
 	viper.SetDefault("Theme.DialogBox.Titlebar.Foreground",
 		lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#000000"})
 	viper.SetDefault("Theme.DialogBox.Titlebar.Background",
-		lipgloss.AdaptiveColor{Light: "#da70d6", Dark: "#da70d6"})
+		lipgloss.AdaptiveColor{Light: "#00cccc", Dark: "#00cccc"})
 
 	// DialogBox Bottombar
 	viper.SetDefault("Theme.DialogBox.Bottombar.Margin",
