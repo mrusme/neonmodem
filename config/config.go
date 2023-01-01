@@ -46,8 +46,14 @@ type Config struct {
 
 	Theme struct {
 		DialogBox struct {
-			Window    ThemeItemConfig
-			Titlebar  ThemeItemConfig
+			Window struct {
+				Focused ThemeItemConfig
+				Blurred ThemeItemConfig
+			}
+			Titlebar struct {
+				Focused ThemeItemConfig
+				Blurred ThemeItemConfig
+			}
 			Bottombar ThemeItemConfig
 		}
 
@@ -223,28 +229,51 @@ func SetDefaults(cacheDir string) {
 	viper.SetDefault("Theme.PostsList.ItemDetail.Selected.Foreground",
 		lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
 
-	// DialogBox Window
-	viper.SetDefault("Theme.DialogBox.Window.Margin",
+	// DialogBox Window:Focused
+	viper.SetDefault("Theme.DialogBox.Window.Focused.Margin",
 		[]int{0, 0, 0, 0})
-	viper.SetDefault("Theme.DialogBox.Window.Padding",
+	viper.SetDefault("Theme.DialogBox.Window.Focused.Padding",
 		[]int{0, 0, 0, 0})
-	viper.SetDefault("Theme.DialogBox.Window.Border.Border",
+	viper.SetDefault("Theme.DialogBox.Window.Focused.Border.Border",
 		lipgloss.ThickBorder())
-	viper.SetDefault("Theme.DialogBox.Window.Border.Sides",
+	viper.SetDefault("Theme.DialogBox.Window.Focused.Border.Sides",
 		[]bool{false, true, true, true},
 	)
-	viper.SetDefault("Theme.DialogBox.Window.Border.Foreground",
+	viper.SetDefault("Theme.DialogBox.Window.Focused.Border.Foreground",
 		lipgloss.AdaptiveColor{Light: "#00ffff", Dark: "#00ffff"})
 
-	// DialogBox Titlebar
-	viper.SetDefault("Theme.DialogBox.Titlebar.Margin",
+	// DialogBox Window:Blurred
+	viper.SetDefault("Theme.DialogBox.Window.Blurred.Margin",
+		[]int{0, 0, 0, 0})
+	viper.SetDefault("Theme.DialogBox.Window.Blurred.Padding",
+		[]int{0, 0, 0, 0})
+	viper.SetDefault("Theme.DialogBox.Window.Blurred.Border.Border",
+		lipgloss.ThickBorder())
+	viper.SetDefault("Theme.DialogBox.Window.Blurred.Border.Sides",
+		[]bool{false, true, true, true},
+	)
+	viper.SetDefault("Theme.DialogBox.Window.Blurred.Border.Foreground",
+		lipgloss.AdaptiveColor{Light: "#cccccc", Dark: "#333333"})
+
+	// DialogBox Titlebar:Focused
+	viper.SetDefault("Theme.DialogBox.Titlebar.Focused.Margin",
 		[]int{0, 0, 1, 0})
-	viper.SetDefault("Theme.DialogBox.Titlebar.Padding",
+	viper.SetDefault("Theme.DialogBox.Titlebar.Focused.Padding",
 		[]int{0, 1, 0, 1})
-	viper.SetDefault("Theme.DialogBox.Titlebar.Foreground",
+	viper.SetDefault("Theme.DialogBox.Titlebar.Focused.Foreground",
 		lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#000000"})
-	viper.SetDefault("Theme.DialogBox.Titlebar.Background",
+	viper.SetDefault("Theme.DialogBox.Titlebar.Focused.Background",
 		lipgloss.AdaptiveColor{Light: "#00cccc", Dark: "#00cccc"})
+
+	// DialogBox Titlebar:Blurred
+	viper.SetDefault("Theme.DialogBox.Titlebar.Blurred.Margin",
+		[]int{0, 0, 1, 0})
+	viper.SetDefault("Theme.DialogBox.Titlebar.Blurred.Padding",
+		[]int{0, 1, 0, 1})
+	viper.SetDefault("Theme.DialogBox.Titlebar.Blurred.Foreground",
+		lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#000000"})
+	viper.SetDefault("Theme.DialogBox.Titlebar.Blurred.Background",
+		lipgloss.AdaptiveColor{Light: "#cccccc", Dark: "#333333"})
 
 	// DialogBox Bottombar
 	viper.SetDefault("Theme.DialogBox.Bottombar.Margin",

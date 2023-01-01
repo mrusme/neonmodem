@@ -199,8 +199,13 @@ func (m Model) View() string {
 	))
 
 	if m.focused == "post" || m.focused == "reply" {
-		titlebar := m.ctx.Theme.DialogBox.Titlebar.
-			Align(lipgloss.Center).
+		var style lipgloss.Style
+		if m.focused == "post" {
+			style = m.ctx.Theme.DialogBox.Titlebar.Focused
+		} else {
+			style = m.ctx.Theme.DialogBox.Titlebar.Blurred
+		}
+		titlebar := style.Align(lipgloss.Center).
 			Width(m.viewport.Width + 4).
 			Render("Post")
 
@@ -215,16 +220,23 @@ func (m Model) View() string {
 			bottombar,
 		)
 
-		tmp := helpers.PlaceOverlay(3, 2,
-			m.ctx.Theme.DialogBox.Window.Render(ui),
-			view.String(), true)
+		var tmp string
+		if m.focused == "post" {
+			tmp = helpers.PlaceOverlay(3, 2,
+				m.ctx.Theme.DialogBox.Window.Focused.Render(ui),
+				view.String(), true)
+		} else {
+			tmp = helpers.PlaceOverlay(3, 2,
+				m.ctx.Theme.DialogBox.Window.Blurred.Render(ui),
+				view.String(), true)
+		}
 
 		view = strings.Builder{}
 		view.WriteString(tmp)
 	}
 
 	if m.focused == "reply" {
-		titlebar := m.ctx.Theme.DialogBox.Titlebar.
+		titlebar := m.ctx.Theme.DialogBox.Titlebar.Focused.
 			Align(lipgloss.Center).
 			Width(m.viewport.Width - 2).
 			Render("Reply")
@@ -234,7 +246,7 @@ func (m Model) View() string {
 
 		bottombar := m.ctx.Theme.DialogBox.Bottombar.
 			Width(m.viewport.Width - 2).
-			Render("ctrl+r reply · esc close")
+			Render("ctrl+enter reply · esc close")
 
 		replyWindow := lipgloss.JoinVertical(
 			lipgloss.Center,
@@ -244,7 +256,7 @@ func (m Model) View() string {
 		)
 
 		tmp := helpers.PlaceOverlay(5, m.ctx.Screen[1]-21,
-			m.ctx.Theme.DialogBox.Window.Render(replyWindow),
+			m.ctx.Theme.DialogBox.Window.Focused.Render(replyWindow),
 			view.String(), true)
 
 		view = strings.Builder{}
@@ -352,7 +364,7 @@ func (m *Model) renderReplies(
 			lipgloss.NewStyle().
 				Foreground(m.ctx.Theme.Reply.Author.GetBackground()).
 				Render(fmt.Sprintf("writes in reply to %s:", inReplyTo)),
-			strings.Repeat(" ", (m.viewport.Width-len(author)-len(inReplyTo)-26)),
+			strings.Repeat(" ", (m.viewport.Width-len(author)-len(inReplyTo)-28)),
 			lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#777777")).
 				Render(fmt.Sprintf("#%d", idx)),

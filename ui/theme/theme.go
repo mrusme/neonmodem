@@ -7,8 +7,14 @@ import (
 
 type Theme struct {
 	DialogBox struct {
-		Window lipgloss.Style
-		Titlebar lipgloss.Style
+		Window struct {
+			Focused lipgloss.Style
+			Blurred lipgloss.Style
+		}
+		Titlebar struct {
+			Focused lipgloss.Style
+			Blurred lipgloss.Style
+		}
 		Bottombar lipgloss.Style
 	}
 
@@ -50,8 +56,10 @@ func New(cfg *config.Config) (*Theme) {
 	t.PostsList.ItemDetail.Focused = t.fromConfig(&cfg.Theme.PostsList.ItemDetail.Focused)
 	t.PostsList.ItemDetail.Blurred = t.fromConfig(&cfg.Theme.PostsList.ItemDetail.Blurred)
 	t.PostsList.ItemDetail.Selected = t.fromConfig(&cfg.Theme.PostsList.ItemDetail.Selected)
-	t.DialogBox.Window = t.fromConfig(&cfg.Theme.DialogBox.Window)
-	t.DialogBox.Titlebar = t.fromConfig(&cfg.Theme.DialogBox.Titlebar)
+	t.DialogBox.Window.Focused = t.fromConfig(&cfg.Theme.DialogBox.Window.Focused)
+	t.DialogBox.Window.Blurred = t.fromConfig(&cfg.Theme.DialogBox.Window.Blurred)
+	t.DialogBox.Titlebar.Focused = t.fromConfig(&cfg.Theme.DialogBox.Titlebar.Focused)
+	t.DialogBox.Titlebar.Blurred = t.fromConfig(&cfg.Theme.DialogBox.Titlebar.Blurred)
 	t.DialogBox.Bottombar = t.fromConfig(&cfg.Theme.DialogBox.Bottombar)
 	t.Post.Author = t.fromConfig(&cfg.Theme.Post.Author)
 	t.Post.Subject = t.fromConfig(&cfg.Theme.Post.Subject)
