@@ -60,7 +60,9 @@ type Model struct {
 
 	glam *glamour.TermRenderer
 
-	focused string
+	focused  string
+	buffer   string
+	replyIDs []string
 }
 
 func (m Model) Init() tea.Cmd {
@@ -74,6 +76,7 @@ func NewModel(c *ctx.Ctx) Model {
 		ctx:     c,
 		keymap:  DefaultKeyMap,
 		focused: "list",
+		buffer:  "",
 	}
 
 	listDelegate := list.NewDefaultDelegate()
@@ -129,7 +132,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			} else if m.focused == "reply" {
 				m.focused = "post"
+				m.buffer = ""
 				return m, nil
+			}
+
+		default:
+			switch msg.String() {
+			case "1", "2", "3", "4", "5", "6", "7", "8", "9", "0":
+				if m.focused == "post" {
+					m.buffer += msg.String()
+					return m, nil
+				}
+			default:
+				if m.focused != "reply" {
+					m.buffer = ""
+				}
 			}
 		}
 
@@ -211,7 +228,7 @@ func (m Model) View() string {
 
 		bottombar := m.ctx.Theme.DialogBox.Bottombar.
 			Width(m.viewport.Width + 4).
-			Render("r reply · esc close")
+			Render("[#]r reply · esc close")
 
 		ui := lipgloss.JoinVertical(
 			lipgloss.Center,
@@ -236,10 +253,14 @@ func (m Model) View() string {
 	}
 
 	if m.focused == "reply" {
+		title := "Reply"
+		if m.buffer != "" && m.buffer != "0" {
+			title += " to reply #" + m.buffer
+		}
 		titlebar := m.ctx.Theme.DialogBox.Titlebar.Focused.
 			Align(lipgloss.Center).
 			Width(m.viewport.Width - 2).
-			Render("Reply")
+			Render(title)
 
 		m.textarea.SetWidth(m.viewport.Width - 2)
 		m.textarea.SetHeight(6)
@@ -321,7 +342,8 @@ func (m *Model) renderViewport(p *post.Post) string {
 		body,
 	)
 
-	out += m.renderReplies(0, 1, p.Author.Name, &p.Replies)
+	m.replyIDs = []string{p.ID}
+	out += m.renderReplies(0, p.Author.Name, &p.Replies)
 
 	m.focused = "post"
 	return out
@@ -329,7 +351,6 @@ func (m *Model) renderViewport(p *post.Post) string {
 
 func (m *Model) renderReplies(
 	level int,
-	idx int,
 	inReplyTo string,
 	replies *[]reply.Reply,
 ) string {
@@ -356,6 +377,10 @@ func (m *Model) renderReplies(
 
 			author = re.Author.Name
 		}
+
+		m.replyIDs = append(m.replyIDs, re.ID)
+		idx := len(m.replyIDs) - 1
+
 		out += fmt.Sprintf(
 			"\n\n %s %s%s%s\n%s",
 			m.ctx.Theme.Reply.Author.Render(
@@ -372,7 +397,7 @@ func (m *Model) renderReplies(
 		)
 
 		idx++
-		out += m.renderReplies(level+1, idx, re.Author.Name, &re.Replies)
+		out += m.renderReplies(level+1, re.Author.Name, &re.Replies)
 	}
 
 	return out
