@@ -153,7 +153,7 @@ func SetDefaults(cacheDir string) {
 	viper.SetDefault("Theme.PostsList.List.Focused.Padding",
 		[]int{1, 1, 1, 1})
 	viper.SetDefault("Theme.PostsList.List.Focused.Border.Border",
-		lipgloss.RoundedBorder())
+		lipgloss.DoubleBorder())
 	viper.SetDefault("Theme.PostsList.List.Focused.Border.Sides",
 		[]bool{true, true, true, true},
 	)
@@ -166,7 +166,7 @@ func SetDefaults(cacheDir string) {
 	viper.SetDefault("Theme.PostsList.List.Blurred.Padding",
 		[]int{1, 1, 1, 1})
 	viper.SetDefault("Theme.PostsList.List.Blurred.Border.Border",
-		lipgloss.RoundedBorder())
+		lipgloss.DoubleBorder())
 	viper.SetDefault("Theme.PostsList.List.Blurred.Border.Sides",
 		[]bool{true, true, true, true},
 	)
@@ -234,7 +234,7 @@ func SetDefaults(cacheDir string) {
 		[]bool{false, true, true, true},
 	)
 	viper.SetDefault("Theme.DialogBox.Window.Border.Foreground",
-		lipgloss.AdaptiveColor{Light: "#333333", Dark: "#cccccc"})
+		lipgloss.AdaptiveColor{Light: "#ba55d3", Dark: "#ba55d3"})
 
 	// DialogBox Titlebar
 	viper.SetDefault("Theme.DialogBox.Titlebar.Margin",
@@ -244,7 +244,7 @@ func SetDefaults(cacheDir string) {
 	viper.SetDefault("Theme.DialogBox.Titlebar.Foreground",
 		lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#000000"})
 	viper.SetDefault("Theme.DialogBox.Titlebar.Background",
-		lipgloss.AdaptiveColor{Light: "#333333", Dark: "#cccccc"})
+		lipgloss.AdaptiveColor{Light: "#da70d6", Dark: "#da70d6"})
 
 	// DialogBox Bottombar
 	viper.SetDefault("Theme.DialogBox.Bottombar.Margin",
@@ -273,6 +273,6 @@ func SetDefaults(cacheDir string) {
 		[]int{0, 1, 0, 1})
 	viper.SetDefault("Theme.Reply.Author.Foreground",
 		lipgloss.AdaptiveColor{Light: "#000000", Dark: "#00000"})
-	viper.SetDefault("Theme.Reply.Author.Foreground",
-		lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#874BFD"})
+	viper.SetDefault("Theme.Reply.Author.Background",
+		lipgloss.AdaptiveColor{Light: "#5f9ea0", Dark: "#5f9ea0"})
 }

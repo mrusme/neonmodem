@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
@@ -53,6 +54,7 @@ type Model struct {
 	list     list.Model
 	items    []list.Item
 	viewport viewport.Model
+	textarea textarea.Model
 	ctx      *ctx.Ctx
 	a        *aggregator.Aggregator
 
@@ -62,7 +64,7 @@ type Model struct {
 }
 
 func (m Model) Init() tea.Cmd {
-	return nil
+	return m.refresh()
 }
 
 func NewModel(c *ctx.Ctx) Model {
@@ -83,6 +85,10 @@ func NewModel(c *ctx.Ctx) Model {
 	m.list = list.New(m.items, listDelegate, 0, 0)
 	m.list.SetShowTitle(false)
 	m.list.SetShowStatusBar(false)
+
+	m.textarea = textarea.New()
+	m.textarea.Placeholder = "Type in your reply ..."
+
 	m.a, _ = aggregator.New(m.ctx)
 
 	return m
@@ -95,19 +101,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.keymap.Refresh):
-			m.ctx.Loading = true
-			cmds = append(cmds, m.refresh())
+			if m.focused == "list" {
+				m.ctx.Loading = true
+				cmds = append(cmds, m.refresh())
+			} else if m.focused == "post" {
+				m.focused = "reply"
+				return m, m.textarea.Focus()
+			}
 
 		case key.Matches(msg, m.keymap.Select):
-			m.ctx.Loading = true
-			i, ok := m.list.SelectedItem().(post.Post)
-			if ok {
-				cmds = append(cmds, m.loadItem(&i))
+			if m.focused == "list" {
+				m.ctx.Loading = true
+				i, ok := m.list.SelectedItem().(post.Post)
+				if ok {
+					cmds = append(cmds, m.loadItem(&i))
+				}
 			}
 
 		case key.Matches(msg, m.keymap.Close):
 			if m.focused == "post" {
 				m.focused = "list"
+				return m, nil
+			} else if m.focused == "reply" {
+				m.focused = "post"
 				return m, nil
 			}
 		}
@@ -131,7 +147,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		viewportStyle.Height(viewportHeight)
 		m.viewport = viewport.New(viewportWidth-4, viewportHeight-4)
 		m.viewport.Width = viewportWidth - 4
-		m.viewport.Height = viewportHeight - 4
+		m.viewport.Height = viewportHeight + 1
 		// cmds = append(cmds, viewport.Sync(m.viewport))
 
 	case []list.Item:
@@ -152,6 +168,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.list, cmd = m.list.Update(msg)
 	} else if m.focused == "post" {
 		m.viewport, cmd = m.viewport.Update(msg)
+	} else if m.focused == "reply" {
+		if !m.textarea.Focused() {
+			cmds = append(cmds, m.textarea.Focus())
+		}
+		m.textarea, cmd = m.textarea.Update(msg)
 	}
 	cmds = append(cmds, cmd)
 
@@ -172,7 +193,7 @@ func (m Model) View() string {
 		l,
 	))
 
-	if m.focused == "post" {
+	if m.focused == "post" || m.focused == "reply" {
 		titlebar := m.ctx.Theme.DialogBox.Titlebar.
 			Align(lipgloss.Center).
 			Width(m.viewport.Width + 4).
@@ -189,9 +210,40 @@ func (m Model) View() string {
 			bottombar,
 		)
 
-		return helpers.PlaceOverlay(3, 2,
+		tmp := helpers.PlaceOverlay(3, 2,
 			m.ctx.Theme.DialogBox.Window.Render(ui),
 			view.String(), true)
+
+		view = strings.Builder{}
+		view.WriteString(tmp)
+	}
+
+	if m.focused == "reply" {
+		titlebar := m.ctx.Theme.DialogBox.Titlebar.
+			Align(lipgloss.Center).
+			Width(m.viewport.Width - 2).
+			Render("Reply")
+
+		m.textarea.SetWidth(m.viewport.Width - 2)
+		m.textarea.SetHeight(6)
+
+		bottombar := m.ctx.Theme.DialogBox.Bottombar.
+			Width(m.viewport.Width - 2).
+			Render("ctrl+r reply · esc close")
+
+		replyWindow := lipgloss.JoinVertical(
+			lipgloss.Center,
+			titlebar,
+			m.textarea.View(),
+			bottombar,
+		)
+
+		tmp := helpers.PlaceOverlay(5, m.ctx.Screen[1]-21,
+			m.ctx.Theme.DialogBox.Window.Render(replyWindow),
+			view.String(), true)
+
+		view = strings.Builder{}
+		view.WriteString(tmp)
 	}
 
 	return view.String()
@@ -275,7 +327,7 @@ func (m *Model) renderReplies(
 		var author string = ""
 
 		if re.Deleted {
-			body = "\n  DELETED"
+			body = "\n  DELETED\n\n"
 			author = "DELETED"
 		} else {
 			body, err = m.glam.Render(re.Body)
@@ -291,9 +343,9 @@ func (m *Model) renderReplies(
 			m.ctx.Theme.Reply.Author.Render(
 				author,
 			),
-			lipgloss.NewStyle().Foreground(lipgloss.Color("#874BFD")).Render(
-				fmt.Sprintf("writes in reply to %s:", inReplyTo),
-			),
+			lipgloss.NewStyle().
+				Foreground(m.ctx.Theme.Reply.Author.GetBackground()).
+				Render(fmt.Sprintf("writes in reply to %s:", inReplyTo)),
 			body,
 		)
 
