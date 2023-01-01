@@ -93,7 +93,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) View() string {
 	s := strings.Builder{}
-	s.WriteString(m.header.View() + "\n\n")
+	s.WriteString(m.header.View() + "\n")
 	s.WriteString(m.views[m.currentView].View())
 	return s.String()
 }
