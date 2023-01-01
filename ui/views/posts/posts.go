@@ -64,7 +64,9 @@ type Model struct {
 }
 
 func (m Model) Init() tea.Cmd {
-	return m.refresh()
+	// TODO: Doesn't seem to be working
+	// return m.refresh()
+	return nil
 }
 
 func NewModel(c *ctx.Ctx) Model {
@@ -88,6 +90,7 @@ func NewModel(c *ctx.Ctx) Model {
 
 	m.textarea = textarea.New()
 	m.textarea.Placeholder = "Type in your reply ..."
+	m.textarea.Prompt = ""
 
 	m.a, _ = aggregator.New(m.ctx)
 
@@ -120,6 +123,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, m.keymap.Close):
 			if m.focused == "post" {
+				// Let's make sure we reset the texarea
+				m.textarea.Reset()
 				m.focused = "list"
 				return m, nil
 			} else if m.focused == "reply" {
