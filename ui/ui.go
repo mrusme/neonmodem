@@ -52,16 +52,7 @@ func NewModel(c *ctx.Ctx) Model {
 	}
 
 	m.header = header.NewModel(m.ctx)
-	for _, capability := range (*m.ctx.Systems[0]).GetCapabilities() { // TODO
-		switch capability.ID {
-		case "posts":
-			m.views = append(m.views, posts.NewModel(m.ctx))
-			// case "groups":
-			// 	m.views = append(m.views, groups.NewModel(m.ctx))
-			// case "search":
-			// 	m.views = append(m.views, search.NewModel(m.ctx))
-		}
-	}
+	m.views = append(m.views, posts.NewModel(m.ctx))
 
 	return m
 }
