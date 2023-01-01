@@ -158,7 +158,7 @@ func SetDefaults(cacheDir string) {
 		[]bool{true, true, true, true},
 	)
 	viper.SetDefault("Theme.PostsList.List.Focused.Border.Foreground",
-		lipgloss.AdaptiveColor{Light: "#333333", Dark: "#cccccc"})
+		lipgloss.AdaptiveColor{Light: "#00ffff", Dark: "#00ffff"})
 
 	// PostsList List:Blurred
 	viper.SetDefault("Theme.PostsList.List.Blurred.Margin",
@@ -194,21 +194,21 @@ func SetDefaults(cacheDir string) {
 		[]bool{false, false, false, true},
 	)
 	viper.SetDefault("Theme.PostsList.Item.Selected.Border.Foreground",
-		lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
+		lipgloss.AdaptiveColor{Light: "#ffd500", Dark: "#ffd500"})
 	viper.SetDefault("Theme.PostsList.Item.Selected.Foreground",
-		lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
+		lipgloss.AdaptiveColor{Light: "#F25D94", Dark: "#F25D94"})
 
 	// PostsList ItemDetail:Focused
 	viper.SetDefault("Theme.PostsList.ItemDetail.Focused.Padding",
 		[]int{0, 0, 0, 2})
 	viper.SetDefault("Theme.PostsList.ItemDetail.Focused.Foreground",
-		lipgloss.AdaptiveColor{Light: "#333333", Dark: "#cccccc"})
+		lipgloss.AdaptiveColor{Light: "#666666", Dark: "#4d4d4d"})
 
 	// PostsList ItemDetail:Blurred
 	viper.SetDefault("Theme.PostsList.ItemDetail.Blurred.Padding",
 		[]int{0, 0, 0, 2})
 	viper.SetDefault("Theme.PostsList.ItemDetail.Blurred.Foreground",
-		lipgloss.AdaptiveColor{Light: "#cccccc", Dark: "#333333"})
+		lipgloss.AdaptiveColor{Light: "#666666", Dark: "#4d4d4d"})
 
 	// PostsList ItemDetail:Selected
 	viper.SetDefault("Theme.PostsList.ItemDetail.Selected.Padding",
@@ -219,7 +219,7 @@ func SetDefaults(cacheDir string) {
 		[]bool{false, false, false, true},
 	)
 	viper.SetDefault("Theme.PostsList.ItemDetail.Selected.Border.Foreground",
-		lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
+		lipgloss.AdaptiveColor{Light: "#ffd500", Dark: "#ffd500"})
 	viper.SetDefault("Theme.PostsList.ItemDetail.Selected.Foreground",
 		lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
 
@@ -274,5 +274,5 @@ func SetDefaults(cacheDir string) {
 	viper.SetDefault("Theme.Reply.Author.Foreground",
 		lipgloss.AdaptiveColor{Light: "#000000", Dark: "#00000"})
 	viper.SetDefault("Theme.Reply.Author.Background",
-		lipgloss.AdaptiveColor{Light: "#5f9ea0", Dark: "#5f9ea0"})
+		lipgloss.AdaptiveColor{Light: "#ffd500", Dark: "#ffd500"})
 }

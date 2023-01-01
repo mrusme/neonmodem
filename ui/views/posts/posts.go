@@ -301,7 +301,7 @@ func (m *Model) renderViewport(p *post.Post) string {
 		body = p.Body
 	}
 	out += fmt.Sprintf(
-		" %s\n %s\n%s",
+		" %s\n\n %s\n%s",
 		m.ctx.Theme.Post.Author.Render(
 			fmt.Sprintf("%s %s:", p.Author.Name, adj),
 		),
@@ -309,7 +309,7 @@ func (m *Model) renderViewport(p *post.Post) string {
 		body,
 	)
 
-	out += m.renderReplies(0, p.Author.Name, &p.Replies)
+	out += m.renderReplies(0, 1, p.Author.Name, &p.Replies)
 
 	m.focused = "post"
 	return out
@@ -317,6 +317,7 @@ func (m *Model) renderViewport(p *post.Post) string {
 
 func (m *Model) renderReplies(
 	level int,
+	idx int,
 	inReplyTo string,
 	replies *[]reply.Reply,
 ) string {
@@ -344,17 +345,22 @@ func (m *Model) renderReplies(
 			author = re.Author.Name
 		}
 		out += fmt.Sprintf(
-			"\n\n %s %s\n%s",
+			"\n\n %s %s%s%s\n%s",
 			m.ctx.Theme.Reply.Author.Render(
 				author,
 			),
 			lipgloss.NewStyle().
 				Foreground(m.ctx.Theme.Reply.Author.GetBackground()).
 				Render(fmt.Sprintf("writes in reply to %s:", inReplyTo)),
+			strings.Repeat(" ", (m.viewport.Width-len(author)-len(inReplyTo)-26)),
+			lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#777777")).
+				Render(fmt.Sprintf("#%d", idx)),
 			body,
 		)
 
-		out += m.renderReplies(level+1, re.Author.Name, &re.Replies)
+		idx++
+		out += m.renderReplies(level+1, idx, re.Author.Name, &re.Replies)
 	}
 
 	return out
