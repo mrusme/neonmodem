@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/mrusme/gobbs/ui/ctx"
-	"github.com/mrusme/gobbs/ui/navigation"
+	"github.com/mrusme/gobbs/ui/header"
 	"github.com/mrusme/gobbs/ui/views/posts"
 
 	"github.com/mrusme/gobbs/ui/views"
@@ -16,24 +16,9 @@ import (
 )
 
 type KeyMap struct {
-	FirstTab      key.Binding
-	SecondTab     key.Binding
-	ThirdTab      key.Binding
-	FourthTab     key.Binding
-	FifthTab      key.Binding
-	SixthTab      key.Binding
-	SeventhTab    key.Binding
-	EightTab      key.Binding
-	NinthTab      key.Binding
-	TenthTab      key.Binding
-	EleventhTab   key.Binding
-	TwelfthTab    key.Binding
-	ThirteenthTab key.Binding
-	PrevTab       key.Binding
-	NextTab       key.Binding
-	Up            key.Binding
-	Down          key.Binding
-	Quit          key.Binding
+	Up   key.Binding
+	Down key.Binding
+	Quit key.Binding
 }
 
 var DefaultKeyMap = KeyMap{
@@ -52,19 +37,21 @@ var DefaultKeyMap = KeyMap{
 }
 
 type Model struct {
-	keymap KeyMap
-	nav    navigation.Model
-	views  []views.View
-	ctx    *ctx.Ctx
+	keymap      KeyMap
+	header      header.Model
+	views       []views.View
+	currentView int
+	ctx         *ctx.Ctx
 }
 
 func NewModel(c *ctx.Ctx) Model {
 	m := Model{
-		keymap: DefaultKeyMap,
-		ctx:    c,
+		keymap:      DefaultKeyMap,
+		currentView: 0,
+		ctx:         c,
 	}
 
-	m.nav = navigation.NewModel(m.ctx)
+	m.header = header.NewModel(m.ctx)
 	for _, capability := range (*m.ctx.Systems[0]).GetCapabilities() { // TODO
 		switch capability.ID {
 		case "posts":
@@ -102,12 +89,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	v, cmd := m.views[m.nav.CurrentId].Update(msg)
-	m.views[m.nav.CurrentId] = v
+	v, cmd := m.views[m.currentView].Update(msg)
+	m.views[m.currentView] = v
 	cmds = append(cmds, cmd)
 
-	nav, cmd := m.nav.Update(msg)
-	m.nav = nav
+	header, cmd := m.header.Update(msg)
+	m.header = header
 	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
@@ -115,8 +102,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) View() string {
 	s := strings.Builder{}
-	s.WriteString(m.nav.View() + "\n\n")
-	s.WriteString(m.views[m.nav.CurrentId].View())
+	s.WriteString(m.header.View() + "\n\n")
+	s.WriteString(m.views[m.currentView].View())
 	return s.String()
 }
 
