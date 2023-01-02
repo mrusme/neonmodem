@@ -286,8 +286,10 @@ func (m Model) View() string {
 			Width(m.viewport.Width - 2).
 			Render(title)
 
-		m.textarea.SetWidth(m.viewport.Width - 2)
-		m.textarea.SetHeight(6)
+		textareaWidth := m.viewport.Width - 2
+		textareaHeight := 6
+		m.textarea.SetWidth(textareaWidth)
+		m.textarea.SetHeight(textareaHeight)
 
 		bottombar := m.ctx.Theme.DialogBox.Bottombar.
 			Width(m.viewport.Width - 2).
@@ -300,14 +302,17 @@ func (m Model) View() string {
 			bottombar,
 		)
 
-		tmp := helpers.PlaceOverlay(5, m.ctx.Screen[1]-21,
+		replyWindowX := 5
+		replyWindowY := m.ctx.Screen[1] - 21
+
+		tmp := helpers.PlaceOverlay(replyWindowX, replyWindowY,
 			m.ctx.Theme.DialogBox.Window.Focused.Render(replyWindow),
 			view.String(), true)
 
-		m.viewcacheTextareaXY[0] = 6
-		m.viewcacheTextareaXY[1] = m.ctx.Screen[1] - 19
-		m.viewcacheTextareaXY[2] = m.viewport.Width - 2
-		m.viewcacheTextareaXY[3] = 6
+		m.viewcacheTextareaXY[0] = replyWindowX + 1
+		m.viewcacheTextareaXY[1] = replyWindowY + 2
+		m.viewcacheTextareaXY[2] = textareaWidth
+		m.viewcacheTextareaXY[3] = textareaHeight
 
 		view = strings.Builder{}
 		view.WriteString(tmp)
