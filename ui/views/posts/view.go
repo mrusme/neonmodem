@@ -18,7 +18,7 @@ func (m Model) View() string {
 func (m Model) buildView(cached bool) string {
 	var view strings.Builder = strings.Builder{}
 
-	if cached && m.focused == "reply" && m.viewcache != "" {
+	if cached && m.WMisFocused("reply") && m.viewcache != "" {
 		m.ctx.Logger.Debugln("Cached View()")
 
 		m.textarea.SetWidth(m.viewcacheTextareaXY[2])
@@ -29,7 +29,7 @@ func (m Model) buildView(cached bool) string {
 
 	m.ctx.Logger.Debugln("View()")
 	var l string = ""
-	if m.focused == "list" {
+	if m.WMisFocused("list") {
 		l = m.ctx.Theme.PostsList.List.Focused.Render(m.list.View())
 	} else {
 		l = m.ctx.Theme.PostsList.List.Blurred.Render(m.list.View())
@@ -39,9 +39,9 @@ func (m Model) buildView(cached bool) string {
 		l,
 	))
 
-	if m.focused == "post" || m.focused == "reply" {
+	if m.WMisOpen("post") {
 		var style lipgloss.Style
-		if m.focused == "post" {
+		if m.WMisFocused("post") {
 			style = m.ctx.Theme.DialogBox.Titlebar.Focused
 		} else {
 			style = m.ctx.Theme.DialogBox.Titlebar.Blurred
@@ -62,7 +62,7 @@ func (m Model) buildView(cached bool) string {
 		)
 
 		var tmp string
-		if m.focused == "post" {
+		if m.WMisFocused("post") {
 			tmp = helpers.PlaceOverlay(3, 2,
 				m.ctx.Theme.DialogBox.Window.Focused.Render(ui),
 				view.String(), true)
@@ -76,7 +76,7 @@ func (m Model) buildView(cached bool) string {
 		view.WriteString(tmp)
 	}
 
-	if m.focused == "reply" {
+	if m.WMisOpen("reply") {
 		title := "Reply"
 		if m.buffer != "" && m.buffer != "0" {
 			title += " to reply #" + m.buffer
@@ -157,7 +157,6 @@ func (m *Model) renderViewport(p *post.Post) string {
 	m.replyIDs = []string{p.ID}
 	out += m.renderReplies(0, p.Author.Name, &p.Replies)
 
-	m.focused = "post"
 	return out
 }
 

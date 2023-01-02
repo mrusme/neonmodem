@@ -2,6 +2,7 @@ package posts
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -51,19 +52,21 @@ var DefaultKeyMap = KeyMap{
 }
 
 type Model struct {
+	ctx      *ctx.Ctx
 	keymap   KeyMap
 	list     list.Model
 	items    []list.Item
 	viewport viewport.Model
 	textarea textarea.Model
-	ctx      *ctx.Ctx
-	a        *aggregator.Aggregator
 
+	a    *aggregator.Aggregator
 	glam *glamour.TermRenderer
 
-	focused             string
-	buffer              string
-	replyIDs            []string
+	wm []string
+
+	buffer   string
+	replyIDs []string
+
 	viewcache           string
 	viewcacheTextareaXY []int
 }
@@ -76,10 +79,14 @@ func (m Model) Init() tea.Cmd {
 
 func NewModel(c *ctx.Ctx) Model {
 	m := Model{
-		ctx:                 c,
-		keymap:              DefaultKeyMap,
-		focused:             "list",
-		buffer:              "",
+		ctx:    c,
+		keymap: DefaultKeyMap,
+
+		wm: []string{WM_ROOT_ID},
+
+		buffer:   "",
+		replyIDs: []string{},
+
 		viewcache:           "",
 		viewcacheTextareaXY: []int{0, 0, 0, 0},
 	}
@@ -111,21 +118,35 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
+
 		case key.Matches(msg, m.keymap.Refresh):
-			if m.focused == "list" {
+			if m.WMisFocused("list") {
 				m.ctx.Loading = true
 				cmds = append(cmds, m.refresh())
 			}
 
 		case key.Matches(msg, m.keymap.Select):
-			if m.focused == "list" {
+			switch m.WMFocused() {
+
+			case "list":
 				i, ok := m.list.SelectedItem().(post.Post)
 				if ok {
 					m.ctx.Loading = true
 					cmds = append(cmds, m.loadItem(&i))
 				}
-			} else if m.focused == "post" {
-				m.focused = "reply"
+
+			case "post":
+				if m.buffer != "" {
+					replyToID, err := strconv.Atoi(m.buffer)
+					if err != nil {
+						// TODO: Handle error
+					}
+
+					if replyToID >= len(m.replyIDs) {
+						// TODO: Handle error
+					}
+				}
+				m.WMOpen("reply")
 
 				m.ctx.Logger.Debugln("caching view")
 				m.ctx.Logger.Debugf("buffer: %s", m.buffer)
@@ -135,28 +156,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case key.Matches(msg, m.keymap.Esc), key.Matches(msg, m.keymap.Quit):
-			if m.focused == "list" {
+			switch m.WMFocused() {
+
+			case "list":
 				return m, tea.Quit
-			} else if m.focused == "post" {
+
+			case "post":
 				// Let's make sure we reset the texarea
 				m.textarea.Reset()
-				m.focused = "list"
+				m.WMClose("post")
 				return m, nil
-			} else if m.focused == "reply" && key.Matches(msg, m.keymap.Esc) {
-				m.focused = "post"
-				m.buffer = ""
-				return m, nil
+
+			case "reply":
+				if key.Matches(msg, m.keymap.Esc) {
+					m.buffer = ""
+					m.WMClose("reply")
+					return m, nil
+				}
 			}
 
 		default:
 			switch msg.String() {
 			case "1", "2", "3", "4", "5", "6", "7", "8", "9", "0":
-				if m.focused == "post" {
+				if m.WMisFocused("post") {
 					m.buffer += msg.String()
 					return m, nil
 				}
 			default:
-				if m.focused != "reply" {
+				if m.WMFocused() != "reply" {
 					m.buffer = ""
 				}
 			}
@@ -192,6 +219,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case *post.Post:
 		m.viewport.SetContent(m.renderViewport(msg))
+		m.WMOpen("post")
 		m.ctx.Loading = false
 		return m, nil
 
@@ -199,11 +227,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 
-	if m.focused == "list" {
+	switch m.WMFocused() {
+	case "list":
 		m.list, cmd = m.list.Update(msg)
-	} else if m.focused == "post" {
+	case "post":
 		m.viewport, cmd = m.viewport.Update(msg)
-	} else if m.focused == "reply" {
+	case "reply":
 		if !m.textarea.Focused() {
 			cmds = append(cmds, m.textarea.Focus())
 		}
