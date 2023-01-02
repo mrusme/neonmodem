@@ -13,13 +13,14 @@ import (
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/system/adapter"
+	"github.com/mrusme/gobbs/system/discourse/api"
 	"go.uber.org/zap"
 )
 
 type System struct {
 	config map[string]interface{}
 	logger *zap.SugaredLogger
-	client *Client
+	client *api.Client
 }
 
 func (sys *System) GetConfig() map[string]interface{} {
@@ -64,7 +65,7 @@ func (sys *System) Load() error {
 		credentials[k] = v.(string)
 	}
 
-	sys.client = NewClient(&ClientConfig{
+	sys.client = api.NewClient(&api.ClientConfig{
 		Endpoint:    url.(string),
 		Credentials: credentials,
 		HTTPClient:  http.DefaultClient,

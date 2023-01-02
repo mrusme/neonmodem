@@ -1,4 +1,4 @@
-package discourse
+package api
 
 import (
 	"context"

@@ -1,4 +1,4 @@
-package discourse
+package api
 
 import (
 	"context"
@@ -7,8 +7,16 @@ import (
 
 const PostsBaseURL = "/posts"
 
-type ListPostsResponse struct {
-	LatestPosts []PostModel `json:"latest_posts,omitempty"`
+type CreatePostModel struct {
+	Title            string `json:"title,omitempty"`
+	Raw              string `json:"raw"`
+	TopicID          int    `json:"topic_id,omitempty"`
+	Category         int    `json:"category,omitempty"`
+	TargetRecipients string `json:"targe_recipients,omitempty"`
+	Archetype        string `json:"archetype,omitempty"`
+	CreatedAt        string `json:"created_at"`
+	EmbedURL         string `json:"embed_url,omitempty"`
+	ExternalID       string `json:"external_id,omitempty"`
 }
 
 type PostModel struct {
@@ -65,7 +73,15 @@ type PostModel struct {
 	ReviewableScorePendingCount int    `json:"reviewable_score_pending_count"`
 }
 
+type ListPostsResponse struct {
+	LatestPosts []PostModel `json:"latest_posts,omitempty"`
+}
+
 type PostsService interface {
+	Create(
+		ctx context.Context,
+		w *CreatePostModel,
+	) (PostModel, error)
 	Show(
 		ctx context.Context,
 		id string,
@@ -77,6 +93,26 @@ type PostsService interface {
 
 type PostServiceHandler struct {
 	client *Client
+}
+
+// Create
+func (a *PostServiceHandler) Create(
+	ctx context.Context,
+	w *CreatePostModel,
+) (PostModel, error) {
+	uri := PostsBaseURL + ".json"
+
+	req, err := a.client.NewRequest(ctx, http.MethodPost, uri, w)
+	if err != nil {
+		return PostModel{}, err
+	}
+
+	response := new(Response)
+	if err = a.client.Do(ctx, req, response); err != nil {
+		return PostModel{}, err
+	}
+
+	return response.Post, nil
 }
 
 // Show
