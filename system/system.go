@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/mrusme/gobbs/models/post"
+	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/system/adapter"
 	"github.com/mrusme/gobbs/system/discourse"
 	"github.com/mrusme/gobbs/system/hackernews"
@@ -12,6 +13,8 @@ import (
 )
 
 type System interface {
+	SetID(id int)
+	GetID() int
 	GetConfig() map[string]interface{}
 	SetConfig(cfg *map[string]interface{})
 	SetLogger(logger *zap.SugaredLogger)
@@ -20,8 +23,10 @@ type System interface {
 	Connect(sysURL string) error
 	Load() error
 
-	ListPosts(sysIdx int) ([]post.Post, error)
+	ListPosts() ([]post.Post, error)
 	LoadPost(p *post.Post) error
+	CreatePost(p *post.Post) error
+	CreateReply(r *reply.Reply) error
 }
 
 func New(

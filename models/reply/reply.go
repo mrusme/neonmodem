@@ -7,7 +7,8 @@ import (
 )
 
 type Reply struct {
-	ID string
+	ID        string
+	InReplyTo string
 
 	Body string
 
@@ -18,4 +19,6 @@ type Reply struct {
 	Author author.Author
 
 	Replies []Reply
+
+	SysIDX int
 }

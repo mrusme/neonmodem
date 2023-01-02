@@ -35,3 +35,7 @@ func (c *Ctx) AddSystem(sys *system.System) error {
 	c.Systems = append(c.Systems, sys)
 	return nil
 }
+
+func (c *Ctx) NumSystems() int {
+	return len(c.Systems)
+}

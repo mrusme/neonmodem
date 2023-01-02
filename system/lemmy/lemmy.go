@@ -17,9 +17,18 @@ import (
 )
 
 type System struct {
+	ID     int
 	config map[string]interface{}
 	logger *zap.SugaredLogger
 	client *lemmy.Client
+}
+
+func (sys *System) GetID() int {
+	return sys.ID
+}
+
+func (sys *System) SetID(id int) {
+	sys.ID = id
 }
 
 func (sys *System) GetConfig() map[string]interface{} {
@@ -81,7 +90,7 @@ func (sys *System) Load() error {
 	return nil
 }
 
-func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
+func (sys *System) ListPosts() ([]post.Post, error) {
 	resp, err := sys.client.Posts(context.Background(), types.GetPosts{
 		Type:  types.NewOptional(types.ListingSubscribed),
 		Sort:  types.NewOptional(types.New),
@@ -133,7 +142,7 @@ func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
 				Name: i.Community.Name,
 			},
 
-			SysIDX: sysIdx,
+			SysIDX: sys.ID,
 		})
 	}
 
@@ -177,7 +186,17 @@ func (sys *System) LoadPost(p *post.Post) error {
 				ID:   strconv.Itoa(i.Comment.CreatorID),
 				Name: i.Creator.Name,
 			},
+
+			SysIDX: sys.ID,
 		})
 	}
+	return nil
+}
+
+func (sys *System) CreatePost(p *post.Post) error {
+	return nil
+}
+
+func (sys *System) CreateReply(r *reply.Reply) error {
 	return nil
 }

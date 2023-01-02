@@ -92,6 +92,7 @@ func loadSystems(c *ctx.Ctx) []error {
 		}
 
 		c.AddSystem(&sys)
+		sys.SetID(c.NumSystems() - 1)
 	}
 
 	return errs

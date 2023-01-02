@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/mrusme/gobbs/models/post"
+	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/ui/ctx"
 )
 
@@ -36,7 +37,7 @@ func (a *Aggregator) ListPosts() ([]post.Post, []error) {
 	}
 
 	for idx, sys := range a.ctx.Systems {
-		sysPosts, err := (*sys).ListPosts(idx)
+		sysPosts, err := (*sys).ListPosts()
 		if err != nil {
 			errs[idx] = err
 			continue
@@ -59,4 +60,12 @@ func (a *Aggregator) ListPosts() ([]post.Post, []error) {
 
 func (a *Aggregator) LoadPost(p *post.Post) error {
 	return (*a.ctx.Systems[p.SysIDX]).LoadPost(p)
+}
+
+func (a *Aggregator) CreatePost(p *post.Post) error {
+	return (*a.ctx.Systems[p.SysIDX]).CreatePost(p)
+}
+
+func (a *Aggregator) CreateReply(r *reply.Reply) error {
+	return (*a.ctx.Systems[r.SysIDX]).CreateReply(r)
 }

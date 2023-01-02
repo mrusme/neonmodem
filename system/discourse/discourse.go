@@ -18,9 +18,18 @@ import (
 )
 
 type System struct {
+	ID     int
 	config map[string]interface{}
 	logger *zap.SugaredLogger
 	client *api.Client
+}
+
+func (sys *System) GetID() int {
+	return sys.ID
+}
+
+func (sys *System) SetID(id int) {
+	sys.ID = id
 }
 
 func (sys *System) GetConfig() map[string]interface{} {
@@ -75,7 +84,7 @@ func (sys *System) Load() error {
 	return nil
 }
 
-func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
+func (sys *System) ListPosts() ([]post.Post, error) {
 	cats, err := sys.client.Categories.List(context.Background())
 	if err != nil {
 		return []post.Post{}, err
@@ -143,7 +152,7 @@ func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
 				Name: forumName,
 			},
 
-			SysIDX: sysIdx,
+			SysIDX: sys.ID,
 		})
 	}
 
@@ -184,8 +193,54 @@ func (sys *System) LoadPost(p *post.Post) error {
 				ID:   strconv.Itoa(i.UserID),
 				Name: i.Name,
 			},
+
+			SysIDX: sys.ID,
 		})
 	}
+
+	return nil
+}
+
+func (sys *System) CreatePost(p *post.Post) error {
+	categoryID, err := strconv.Atoi(p.Forum.ID)
+	if err != nil {
+		return err
+	}
+
+	ap := api.CreatePostModel{
+		Title:     p.Subject,
+		Raw:       p.Body,
+		Category:  categoryID,
+		CreatedAt: time.Now().Format(time.RFC3339),
+	}
+
+	cp, err := sys.client.Posts.Create(context.Background(), &ap)
+	if err != nil {
+		return err
+	}
+
+	p.ID = strconv.Itoa(cp.ID)
+	return nil
+}
+
+func (sys *System) CreateReply(r *reply.Reply) error {
+	inReplyTo, err := strconv.Atoi(r.InReplyTo)
+	if err != nil {
+		return err
+	}
+
+	ap := api.CreatePostModel{
+		Raw:       r.Body,
+		TopicID:   inReplyTo,
+		CreatedAt: time.Now().Format(time.RFC3339),
+	}
+
+	cp, err := sys.client.Posts.Create(context.Background(), &ap)
+	if err != nil {
+		return err
+	}
+
+	r.ID = strconv.Itoa(cp.ID)
 
 	return nil
 }

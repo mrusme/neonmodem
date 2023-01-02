@@ -16,9 +16,18 @@ import (
 )
 
 type System struct {
+	ID     int
 	config map[string]interface{}
 	logger *zap.SugaredLogger
 	client *hn.Client
+}
+
+func (sys *System) GetID() int {
+	return sys.ID
+}
+
+func (sys *System) SetID(id int) {
+	sys.ID = id
 }
 
 func (sys *System) GetConfig() map[string]interface{} {
@@ -57,7 +66,7 @@ func (sys *System) Load() error {
 	return nil
 }
 
-func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
+func (sys *System) ListPosts() ([]post.Post, error) {
 	stories, err := sys.client.TopStories(context.Background())
 	if err != nil {
 		return []post.Post{}, err
@@ -121,7 +130,7 @@ func (sys *System) ListPosts(sysIdx int) ([]post.Post, error) {
 
 			Replies: replies,
 
-			SysIDX: sysIdx,
+			SysIDX: sys.ID,
 		})
 	}
 
@@ -168,6 +177,8 @@ func (sys *System) loadReplies(replies *[]reply.Reply) error {
 			Name: i.By,
 		}
 
+		re.SysIDX = sys.ID
+
 		for _, commentID := range i.Kids {
 			re.Replies = append(re.Replies, reply.Reply{
 				ID: strconv.Itoa(commentID),
@@ -179,5 +190,13 @@ func (sys *System) loadReplies(replies *[]reply.Reply) error {
 		}
 	}
 
+	return nil
+}
+
+func (sys *System) CreatePost(p *post.Post) error {
+	return nil
+}
+
+func (sys *System) CreateReply(r *reply.Reply) error {
 	return nil
 }
