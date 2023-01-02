@@ -212,7 +212,7 @@ func (sys *System) CreatePost(p *post.Post) error {
 		Title:     p.Subject,
 		Raw:       p.Body,
 		Category:  categoryID,
-		CreatedAt: strconv.FormatInt(time.Now().Unix(), 10),
+		CreatedAt: time.Now().Format(time.RFC3339Nano),
 	}
 
 	cp, err := sys.client.Posts.Create(context.Background(), &ap)
@@ -239,7 +239,7 @@ func (sys *System) CreateReply(r *reply.Reply) error {
 		Raw:               r.Body,
 		TopicID:           inReplyTo,
 		ReplyToPostNumber: ID,
-		CreatedAt:         strconv.FormatInt(time.Now().Unix(), 10),
+		CreatedAt:         time.Now().Format(time.RFC3339Nano),
 	}
 
 	cp, err := sys.client.Posts.Create(context.Background(), &ap)
