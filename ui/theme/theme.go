@@ -24,19 +24,19 @@ type Theme struct {
 			Blurred lipgloss.Style
 		}
 		Item struct {
-			Focused lipgloss.Style
-			Blurred lipgloss.Style
+			Focused  lipgloss.Style
+			Blurred  lipgloss.Style
 			Selected lipgloss.Style
 		}
 		ItemDetail struct {
-			Focused lipgloss.Style
-			Blurred lipgloss.Style
+			Focused  lipgloss.Style
+			Blurred  lipgloss.Style
 			Selected lipgloss.Style
 		}
 	}
 
 	Post struct {
-		Author lipgloss.Style
+		Author  lipgloss.Style
 		Subject lipgloss.Style
 	}
 
@@ -45,25 +45,41 @@ type Theme struct {
 	}
 }
 
-func New(cfg *config.Config) (*Theme) {
+func New(cfg *config.Config) *Theme {
 	t := new(Theme)
 
-	t.PostsList.List.Focused = t.fromConfig(&cfg.Theme.PostsList.List.Focused)
-	t.PostsList.List.Blurred = t.fromConfig(&cfg.Theme.PostsList.List.Blurred)
-	t.PostsList.Item.Focused = t.fromConfig(&cfg.Theme.PostsList.Item.Focused)
-	t.PostsList.Item.Blurred = t.fromConfig(&cfg.Theme.PostsList.Item.Blurred)
-	t.PostsList.Item.Selected = t.fromConfig(&cfg.Theme.PostsList.Item.Selected)
-	t.PostsList.ItemDetail.Focused = t.fromConfig(&cfg.Theme.PostsList.ItemDetail.Focused)
-	t.PostsList.ItemDetail.Blurred = t.fromConfig(&cfg.Theme.PostsList.ItemDetail.Blurred)
-	t.PostsList.ItemDetail.Selected = t.fromConfig(&cfg.Theme.PostsList.ItemDetail.Selected)
-	t.DialogBox.Window.Focused = t.fromConfig(&cfg.Theme.DialogBox.Window.Focused)
-	t.DialogBox.Window.Blurred = t.fromConfig(&cfg.Theme.DialogBox.Window.Blurred)
-	t.DialogBox.Titlebar.Focused = t.fromConfig(&cfg.Theme.DialogBox.Titlebar.Focused)
-	t.DialogBox.Titlebar.Blurred = t.fromConfig(&cfg.Theme.DialogBox.Titlebar.Blurred)
-	t.DialogBox.Bottombar = t.fromConfig(&cfg.Theme.DialogBox.Bottombar)
-	t.Post.Author = t.fromConfig(&cfg.Theme.Post.Author)
-	t.Post.Subject = t.fromConfig(&cfg.Theme.Post.Subject)
-	t.Reply.Author = t.fromConfig(&cfg.Theme.Reply.Author)
+	t.PostsList.List.Focused =
+		t.fromConfig(&cfg.Theme.PostsList.List.Focused)
+	t.PostsList.List.Blurred =
+		t.fromConfig(&cfg.Theme.PostsList.List.Blurred)
+	t.PostsList.Item.Focused =
+		t.fromConfig(&cfg.Theme.PostsList.Item.Focused)
+	t.PostsList.Item.Blurred =
+		t.fromConfig(&cfg.Theme.PostsList.Item.Blurred)
+	t.PostsList.Item.Selected =
+		t.fromConfig(&cfg.Theme.PostsList.Item.Selected)
+	t.PostsList.ItemDetail.Focused =
+		t.fromConfig(&cfg.Theme.PostsList.ItemDetail.Focused)
+	t.PostsList.ItemDetail.Blurred =
+		t.fromConfig(&cfg.Theme.PostsList.ItemDetail.Blurred)
+	t.PostsList.ItemDetail.Selected =
+		t.fromConfig(&cfg.Theme.PostsList.ItemDetail.Selected)
+	t.DialogBox.Window.Focused =
+		t.fromConfig(&cfg.Theme.DialogBox.Window.Focused)
+	t.DialogBox.Window.Blurred =
+		t.fromConfig(&cfg.Theme.DialogBox.Window.Blurred)
+	t.DialogBox.Titlebar.Focused =
+		t.fromConfig(&cfg.Theme.DialogBox.Titlebar.Focused)
+	t.DialogBox.Titlebar.Blurred =
+		t.fromConfig(&cfg.Theme.DialogBox.Titlebar.Blurred)
+	t.DialogBox.Bottombar =
+		t.fromConfig(&cfg.Theme.DialogBox.Bottombar)
+	t.Post.Author =
+		t.fromConfig(&cfg.Theme.Post.Author)
+	t.Post.Subject =
+		t.fromConfig(&cfg.Theme.Post.Subject)
+	t.Reply.Author =
+		t.fromConfig(&cfg.Theme.Reply.Author)
 	return t
 }
 
@@ -77,4 +93,3 @@ func (t *Theme) fromConfig(itemCfg *config.ThemeItemConfig) lipgloss.Style {
 		Foreground(itemCfg.Foreground).
 		Background(itemCfg.Background)
 }
-

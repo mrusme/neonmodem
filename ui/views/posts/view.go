@@ -24,7 +24,10 @@ func (m Model) buildView(cached bool) string {
 		m.textarea.SetWidth(m.viewcacheTextareaXY[2])
 		m.textarea.SetHeight(m.viewcacheTextareaXY[3])
 
-		return helpers.PlaceOverlay(m.viewcacheTextareaXY[0], m.viewcacheTextareaXY[1], m.textarea.View(), m.viewcache, false)
+		return helpers.PlaceOverlay(
+			m.viewcacheTextareaXY[0], m.viewcacheTextareaXY[1],
+			m.textarea.View(), m.viewcache,
+			false)
 	}
 
 	m.ctx.Logger.Debugln("View()")

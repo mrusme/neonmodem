@@ -47,14 +47,20 @@ func (sys *System) Connect(sysURL string) error {
 		return err
 	}
 	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
-	privateKeyPEM := string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privateKeyBytes}))
+	privateKeyPEM := string(pem.EncodeToMemory(&pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: privateKeyBytes,
+	}))
 
 	// Public key
 	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
 	if err != nil {
 		return err
 	}
-	publicKeyPEM := string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicKeyBytes}))
+	publicKeyPEM := string(pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: publicKeyBytes,
+	}))
 
 	// Client ID
 	uuidV4, err := uuid.NewRandom()
