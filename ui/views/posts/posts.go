@@ -36,15 +36,15 @@ type KeyMap struct {
 
 var DefaultKeyMap = KeyMap{
 	Refresh: key.NewBinding(
-		key.WithKeys("r", "R"),
-		key.WithHelp("r/R", "refresh"),
+		key.WithKeys("ctrl+r"),
+		key.WithHelp("ctrl+r", "refresh"),
 	),
 	Select: key.NewBinding(
-		key.WithKeys("enter"),
-		key.WithHelp("enter", "select"),
+		key.WithKeys("r", "enter"),
+		key.WithHelp("r/enter", "read"),
 	),
 	Close: key.NewBinding(
-		key.WithKeys("esc"),
+		key.WithKeys("esc", "q"),
 		key.WithHelp("esc", "close"),
 	),
 }
@@ -60,9 +60,10 @@ type Model struct {
 
 	glam *glamour.TermRenderer
 
-	focused  string
-	buffer   string
-	replyIDs []string
+	focused   string
+	buffer    string
+	replyIDs  []string
+	viewcache string
 }
 
 func (m Model) Init() tea.Cmd {
@@ -110,22 +111,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.focused == "list" {
 				m.ctx.Loading = true
 				cmds = append(cmds, m.refresh())
+			}
+
+		case key.Matches(msg, m.keymap.Select):
+			if m.focused == "list" {
+				i, ok := m.list.SelectedItem().(post.Post)
+				if ok {
+					m.ctx.Loading = true
+					cmds = append(cmds, m.loadItem(&i))
+				}
 			} else if m.focused == "post" {
 				m.focused = "reply"
 				return m, m.textarea.Focus()
 			}
 
-		case key.Matches(msg, m.keymap.Select):
-			if m.focused == "list" {
-				m.ctx.Loading = true
-				i, ok := m.list.SelectedItem().(post.Post)
-				if ok {
-					cmds = append(cmds, m.loadItem(&i))
-				}
-			}
-
 		case key.Matches(msg, m.keymap.Close):
-			if m.focused == "post" {
+			if m.focused == "list" {
+				return m, tea.Quit
+			} else if m.focused == "post" {
 				// Let's make sure we reset the texarea
 				m.textarea.Reset()
 				m.focused = "list"
@@ -176,6 +179,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.items = msg
 		m.list.SetItems(m.items)
 		m.ctx.Loading = false
+		return m, nil
 
 	case *post.Post:
 		m.viewport.SetContent(m.renderViewport(msg))
@@ -204,6 +208,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 	var view strings.Builder = strings.Builder{}
 
+	if m.focused == "reply" && m.viewcache != "" {
+		return helpers.PlaceOverlay(3, 2, m.textarea.View(), m.viewcache, false)
+	}
+
+	m.ctx.Logger.Debugln("View()")
 	var l string = ""
 	if m.focused == "list" {
 		l = m.ctx.Theme.PostsList.List.Focused.Render(m.list.View())
@@ -284,7 +293,8 @@ func (m Model) View() string {
 		view.WriteString(tmp)
 	}
 
-	return view.String()
+	m.viewcache = view.String()
+	return m.viewcache
 }
 
 func (m *Model) refresh() tea.Cmd {

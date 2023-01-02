@@ -31,8 +31,8 @@ var DefaultKeyMap = KeyMap{
 		key.WithHelp("↓/j", "move down"),
 	),
 	Quit: key.NewBinding(
-		key.WithKeys("q", "ctrl+q"),
-		key.WithHelp("q/Q", "quit"),
+		key.WithKeys("q", "ctrl+q", "escape"),
+		key.WithHelp("q/esc", "quit"),
 	),
 }
 
