@@ -1,4 +1,4 @@
-package postdialog
+package postcreatedialog
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
@@ -16,18 +17,6 @@ import (
 	"github.com/mrusme/gobbs/ui/cmd"
 	"github.com/mrusme/gobbs/ui/ctx"
 	"github.com/mrusme/gobbs/ui/helpers"
-)
-
-var (
-	WIN_ID = "postShow"
-
-	viewportStyle = lipgloss.NewStyle().
-			Margin(0, 0, 0, 0).
-			Padding(0, 0).
-			BorderTop(false).
-			BorderLeft(false).
-			BorderRight(false).
-			BorderBottom(false)
 )
 
 type KeyMap struct {
@@ -63,17 +52,12 @@ var DefaultKeyMap = KeyMap{
 type Model struct {
 	ctx      *ctx.Ctx
 	keymap   KeyMap
+	textarea textarea.Model
 	focused  bool
-	viewport viewport.Model
 
 	a    *aggregator.Aggregator
 	glam *glamour.TermRenderer
 
-	buffer   string
-	replyIDs []string
-
-	activePost  *post.Post
-	allReplies  []*reply.Reply
 	activeReply *reply.Reply
 }
 
@@ -93,9 +77,6 @@ func NewModel(c *ctx.Ctx) Model {
 	m := Model{
 		ctx:    c,
 		keymap: DefaultKeyMap,
-
-		buffer:   "",
-		replyIDs: []string{},
 	}
 
 	m.a, _ = aggregator.New(m.ctx)
@@ -110,37 +91,41 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 
-		case key.Matches(msg, m.keymap.Select):
-			if m.buffer != "" {
-				replyToID, err := strconv.Atoi(m.buffer)
-				if err != nil {
-					// TODO: Handle error
-				}
+		case key.Matches(msg, m.keymap.Reply):
+			replyToIdx, _ := strconv.Atoi(m.buffer)
 
-				if replyToID >= len(m.replyIDs) {
-					// TODO: Handle error
-				}
+			m.ctx.Logger.Debugf("replyToIdx: %d", replyToIdx)
+
+			var irtID string = ""
+			var irtIRT string = ""
+			var irtSysIDX int = 0
+
+			if replyToIdx == 0 {
+				irtID = m.activePost.ID
+				irtSysIDX = m.activePost.SysIDX
+			} else {
+				irt := m.allReplies[(replyToIdx - 1)]
+				irtID = strconv.Itoa(replyToIdx + 1)
+				irtIRT = irt.InReplyTo
+				irtSysIDX = irt.SysIDX
 			}
-			// m.WMOpen("reply")
 
-			m.ctx.Logger.Debugln("caching view")
-			m.ctx.Logger.Debugf("buffer: %s", m.buffer)
-			// m.viewcache = m.buildView(false)
+			r := reply.Reply{
+				ID:        irtID,
+				InReplyTo: irtIRT,
+				Body:      m.textarea.Value(),
+				SysIDX:    irtSysIDX,
+			}
+			err := m.a.CreateReply(&r)
+			if err != nil {
+				m.ctx.Logger.Error(err)
+			}
 
+			m.textarea.Reset()
+			m.buffer = ""
+			m.WMClose("reply")
 			return m, nil
 
-		case key.Matches(msg, m.keymap.Esc), key.Matches(msg, m.keymap.Quit):
-			// m.WMClose("post")
-			return m, nil
-
-		default:
-			switch msg.String() {
-			case "1", "2", "3", "4", "5", "6", "7", "8", "9", "0":
-				m.buffer += msg.String()
-				return m, nil
-			default:
-				m.buffer = ""
-			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -155,40 +140,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.Height = viewportHeight + 1
 		// cmds = append(cmds, viewport.Sync(m.viewport))
 
+	case *post.Post:
+		m.ctx.Logger.Debug("got *post.Post")
+		m.activePost = msg
+		m.viewport.SetContent(m.renderViewport(m.activePost))
+		m.ctx.Loading = false
+		return m, nil
+
 	case cmd.Command:
 		m.ctx.Logger.Debugf("got command: %v\n", msg)
 		switch msg.Call {
-		case cmd.WinOpen, cmd.WinRefreshData:
-			if msg.Target == WIN_ID {
-				m.ctx.Logger.Debug("got own WinOpen command")
+		case cmd.WinRefreshData:
+			if msg.Target == "post" {
 				m.activePost = msg.GetArg("post").(*post.Post)
-				m.viewport.SetContent(m.renderViewport(m.activePost))
 				m.ctx.Logger.Debugf("loading post: %v", m.activePost.ID)
 				m.ctx.Loading = true
 				return m, m.loadPost(m.activePost)
 			}
 			return m, nil
 		case cmd.WinFocus:
-			if msg.Target == WIN_ID ||
-				msg.Target == "*" {
+			if msg.Target == "post" {
 				m.focused = true
 			}
 			return m, nil
 		case cmd.WinBlur:
-			if msg.Target == WIN_ID ||
-				msg.Target == "*" {
+			if msg.Target == "post" {
 				m.focused = false
 			}
 			return m, nil
-		case cmd.WinFreshData:
-			if msg.Target == WIN_ID ||
-				msg.Target == "*" {
-				m.ctx.Logger.Debug("got *post.Post")
-				m.activePost = msg.GetArg("post").(*post.Post)
-				m.viewport.SetContent(m.renderViewport(m.activePost))
-				m.ctx.Loading = false
-				return m, nil
-			}
 		default:
 			m.ctx.Logger.Debugf("received unhandled command: %v\n", msg)
 		}
@@ -211,13 +190,7 @@ func (m *Model) loadPost(p *post.Post) tea.Cmd {
 		if err := m.a.LoadPost(p); err != nil {
 			m.ctx.Logger.Error(err)
 		}
-
-		c := cmd.New(
-			cmd.WinFreshData,
-			WIN_ID,
-			cmd.Arg{Name: "post", Value: p},
-		)
-		return *c
+		return p
 	}
 }
 

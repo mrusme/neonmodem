@@ -9,10 +9,12 @@ const (
 	WinFocus
 	WinBlur
 	WinRefreshData
+	WinFreshData
 
 	ViewFocus
 	ViewBlur
 	ViewRefreshData
+	ViewFreshData
 )
 
 type Arg struct {

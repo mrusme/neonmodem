@@ -15,6 +15,7 @@ import (
 	"github.com/mrusme/gobbs/ui/views"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -109,20 +110,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				msg.Target,
 				postdialog.NewModel(m.ctx),
 				[4]int{3, 2, 10, 6},
-				msg.GetArgs()...,
+				&msg,
 			)
 			m.ctx.Logger.Debugf("got back ccmds: %v\n", ccmds)
 		default:
-			m.ctx.Logger.Debugf("updating all with cmd: %v\n", msg)
-			ccmds = m.wm.UpdateAll(msg)
+			if msg.Call < cmd.ViewFocus {
+				m.ctx.Logger.Debugf("updating all with cmd: %v\n", msg)
+				ccmds = m.wm.UpdateAll(msg)
+			}
 		}
 
 		cmds = append(cmds, ccmds...)
 
+	case spinner.TickMsg:
+		// Do nothing
+
 	default:
 		m.ctx.Logger.Debugf("updating all with default: %v\n", msg)
 		cmds = append(cmds, m.wm.UpdateAll(msg)...)
-
 	}
 
 	v, vcmd := m.views[m.currentView].Update(msg)

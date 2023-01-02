@@ -15,16 +15,19 @@ import (
 	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/ui/cmd"
 	"github.com/mrusme/gobbs/ui/ctx"
+	"github.com/mrusme/gobbs/ui/windows/postdialog"
 )
 
 var (
+	VIEW_ID = "posts"
+
 	viewportStyle = lipgloss.NewStyle().
-		Margin(0, 0, 0, 0).
-		Padding(0, 0).
-		BorderTop(false).
-		BorderLeft(false).
-		BorderRight(false).
-		BorderBottom(false)
+			Margin(0, 0, 0, 0).
+			Padding(0, 0).
+			BorderTop(false).
+			BorderLeft(false).
+			BorderRight(false).
+			BorderBottom(false)
 )
 
 type KeyMap struct {
@@ -145,7 +148,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if ok {
 				// m.ctx.Loading = true
 				// cmds = append(cmds, m.loadItem(&i))
-				cmd := cmd.New(cmd.WinOpen, "post", cmd.Arg{
+				cmd := cmd.New(cmd.WinOpen, postdialog.WIN_ID, cmd.Arg{
 					Name:  "post",
 					Value: &i,
 				})
@@ -265,12 +268,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// m.viewport.Height = viewportHeight + 1
 		// // cmds = append(cmds, viewport.Sync(m.viewport))
 
-	case []list.Item:
-		m.items = msg
-		m.list.SetItems(m.items)
-		m.ctx.Loading = false
-		return m, nil
-
 		// case *post.Post:
 		// 	m.viewport.SetContent(m.renderViewport(msg))
 		// 	m.WMOpen("post")
@@ -280,19 +277,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmd.Command:
 		switch msg.Call {
 		case cmd.ViewFocus:
-			if msg.Target == "*" {
+			if msg.Target == VIEW_ID ||
+				msg.Target == "*" {
 				m.focused = true
 			}
 			return m, nil
 		case cmd.ViewBlur:
-			if msg.Target == "*" {
+			if msg.Target == VIEW_ID ||
+				msg.Target == "*" {
 				m.focused = false
 			}
 			return m, nil
 		case cmd.ViewRefreshData:
-			if msg.Target == "*" {
+			if msg.Target == VIEW_ID ||
+				msg.Target == "*" {
 				m.ctx.Loading = true
 				cmds = append(cmds, m.refresh())
+			}
+		case cmd.ViewFreshData:
+			if msg.Target == VIEW_ID ||
+				msg.Target == "*" {
+				m.items = msg.GetArg("items").([]list.Item)
+				m.list.SetItems(m.items)
+				m.ctx.Loading = false
+				return m, nil
 			}
 		}
 
@@ -328,7 +336,13 @@ func (m *Model) refresh() tea.Cmd {
 			items = append(items, post)
 		}
 
-		return items
+		c := cmd.New(
+			cmd.ViewFreshData,
+			VIEW_ID,
+			cmd.Arg{Name: "items", Value: items},
+		)
+
+		return *c
 	}
 }
 

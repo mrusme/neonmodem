@@ -23,7 +23,7 @@ func New() *WM {
 	return wm
 }
 
-func (wm *WM) Open(id string, win windows.Window, xywh [4]int, args ...cmd.Arg) []tea.Cmd {
+func (wm *WM) Open(id string, win windows.Window, xywh [4]int, command *cmd.Command) []tea.Cmd {
 	var tcmds []tea.Cmd
 
 	if wm.IsOpen(id) {
@@ -40,18 +40,18 @@ func (wm *WM) Open(id string, win windows.Window, xywh [4]int, args ...cmd.Arg) 
 
 	wm.stack = append(wm.stack, *item)
 
-	tcmds = append(tcmds, wm.Update(id, tea.WindowSizeMsg{
-		Width:  item.XYWH[2],
-		Height: item.XYWH[3],
-	}))
-	tcmds = append(tcmds, wm.Update(id, *cmd.New(
-		cmd.WinRefreshData,
-		id,
-		args...,
-	)))
+	// tcmds = append(tcmds, wm.Update(id, *command))
+	// tcmds = append(tcmds, wm.Update(id, tea.WindowSizeMsg{
+	// 	Width:  item.XYWH[2],
+	// 	Height: item.XYWH[3],
+	// }))
+	// tcmds = append(tcmds, wm.Update(id, *cmd.New(
+	// 	cmd.WinRefreshData,
+	// 	id,
+	// )))
 
-	fcmds := wm.Focus(id)
-	tcmds = append(tcmds, fcmds...)
+	// fcmds := wm.Focus(id)
+	// tcmds = append(tcmds, fcmds...)
 
 	return tcmds
 }
