@@ -130,7 +130,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else if m.focused == "post" {
 				m.focused = "reply"
 
-				m.viewcache = m.View()
+				m.ctx.Logger.Debugln("caching view")
+				m.ctx.Logger.Debugf("buffer: %s", m.buffer)
+				m.viewcache = m.buildView(false)
 
 				return m, m.textarea.Focus()
 			}
@@ -216,9 +218,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+	return m.buildView(true)
+}
+
+func (m Model) buildView(cached bool) string {
 	var view strings.Builder = strings.Builder{}
 
-	if m.focused == "reply" && m.viewcache != "" {
+	if cached && m.focused == "reply" && m.viewcache != "" {
 		m.ctx.Logger.Debugln("Cached View()")
 
 		m.textarea.SetWidth(m.viewcacheTextareaXY[2])
