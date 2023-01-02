@@ -1,4 +1,4 @@
-package postdialog
+package postshow
 
 import (
 	"fmt"
@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	WIN_ID = "postShow"
+	WIN_ID = "postshow"
 
 	viewportStyle = lipgloss.NewStyle().
 			Margin(0, 0, 0, 0).

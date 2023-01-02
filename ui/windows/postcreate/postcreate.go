@@ -1,4 +1,4 @@
-package postcreatedialog
+package postcreate
 
 import (
 	"fmt"
@@ -17,6 +17,10 @@ import (
 	"github.com/mrusme/gobbs/ui/cmd"
 	"github.com/mrusme/gobbs/ui/ctx"
 	"github.com/mrusme/gobbs/ui/helpers"
+)
+
+var (
+	WIN_ID = "postcreate"
 )
 
 type KeyMap struct {

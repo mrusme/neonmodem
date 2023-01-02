@@ -15,7 +15,7 @@ import (
 	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/ui/cmd"
 	"github.com/mrusme/gobbs/ui/ctx"
-	"github.com/mrusme/gobbs/ui/windows/postdialog"
+	"github.com/mrusme/gobbs/ui/windows/postshow"
 )
 
 var (
@@ -148,7 +148,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if ok {
 				// m.ctx.Loading = true
 				// cmds = append(cmds, m.loadItem(&i))
-				cmd := cmd.New(cmd.WinOpen, postdialog.WIN_ID, cmd.Arg{
+				cmd := cmd.New(cmd.WinOpen, postshow.WIN_ID, cmd.Arg{
 					Name:  "post",
 					Value: &i,
 				})

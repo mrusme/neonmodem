@@ -10,7 +10,7 @@ import (
 	"github.com/mrusme/gobbs/ui/header"
 	"github.com/mrusme/gobbs/ui/views/posts"
 	"github.com/mrusme/gobbs/ui/windowmanager"
-	"github.com/mrusme/gobbs/ui/windows/postdialog"
+	"github.com/mrusme/gobbs/ui/windows/postshow"
 
 	"github.com/mrusme/gobbs/ui/views"
 
@@ -108,7 +108,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.ctx.Logger.Debugln("received WinOpen")
 			ccmds = m.wm.Open(
 				msg.Target,
-				postdialog.NewModel(m.ctx),
+				postshow.NewModel(m.ctx),
 				[4]int{3, 2, 10, 6},
 				&msg,
 			)
