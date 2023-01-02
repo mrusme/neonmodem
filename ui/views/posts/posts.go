@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mrusme/gobbs/aggregator"
 	"github.com/mrusme/gobbs/models/post"
+	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/ui/ctx"
 )
 
@@ -31,6 +32,7 @@ type KeyMap struct {
 	Select  key.Binding
 	Esc     key.Binding
 	Quit    key.Binding
+	Reply   key.Binding
 }
 
 var DefaultKeyMap = KeyMap{
@@ -49,6 +51,10 @@ var DefaultKeyMap = KeyMap{
 	Quit: key.NewBinding(
 		key.WithKeys("q"),
 	),
+	Reply: key.NewBinding(
+		key.WithKeys("ctrl+s"),
+		key.WithHelp("ctrl+s", "reply"),
+	),
 }
 
 type Model struct {
@@ -66,6 +72,10 @@ type Model struct {
 
 	buffer   string
 	replyIDs []string
+
+	activePost  *post.Post
+	allReplies  []*reply.Reply
+	activeReply *reply.Reply
 
 	viewcache           string
 	viewcacheTextareaXY []int
@@ -173,6 +183,43 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.WMClose("reply")
 					return m, nil
 				}
+			}
+
+		case key.Matches(msg, m.keymap.Reply):
+			if m.WMisFocused("reply") {
+				replyToIdx, _ := strconv.Atoi(m.buffer)
+
+				m.ctx.Logger.Debugf("replyToIdx: %d", replyToIdx)
+
+				var irtID string = ""
+				var irtIRT string = ""
+				var irtSysIDX int = 0
+
+				if replyToIdx == 0 {
+					irtID = m.activePost.ID
+					irtSysIDX = m.activePost.SysIDX
+				} else {
+					irt := m.allReplies[(replyToIdx - 1)]
+					irtID = strconv.Itoa(replyToIdx + 1)
+					irtIRT = irt.InReplyTo
+					irtSysIDX = irt.SysIDX
+				}
+
+				r := reply.Reply{
+					ID:        irtID,
+					InReplyTo: irtIRT,
+					Body:      m.textarea.Value(),
+					SysIDX:    irtSysIDX,
+				}
+				err := m.a.CreateReply(&r)
+				if err != nil {
+					m.ctx.Logger.Error(err)
+				}
+
+				m.textarea.Reset()
+				m.buffer = ""
+				m.WMClose("reply")
+				return m, nil
 			}
 
 		default:

@@ -8,15 +8,16 @@ import (
 const PostsBaseURL = "/posts"
 
 type CreatePostModel struct {
-	Title            string `json:"title,omitempty"`
-	Raw              string `json:"raw"`
-	TopicID          int    `json:"topic_id,omitempty"`
-	Category         int    `json:"category,omitempty"`
-	TargetRecipients string `json:"targe_recipients,omitempty"`
-	Archetype        string `json:"archetype,omitempty"`
-	CreatedAt        string `json:"created_at"`
-	EmbedURL         string `json:"embed_url,omitempty"`
-	ExternalID       string `json:"external_id,omitempty"`
+	Title             string `json:"title,omitempty"`
+	Raw               string `json:"raw"`
+	TopicID           int    `json:"topic_id,omitempty"`
+	ReplyToPostNumber int    `json:"reply_to_post_number,omitempty"`
+	Category          int    `json:"category,omitempty"`
+	TargetRecipients  string `json:"targe_recipients,omitempty"`
+	Archetype         string `json:"archetype,omitempty"`
+	CreatedAt         string `json:"created_at,omitempty"`
+	EmbedURL          string `json:"embed_url,omitempty"`
+	ExternalID        string `json:"external_id,omitempty"`
 }
 
 type PostModel struct {
@@ -107,12 +108,14 @@ func (a *PostServiceHandler) Create(
 		return PostModel{}, err
 	}
 
-	response := new(Response)
+	response := new(PostModel)
 	if err = a.client.Do(ctx, req, response); err != nil {
 		return PostModel{}, err
 	}
 
-	return response.Post, nil
+	a.client.logger.Debug(response)
+
+	return *response, nil
 }
 
 // Show

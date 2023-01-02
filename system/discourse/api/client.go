@@ -126,6 +126,8 @@ func (c *Client) NewRequest(
 		}
 	}
 
+	c.logger.Debug(buffer.String())
+
 	if req, err = http.NewRequest(
 		method,
 		parsedURL.String(),
@@ -172,6 +174,9 @@ func (c *Client) Do(
 			return err
 		}
 	}
+
+	c.logger.Debug(res)
+	c.logger.Debug(string(body))
 
 	if res.StatusCode < http.StatusOK ||
 		res.StatusCode > http.StatusNoContent {

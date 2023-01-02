@@ -183,7 +183,8 @@ func (sys *System) LoadPost(p *post.Post) error {
 			createdAt = time.Now() // TODO: Errrrrr
 		}
 		p.Replies = append(p.Replies, reply.Reply{
-			ID: strconv.Itoa(i.ID),
+			ID:        strconv.Itoa(i.ID),
+			InReplyTo: p.ID,
 
 			Body: cookedMd,
 
@@ -211,7 +212,7 @@ func (sys *System) CreatePost(p *post.Post) error {
 		Title:     p.Subject,
 		Raw:       p.Body,
 		Category:  categoryID,
-		CreatedAt: time.Now().Format(time.RFC3339),
+		CreatedAt: strconv.FormatInt(time.Now().Unix(), 10),
 	}
 
 	cp, err := sys.client.Posts.Create(context.Background(), &ap)
@@ -224,15 +225,21 @@ func (sys *System) CreatePost(p *post.Post) error {
 }
 
 func (sys *System) CreateReply(r *reply.Reply) error {
+	sys.logger.Debugf("%v", r)
+	ID, err := strconv.Atoi(r.ID)
+	if err != nil {
+		return err
+	}
 	inReplyTo, err := strconv.Atoi(r.InReplyTo)
 	if err != nil {
 		return err
 	}
 
 	ap := api.CreatePostModel{
-		Raw:       r.Body,
-		TopicID:   inReplyTo,
-		CreatedAt: time.Now().Format(time.RFC3339),
+		Raw:               r.Body,
+		TopicID:           inReplyTo,
+		ReplyToPostNumber: ID,
+		CreatedAt:         strconv.FormatInt(time.Now().Unix(), 10),
 	}
 
 	cp, err := sys.client.Posts.Create(context.Background(), &ap)

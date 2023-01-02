@@ -158,6 +158,7 @@ func (m *Model) renderViewport(p *post.Post) string {
 	)
 
 	m.replyIDs = []string{p.ID}
+	m.activePost = p
 	out += m.renderReplies(0, p.Author.Name, &p.Replies)
 
 	return out
@@ -174,7 +175,7 @@ func (m *Model) renderReplies(
 		return ""
 	}
 
-	for _, re := range *replies {
+	for ri, re := range *replies {
 		var err error = nil
 		var body string = ""
 		var author string = ""
@@ -193,6 +194,7 @@ func (m *Model) renderReplies(
 		}
 
 		m.replyIDs = append(m.replyIDs, re.ID)
+		m.allReplies = append(m.allReplies, &(*replies)[ri])
 		idx := len(m.replyIDs) - 1
 
 		out += fmt.Sprintf(
