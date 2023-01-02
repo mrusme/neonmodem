@@ -56,6 +56,8 @@ type Model struct {
 	activePost  *post.Post
 	allReplies  []*reply.Reply
 	activeReply *reply.Reply
+
+	viewcache string
 }
 
 func (m Model) Init() tea.Cmd {
@@ -78,6 +80,8 @@ func NewModel(c *ctx.Ctx) Model {
 
 		buffer:   "",
 		replyIDs: []string{},
+
+		viewcache: "",
 	}
 
 	m.a, _ = aggregator.New(m.ctx)
@@ -103,6 +107,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// 		// TODO: Handle error
 			// 	}
 			// }
+			m.viewcache = m.buildView(false)
+
 			cmd := cmd.New(cmd.WinOpen, postcreate.WIN_ID, cmd.Arg{
 				Name:  "post",
 				Value: &m.activePost,
@@ -217,6 +223,12 @@ func (m Model) View() string {
 
 func (m Model) buildView(cached bool) string {
 	var view strings.Builder = strings.Builder{}
+
+	if cached && m.focused == false && m.viewcache != "" {
+		m.ctx.Logger.Debugln("Cached View()")
+
+		return m.viewcache
+	}
 
 	var style lipgloss.Style
 	if m.focused {
