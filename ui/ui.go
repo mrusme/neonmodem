@@ -10,6 +10,7 @@ import (
 	"github.com/mrusme/gobbs/ui/header"
 	"github.com/mrusme/gobbs/ui/views/posts"
 	"github.com/mrusme/gobbs/ui/windowmanager"
+	"github.com/mrusme/gobbs/ui/windows/postcreate"
 	"github.com/mrusme/gobbs/ui/windows/postshow"
 
 	"github.com/mrusme/gobbs/ui/views"
@@ -109,13 +110,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch msg.Call {
 		case cmd.WinOpen:
-			m.ctx.Logger.Debugln("received WinOpen")
-			ccmds = m.wm.Open(
-				msg.Target,
-				postshow.NewModel(m.ctx),
-				[4]int{3, 1, 4, 4},
-				&msg,
-			)
+			switch msg.Target {
+			case postshow.WIN_ID:
+				m.ctx.Logger.Debugln("received WinOpen")
+				ccmds = m.wm.Open(
+					msg.Target,
+					postshow.NewModel(m.ctx),
+					[4]int{3, 1, 4, 4},
+					&msg,
+				)
+			case postcreate.WIN_ID:
+				m.ctx.Logger.Debugln("received WinOpen")
+				ccmds = m.wm.Open(
+					msg.Target,
+					postcreate.NewModel(m.ctx),
+					[4]int{6, int(m.ctx.Content[1] / 3), 8, 4},
+					&msg,
+				)
+			}
 			m.ctx.Logger.Debugf("got back ccmds: %v\n", ccmds)
 		default:
 			if msg.Call < cmd.ViewFocus {
@@ -130,8 +142,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Do nothing
 
 	default:
-		m.ctx.Logger.Debugf("updating all with default: %v\n", msg)
-		cmds = append(cmds, m.wm.UpdateAll(msg)...)
+		m.ctx.Logger.Debugf("updating focused with default: %v\n", msg)
+		cmds = append(cmds, m.wm.UpdateFocused(msg)...)
 	}
 
 	v, vcmd := m.views[m.currentView].Update(msg)

@@ -2,7 +2,6 @@ package postshow
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -15,6 +14,7 @@ import (
 	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/ui/cmd"
 	"github.com/mrusme/gobbs/ui/ctx"
+	"github.com/mrusme/gobbs/ui/windows/postcreate"
 )
 
 var (
@@ -30,32 +30,13 @@ var (
 )
 
 type KeyMap struct {
-	Refresh key.Binding
-	Select  key.Binding
-	Esc     key.Binding
-	Quit    key.Binding
-	Reply   key.Binding
+	Reply key.Binding
 }
 
 var DefaultKeyMap = KeyMap{
-	Refresh: key.NewBinding(
-		key.WithKeys("ctrl+r"),
-		key.WithHelp("ctrl+r", "refresh"),
-	),
-	Select: key.NewBinding(
-		key.WithKeys("r", "enter"),
-		key.WithHelp("r/enter", "read"),
-	),
-	Esc: key.NewBinding(
-		key.WithKeys("esc"),
-		key.WithHelp("esc", "close"),
-	),
-	Quit: key.NewBinding(
-		key.WithKeys("q"),
-	),
 	Reply: key.NewBinding(
-		key.WithKeys("ctrl+s"),
-		key.WithHelp("ctrl+s", "reply"),
+		key.WithKeys("r"),
+		key.WithHelp("r", "reply"),
 	),
 }
 
@@ -111,28 +92,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 
-		case key.Matches(msg, m.keymap.Select):
-			if m.buffer != "" {
-				replyToID, err := strconv.Atoi(m.buffer)
-				if err != nil {
-					// TODO: Handle error
-				}
-
-				if replyToID >= len(m.replyIDs) {
-					// TODO: Handle error
-				}
-			}
-			// m.WMOpen("reply")
+		case key.Matches(msg, m.keymap.Reply):
+			// if m.buffer != "" {
+			// 	replyToID, err := strconv.Atoi(m.buffer)
+			// 	if err != nil {
+			// 		// TODO: Handle error
+			// 	}
+			//
+			// 	if replyToID >= len(m.replyIDs) {
+			// 		// TODO: Handle error
+			// 	}
+			// }
+			cmd := cmd.New(cmd.WinOpen, postcreate.WIN_ID, cmd.Arg{
+				Name:  "post",
+				Value: &m.activePost,
+			})
+			cmds = append(cmds, cmd.Tea())
 
 			m.ctx.Logger.Debugln("caching view")
 			m.ctx.Logger.Debugf("buffer: %s", m.buffer)
 			// m.viewcache = m.buildView(false)
 
-			return m, nil
-
-		case key.Matches(msg, m.keymap.Esc), key.Matches(msg, m.keymap.Quit):
-			// m.WMClose("post")
-			return m, nil
+			return m, tea.Batch(cmds...)
 
 		default:
 			switch msg.String() {
@@ -244,11 +225,11 @@ func (m Model) buildView(cached bool) string {
 		style = m.ctx.Theme.DialogBox.Titlebar.Blurred
 	}
 	titlebar := style.Align(lipgloss.Center).
-		Width(m.viewport.Width + 4).
+		Width(m.wh[0]).
 		Render("Post")
 
 	bottombar := m.ctx.Theme.DialogBox.Bottombar.
-		Width(m.viewport.Width + 4).
+		Width(m.wh[0]).
 		Render("[#]r reply · esc close")
 
 	ui := lipgloss.JoinVertical(

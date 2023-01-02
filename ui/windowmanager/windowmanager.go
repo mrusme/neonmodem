@@ -69,8 +69,11 @@ func (wm *WM) Close(id string) (bool, []tea.Cmd) {
 			tcmds = append(tcmds, cmd.New(cmd.WinClose, id).Tea())
 			wm.ctx.Loading = false
 
-			if wm.GetNumberOpen() == 0 {
+			nrOpen := wm.GetNumberOpen()
+			if nrOpen == 0 {
 				tcmds = append(tcmds, cmd.New(cmd.ViewFocus, "*").Tea())
+			} else {
+				tcmds = append(tcmds, wm.Focus(wm.stack[(nrOpen-1)].ID)...)
 			}
 			return true, tcmds
 		}
@@ -142,6 +145,21 @@ func (wm *WM) UpdateAll(msg tea.Msg) []tea.Cmd {
 		wm.stack[i].Win, tcmd = wm.stack[i].Win.Update(msg)
 		tcmds = append(tcmds, tcmd)
 	}
+
+	return tcmds
+}
+
+func (wm *WM) UpdateFocused(msg tea.Msg) []tea.Cmd {
+	var tcmd tea.Cmd
+	var tcmds []tea.Cmd
+
+	i := len(wm.stack) - 1
+	if i < 0 {
+		return tcmds
+	}
+
+	wm.stack[i].Win, tcmd = wm.stack[i].Win.Update(msg)
+	tcmds = append(tcmds, tcmd)
 
 	return tcmds
 }
