@@ -13,18 +13,12 @@ func (m Model) View() string {
 func (m Model) buildView(cached bool) string {
 	var view strings.Builder = strings.Builder{}
 
-	// if cached && m.WMisFocused("reply") && m.viewcache != "" {
-	// 	m.ctx.Logger.Debugln("Cached View()")
-	//
-	// 	m.textarea.SetWidth(m.viewcacheTextareaXY[2])
-	// 	m.textarea.SetHeight(m.viewcacheTextareaXY[3])
-	//
-	// 	return helpers.PlaceOverlay(
-	// 		m.viewcacheTextareaXY[0], m.viewcacheTextareaXY[1],
-	// 		m.textarea.View(), m.viewcache,
-	// 		false)
-	// }
-	//
+	if cached && m.focused == false && m.viewcache != "" {
+		m.ctx.Logger.Debugln("Cached View()")
+
+		return m.viewcache
+	}
+
 	m.ctx.Logger.Debugln("Posts.View()")
 	var l string = ""
 	if m.focused {

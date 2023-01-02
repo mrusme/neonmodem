@@ -118,9 +118,9 @@ func NewModel(c *ctx.Ctx) Model {
 	m.list.SetShowTitle(false)
 	m.list.SetShowStatusBar(false)
 
-	m.textarea = textarea.New()
-	m.textarea.Placeholder = "Type in your reply ..."
-	m.textarea.Prompt = ""
+	// m.textarea = textarea.New()
+	// m.textarea.Placeholder = "Type in your reply ..."
+	// m.textarea.Prompt = ""
 
 	m.a, _ = aggregator.New(m.ctx)
 
@@ -148,6 +148,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if ok {
 				// m.ctx.Loading = true
 				// cmds = append(cmds, m.loadItem(&i))
+				m.viewcache = m.buildView(false)
 				cmd := cmd.New(cmd.WinOpen, postshow.WIN_ID, cmd.Arg{
 					Name:  "post",
 					Value: &i,
