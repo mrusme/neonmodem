@@ -15,7 +15,6 @@ import (
 	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/ui/cmd"
 	"github.com/mrusme/gobbs/ui/ctx"
-	"github.com/mrusme/gobbs/ui/helpers"
 )
 
 var (
@@ -94,7 +93,7 @@ func NewModel(c *ctx.Ctx) Model {
 	m := Model{
 		ctx:    c,
 		keymap: DefaultKeyMap,
-		wh: [2]int{0,0},
+		wh:     [2]int{0, 0},
 
 		buffer:   "",
 		replyIDs: []string{},
@@ -149,8 +148,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.wh[0] = msg.Width
 		m.wh[1] = msg.Height
 		m.ctx.Logger.Debugf("received WindowSizeMsg: %v\n", m.wh)
-		viewportWidth := m.wh[0]
-		viewportHeight := m.wh[1]
+		viewportWidth := m.wh[0] - 2
+		viewportHeight := m.wh[1] - 5
 
 		viewportStyle.Width(viewportWidth)
 		viewportStyle.Height(viewportHeight)
@@ -238,12 +237,6 @@ func (m Model) View() string {
 func (m Model) buildView(cached bool) string {
 	var view strings.Builder = strings.Builder{}
 
-	var l string = ""
-	view.WriteString(lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		l,
-	))
-
 	var style lipgloss.Style
 	if m.focused {
 		style = m.ctx.Theme.DialogBox.Titlebar.Focused
@@ -267,16 +260,11 @@ func (m Model) buildView(cached bool) string {
 
 	var tmp string
 	if m.focused {
-		tmp = helpers.PlaceOverlay(3, 2,
-			m.ctx.Theme.DialogBox.Window.Focused.Render(ui),
-			view.String(), true)
+		tmp = m.ctx.Theme.DialogBox.Window.Focused.Render(ui)
 	} else {
-		tmp = helpers.PlaceOverlay(3, 2,
-			m.ctx.Theme.DialogBox.Window.Blurred.Render(ui),
-			view.String(), true)
+		tmp = m.ctx.Theme.DialogBox.Window.Blurred.Render(ui)
 	}
 
-	view = strings.Builder{}
 	view.WriteString(tmp)
 
 	return view.String()
@@ -354,7 +342,7 @@ func (m *Model) renderReplies(
 		m.allReplies = append(m.allReplies, &(*replies)[ri])
 		idx := len(m.replyIDs) - 1
 
-		replyIdPadding := (m.viewport.Width-len(author)-len(inReplyTo)-28)
+		replyIdPadding := (m.viewport.Width - len(author) - len(inReplyTo) - 28)
 		if replyIdPadding < 0 {
 			replyIdPadding = 0
 		}

@@ -113,7 +113,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			ccmds = m.wm.Open(
 				msg.Target,
 				postshow.NewModel(m.ctx),
-				[4]int{3, 2, 9, 10},
+				[4]int{3, 1, 4, 4},
 				&msg,
 			)
 			m.ctx.Logger.Debugf("got back ccmds: %v\n", ccmds)

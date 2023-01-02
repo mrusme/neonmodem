@@ -153,8 +153,8 @@ func (wm *WM) Resize(id string, w int, h int) []tea.Cmd {
 	for i := 0; i < len(wm.stack); i++ {
 		if wm.stack[i].ID == id {
 			wm.stack[i].Win, tcmd = wm.stack[i].Win.Update(tea.WindowSizeMsg{
-				Width:  w - wm.stack[i].XYWH[2],
-				Height: h - wm.stack[i].XYWH[3],
+				Width:  w - wm.stack[i].XYWH[0] - wm.stack[i].XYWH[2],
+				Height: h - wm.stack[i].XYWH[1] - wm.stack[i].XYWH[3],
 			})
 			tcmds = append(tcmds, tcmd)
 		}
@@ -169,8 +169,8 @@ func (wm *WM) ResizeAll(w int, h int) []tea.Cmd {
 
 	for i := 0; i < len(wm.stack); i++ {
 		wm.stack[i].Win, tcmd = wm.stack[i].Win.Update(tea.WindowSizeMsg{
-			Width:  w - wm.stack[i].XYWH[2],
-			Height: h - wm.stack[i].XYWH[3],
+			Width:  w - wm.stack[i].XYWH[0] - wm.stack[i].XYWH[2],
+			Height: h - wm.stack[i].XYWH[1] - wm.stack[i].XYWH[3],
 		})
 		tcmds = append(tcmds, tcmd)
 	}
@@ -182,9 +182,13 @@ func (wm *WM) View(view string) string {
 	var v string = view
 
 	for i := 0; i < len(wm.stack); i++ {
-		v = helpers.PlaceOverlay(3, 2,
+		v = helpers.PlaceOverlay(
+			wm.stack[i].XYWH[0],
+			wm.stack[i].XYWH[1]+(wm.ctx.Screen[1]-wm.ctx.Content[1]),
 			wm.stack[i].Win.View(),
-			v, true)
+			v,
+			true,
+		)
 	}
 
 	return v
