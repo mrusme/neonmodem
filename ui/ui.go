@@ -53,7 +53,7 @@ func NewModel(c *ctx.Ctx) Model {
 	m := Model{
 		keymap:      DefaultKeyMap,
 		currentView: 0,
-		wm:          windowmanager.New(),
+		wm:          windowmanager.New(c),
 		ctx:         c,
 	}
 
@@ -80,11 +80,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, m.keymap.Close):
 			m.ctx.Logger.Debug("close received")
-			if !m.wm.CloseFocused() {
+			closed, ccmds := m.wm.CloseFocused()
+			if !closed {
 				m.ctx.Logger.Debug("CloseFocused() was false, quitting")
 				return m, tea.Quit
 			}
-			return m, nil
+			return m, tea.Batch(ccmds...)
+		default:
+			if m.wm.GetNumberOpen() > 0 {
+				cmd := m.wm.Update(m.wm.Focused(), msg)
+				return m, cmd
+			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -94,10 +100,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.views[i] = v
 			cmds = append(cmds, cmd)
 		}
-		ccmds := m.wm.UpdateAll(tea.WindowSizeMsg{
-			Width:  m.ctx.Content[0],
-			Height: m.ctx.Content[1],
-		})
+		m.ctx.Logger.Debugf("resizing all: %v\n", m.ctx.Content)
+		ccmds := m.wm.ResizeAll(m.ctx.Content[0], m.ctx.Content[1])
 		cmds = append(cmds, ccmds...)
 
 	case cmd.Command:
@@ -109,7 +113,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			ccmds = m.wm.Open(
 				msg.Target,
 				postshow.NewModel(m.ctx),
-				[4]int{3, 2, 10, 6},
+				[4]int{3, 2, 9, 10},
 				&msg,
 			)
 			m.ctx.Logger.Debugf("got back ccmds: %v\n", ccmds)

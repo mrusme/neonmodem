@@ -6,6 +6,7 @@ type CallType int8
 
 const (
 	WinOpen CallType = iota
+	WinClose
 	WinFocus
 	WinBlur
 	WinRefreshData
@@ -15,6 +16,8 @@ const (
 	ViewBlur
 	ViewRefreshData
 	ViewFreshData
+
+	MsgError
 )
 
 type Arg struct {

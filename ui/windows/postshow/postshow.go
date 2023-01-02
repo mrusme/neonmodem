@@ -63,6 +63,7 @@ var DefaultKeyMap = KeyMap{
 type Model struct {
 	ctx      *ctx.Ctx
 	keymap   KeyMap
+	wh       [2]int
 	focused  bool
 	viewport viewport.Model
 
@@ -93,6 +94,7 @@ func NewModel(c *ctx.Ctx) Model {
 	m := Model{
 		ctx:    c,
 		keymap: DefaultKeyMap,
+		wh: [2]int{0,0},
 
 		buffer:   "",
 		replyIDs: []string{},
@@ -144,9 +146,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.WindowSizeMsg:
-		m.ctx.Logger.Debug("received WindowSizeMsg")
-		viewportWidth := m.ctx.Content[0] - 9
-		viewportHeight := m.ctx.Content[1] - 10
+		m.wh[0] = msg.Width
+		m.wh[1] = msg.Height
+		m.ctx.Logger.Debugf("received WindowSizeMsg: %v\n", m.wh)
+		viewportWidth := m.wh[0]
+		viewportHeight := m.wh[1]
 
 		viewportStyle.Width(viewportWidth)
 		viewportStyle.Height(viewportHeight)
@@ -210,6 +214,12 @@ func (m *Model) loadPost(p *post.Post) tea.Cmd {
 		m.ctx.Logger.Debug("------ EXECUTED -----")
 		if err := m.a.LoadPost(p); err != nil {
 			m.ctx.Logger.Error(err)
+			c := cmd.New(
+				cmd.MsgError,
+				"*",
+				cmd.Arg{Name: "error", Value: err},
+			)
+			return *c
 		}
 
 		c := cmd.New(
@@ -344,6 +354,11 @@ func (m *Model) renderReplies(
 		m.allReplies = append(m.allReplies, &(*replies)[ri])
 		idx := len(m.replyIDs) - 1
 
+		replyIdPadding := (m.viewport.Width-len(author)-len(inReplyTo)-28)
+		if replyIdPadding < 0 {
+			replyIdPadding = 0
+		}
+
 		out += fmt.Sprintf(
 			"\n\n %s %s%s%s\n%s",
 			m.ctx.Theme.Reply.Author.Render(
@@ -352,7 +367,7 @@ func (m *Model) renderReplies(
 			lipgloss.NewStyle().
 				Foreground(m.ctx.Theme.Reply.Author.GetBackground()).
 				Render(fmt.Sprintf("writes in reply to %s:", inReplyTo)),
-			strings.Repeat(" ", (m.viewport.Width-len(author)-len(inReplyTo)-28)),
+			strings.Repeat(" ", replyIdPadding),
 			lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#777777")).
 				Render(fmt.Sprintf("#%d", idx)),
