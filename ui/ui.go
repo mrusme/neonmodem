@@ -5,9 +5,12 @@ import (
 
 	"strings"
 
+	"github.com/mrusme/gobbs/ui/cmd"
 	"github.com/mrusme/gobbs/ui/ctx"
 	"github.com/mrusme/gobbs/ui/header"
 	"github.com/mrusme/gobbs/ui/views/posts"
+	"github.com/mrusme/gobbs/ui/windowmanager"
+	"github.com/mrusme/gobbs/ui/windows/postdialog"
 
 	"github.com/mrusme/gobbs/ui/views"
 
@@ -16,9 +19,9 @@ import (
 )
 
 type KeyMap struct {
-	Up   key.Binding
-	Down key.Binding
-	Quit key.Binding
+	Up    key.Binding
+	Down  key.Binding
+	Close key.Binding
 }
 
 var DefaultKeyMap = KeyMap{
@@ -30,10 +33,10 @@ var DefaultKeyMap = KeyMap{
 	// 	key.WithKeys("j", "down"),
 	// 	key.WithHelp("↓/j", "move down"),
 	// ),
-	// Quit: key.NewBinding(
-	// 	key.WithKeys("q", "ctrl+q", "escape"),
-	// 	key.WithHelp("q/esc", "quit"),
-	// ),
+	Close: key.NewBinding(
+		key.WithKeys("q", "esc"),
+		key.WithHelp("q/esc", "close"),
+	),
 }
 
 type Model struct {
@@ -41,6 +44,7 @@ type Model struct {
 	header      header.Model
 	views       []views.View
 	currentView int
+	wm          *windowmanager.WM
 	ctx         *ctx.Ctx
 }
 
@@ -48,6 +52,7 @@ func NewModel(c *ctx.Ctx) Model {
 	m := Model{
 		keymap:      DefaultKeyMap,
 		currentView: 0,
+		wm:          windowmanager.New(),
 		ctx:         c,
 	}
 
@@ -58,7 +63,11 @@ func NewModel(c *ctx.Ctx) Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(tea.EnterAltScreen)
+	return tea.Batch(
+		tea.EnterAltScreen,
+		cmd.New(cmd.ViewFocus, "*").Tea(),
+		cmd.New(cmd.ViewRefreshData, "*").Tea(),
+	)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -67,8 +76,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		// case key.Matches(msg, m.keymap.Quit):
-		// 	return m, tea.Quit
+		case key.Matches(msg, m.keymap.Close):
+			m.ctx.Logger.Debug("close received")
+			if !m.wm.CloseFocused() {
+				m.ctx.Logger.Debug("CloseFocused() was false, quitting")
+				return m, tea.Quit
+			}
+			return m, nil
 		}
 
 	case tea.WindowSizeMsg:
@@ -78,15 +92,39 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.views[i] = v
 			cmds = append(cmds, cmd)
 		}
+		ccmds := m.wm.UpdateAll(tea.WindowSizeMsg{
+			Width:  m.ctx.Content[0],
+			Height: m.ctx.Content[1],
+		})
+		cmds = append(cmds, ccmds...)
+
+	case cmd.Command:
+		var ccmds []tea.Cmd
+
+		switch msg.Call {
+		case cmd.WinOpen:
+			m.ctx.Logger.Debugln("received WinOpen")
+			ccmds = m.wm.Open(
+				msg.Target,
+				postdialog.NewModel(m.ctx),
+				[4]int{3, 2, 10, 6},
+			)
+			m.ctx.Logger.Debugf("got back ccmds: %v\n", ccmds)
+		default:
+			m.ctx.Logger.Debugf("updating all with cmd: %v\n", msg)
+			ccmds = m.wm.UpdateAll(msg)
+		}
+
+		cmds = append(cmds, ccmds...)
 	}
 
-	v, cmd := m.views[m.currentView].Update(msg)
+	v, vcmd := m.views[m.currentView].Update(msg)
 	m.views[m.currentView] = v
-	cmds = append(cmds, cmd)
+	cmds = append(cmds, vcmd)
 
-	header, cmd := m.header.Update(msg)
+	header, hcmd := m.header.Update(msg)
 	m.header = header
-	cmds = append(cmds, cmd)
+	cmds = append(cmds, hcmd)
 
 	return m, tea.Batch(cmds...)
 }
@@ -95,7 +133,8 @@ func (m Model) View() string {
 	s := strings.Builder{}
 	s.WriteString(m.header.View() + "\n")
 	s.WriteString(m.views[m.currentView].View())
-	return s.String()
+
+	return m.wm.View(s.String())
 }
 
 func (m Model) setSizes(winWidth int, winHeight int) {

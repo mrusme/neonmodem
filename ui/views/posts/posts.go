@@ -2,7 +2,6 @@ package posts
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -14,6 +13,7 @@ import (
 	"github.com/mrusme/gobbs/aggregator"
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/models/reply"
+	"github.com/mrusme/gobbs/ui/cmd"
 	"github.com/mrusme/gobbs/ui/ctx"
 )
 
@@ -30,9 +30,9 @@ var (
 type KeyMap struct {
 	Refresh key.Binding
 	Select  key.Binding
-	Esc     key.Binding
-	Quit    key.Binding
-	Reply   key.Binding
+	// Esc     key.Binding
+	// Quit    key.Binding
+	Reply key.Binding
 }
 
 var DefaultKeyMap = KeyMap{
@@ -44,13 +44,13 @@ var DefaultKeyMap = KeyMap{
 		key.WithKeys("r", "enter"),
 		key.WithHelp("r/enter", "read"),
 	),
-	Esc: key.NewBinding(
-		key.WithKeys("esc"),
-		key.WithHelp("esc", "close"),
-	),
-	Quit: key.NewBinding(
-		key.WithKeys("q"),
-	),
+	// Esc: key.NewBinding(
+	// 	key.WithKeys("esc"),
+	// 	key.WithHelp("esc", "close"),
+	// ),
+	// Quit: key.NewBinding(
+	// 	key.WithKeys("q"),
+	// ),
 	Reply: key.NewBinding(
 		key.WithKeys("ctrl+s"),
 		key.WithHelp("ctrl+s", "reply"),
@@ -60,6 +60,7 @@ var DefaultKeyMap = KeyMap{
 type Model struct {
 	ctx      *ctx.Ctx
 	keymap   KeyMap
+	focused  bool
 	list     list.Model
 	items    []list.Item
 	viewport viewport.Model
@@ -68,7 +69,7 @@ type Model struct {
 	a    *aggregator.Aggregator
 	glam *glamour.TermRenderer
 
-	wm []string
+	// wm []string
 
 	buffer   string
 	replyIDs []string
@@ -89,10 +90,11 @@ func (m Model) Init() tea.Cmd {
 
 func NewModel(c *ctx.Ctx) Model {
 	m := Model{
-		ctx:    c,
-		keymap: DefaultKeyMap,
+		ctx:     c,
+		keymap:  DefaultKeyMap,
+		focused: false,
 
-		wm: []string{WM_ROOT_ID},
+		// wm: []string{WM_ROOT_ID},
 
 		buffer:   "",
 		replyIDs: []string{},
@@ -130,117 +132,122 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 
 		case key.Matches(msg, m.keymap.Refresh):
-			if m.WMisFocused("list") {
-				m.ctx.Loading = true
-				cmds = append(cmds, m.refresh())
-			}
+			// if m.WMisFocused("list") {
+			m.ctx.Loading = true
+			cmds = append(cmds, m.refresh())
+			// }
 
 		case key.Matches(msg, m.keymap.Select):
-			switch m.WMFocused() {
-
-			case "list":
-				i, ok := m.list.SelectedItem().(post.Post)
-				if ok {
-					m.ctx.Loading = true
-					cmds = append(cmds, m.loadItem(&i))
-				}
-
-			case "post":
-				if m.buffer != "" {
-					replyToID, err := strconv.Atoi(m.buffer)
-					if err != nil {
-						// TODO: Handle error
-					}
-
-					if replyToID >= len(m.replyIDs) {
-						// TODO: Handle error
-					}
-				}
-				m.WMOpen("reply")
-
-				m.ctx.Logger.Debugln("caching view")
-				m.ctx.Logger.Debugf("buffer: %s", m.buffer)
-				m.viewcache = m.buildView(false)
-
-				return m, m.textarea.Focus()
+			// switch m.WMFocused() {
+			//
+			// case "list":
+			i, ok := m.list.SelectedItem().(post.Post)
+			if ok {
+				// m.ctx.Loading = true
+				// cmds = append(cmds, m.loadItem(&i))
+				cmd := cmd.New(cmd.WinOpen, "post", cmd.Arg{
+					Name:  "post",
+					Value: &i,
+				})
+				cmds = append(cmds, cmd.Tea())
 			}
+			//
+			// case "post":
+			// 	if m.buffer != "" {
+			// 		replyToID, err := strconv.Atoi(m.buffer)
+			// 		if err != nil {
+			// 			// TODO: Handle error
+			// 		}
+			//
+			// 		if replyToID >= len(m.replyIDs) {
+			// 			// TODO: Handle error
+			// 		}
+			// 	}
+			// 	m.WMOpen("reply")
+			//
+			// 	m.ctx.Logger.Debugln("caching view")
+			// 	m.ctx.Logger.Debugf("buffer: %s", m.buffer)
+			// 	m.viewcache = m.buildView(false)
+			//
+			// 	return m, m.textarea.Focus()
+			// }
 
-		case key.Matches(msg, m.keymap.Esc), key.Matches(msg, m.keymap.Quit):
-			switch m.WMFocused() {
-
-			case "list":
-				return m, tea.Quit
-
-			case "post":
-				// Let's make sure we reset the texarea
-				m.textarea.Reset()
-				m.WMClose("post")
-				return m, nil
-
-			case "reply":
-				if key.Matches(msg, m.keymap.Esc) {
-					m.buffer = ""
-					m.WMClose("reply")
-					return m, nil
-				}
-			}
+		// case key.Matches(msg, m.keymap.Esc), key.Matches(msg, m.keymap.Quit):
+		// switch m.WMFocused() {
+		//
+		// case "list":
+		// return m, tea.Quit
+		//
+		// case "post":
+		// 	// Let's make sure we reset the texarea
+		// 	m.textarea.Reset()
+		// 	m.WMClose("post")
+		// 	return m, nil
+		//
+		// case "reply":
+		// 	if key.Matches(msg, m.keymap.Esc) {
+		// 		m.buffer = ""
+		// 		m.WMClose("reply")
+		// 		return m, nil
+		// 	}
+		// }
 
 		case key.Matches(msg, m.keymap.Reply):
-			if m.WMisFocused("reply") {
-				replyToIdx, _ := strconv.Atoi(m.buffer)
+			// if m.WMisFocused("reply") {
+			// 	replyToIdx, _ := strconv.Atoi(m.buffer)
+			//
+			// 	m.ctx.Logger.Debugf("replyToIdx: %d", replyToIdx)
+			//
+			// 	var irtID string = ""
+			// 	var irtIRT string = ""
+			// 	var irtSysIDX int = 0
+			//
+			// 	if replyToIdx == 0 {
+			// 		irtID = m.activePost.ID
+			// 		irtSysIDX = m.activePost.SysIDX
+			// 	} else {
+			// 		irt := m.allReplies[(replyToIdx - 1)]
+			// 		irtID = strconv.Itoa(replyToIdx + 1)
+			// 		irtIRT = irt.InReplyTo
+			// 		irtSysIDX = irt.SysIDX
+			// 	}
+			//
+			// 	r := reply.Reply{
+			// 		ID:        irtID,
+			// 		InReplyTo: irtIRT,
+			// 		Body:      m.textarea.Value(),
+			// 		SysIDX:    irtSysIDX,
+			// 	}
+			// 	err := m.a.CreateReply(&r)
+			// 	if err != nil {
+			// 		m.ctx.Logger.Error(err)
+			// 	}
+			//
+			// 	m.textarea.Reset()
+			// 	m.buffer = ""
+			// 	m.WMClose("reply")
+			// 	return m, nil
+			// }
 
-				m.ctx.Logger.Debugf("replyToIdx: %d", replyToIdx)
-
-				var irtID string = ""
-				var irtIRT string = ""
-				var irtSysIDX int = 0
-
-				if replyToIdx == 0 {
-					irtID = m.activePost.ID
-					irtSysIDX = m.activePost.SysIDX
-				} else {
-					irt := m.allReplies[(replyToIdx - 1)]
-					irtID = strconv.Itoa(replyToIdx + 1)
-					irtIRT = irt.InReplyTo
-					irtSysIDX = irt.SysIDX
-				}
-
-				r := reply.Reply{
-					ID:        irtID,
-					InReplyTo: irtIRT,
-					Body:      m.textarea.Value(),
-					SysIDX:    irtSysIDX,
-				}
-				err := m.a.CreateReply(&r)
-				if err != nil {
-					m.ctx.Logger.Error(err)
-				}
-
-				m.textarea.Reset()
-				m.buffer = ""
-				m.WMClose("reply")
-				return m, nil
-			}
-
-		default:
-			switch msg.String() {
-			case "1", "2", "3", "4", "5", "6", "7", "8", "9", "0":
-				if m.WMisFocused("post") {
-					m.buffer += msg.String()
-					return m, nil
-				}
-			default:
-				if m.WMFocused() != "reply" {
-					m.buffer = ""
-				}
-			}
+			// default:
+			// 	switch msg.String() {
+			// 	case "1", "2", "3", "4", "5", "6", "7", "8", "9", "0":
+			// 		if m.WMisFocused("post") {
+			// 			m.buffer += msg.String()
+			// 			return m, nil
+			// 		}
+			// 	default:
+			// 		if m.WMFocused() != "reply" {
+			// 			m.buffer = ""
+			// 		}
+			// 	}
 		}
 
 	case tea.WindowSizeMsg:
 		listWidth := m.ctx.Content[0] - 2
 		listHeight := m.ctx.Content[1] - 1
-		viewportWidth := m.ctx.Content[0] - 9
-		viewportHeight := m.ctx.Content[1] - 10
+		// viewportWidth := m.ctx.Content[0] - 9
+		// viewportHeight := m.ctx.Content[1] - 10
 
 		m.ctx.Theme.PostsList.List.Focused.Width(listWidth)
 		m.ctx.Theme.PostsList.List.Blurred.Width(listWidth)
@@ -251,12 +258,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			listHeight-2,
 		)
 
-		viewportStyle.Width(viewportWidth)
-		viewportStyle.Height(viewportHeight)
-		m.viewport = viewport.New(viewportWidth-4, viewportHeight-4)
-		m.viewport.Width = viewportWidth - 4
-		m.viewport.Height = viewportHeight + 1
-		// cmds = append(cmds, viewport.Sync(m.viewport))
+		// viewportStyle.Width(viewportWidth)
+		// viewportStyle.Height(viewportHeight)
+		// m.viewport = viewport.New(viewportWidth-4, viewportHeight-4)
+		// m.viewport.Width = viewportWidth - 4
+		// m.viewport.Height = viewportHeight + 1
+		// // cmds = append(cmds, viewport.Sync(m.viewport))
 
 	case []list.Item:
 		m.items = msg
@@ -264,28 +271,47 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.ctx.Loading = false
 		return m, nil
 
-	case *post.Post:
-		m.viewport.SetContent(m.renderViewport(msg))
-		m.WMOpen("post")
-		m.ctx.Loading = false
-		return m, nil
+		// case *post.Post:
+		// 	m.viewport.SetContent(m.renderViewport(msg))
+		// 	m.WMOpen("post")
+		// 	m.ctx.Loading = false
+		// 	return m, nil
 
-	}
-
-	var cmd tea.Cmd
-
-	switch m.WMFocused() {
-	case "list":
-		m.list, cmd = m.list.Update(msg)
-	case "post":
-		m.viewport, cmd = m.viewport.Update(msg)
-	case "reply":
-		if !m.textarea.Focused() {
-			cmds = append(cmds, m.textarea.Focus())
+	case cmd.Command:
+		switch msg.Call {
+		case cmd.ViewFocus:
+			if msg.Target == "*" {
+				m.focused = true
+			}
+			return m, nil
+		case cmd.ViewBlur:
+			if msg.Target == "*" {
+				m.focused = false
+			}
+			return m, nil
+		case cmd.ViewRefreshData:
+			if msg.Target == "*" {
+				m.ctx.Loading = true
+				cmds = append(cmds, m.refresh())
+			}
 		}
-		m.textarea, cmd = m.textarea.Update(msg)
+
 	}
-	cmds = append(cmds, cmd)
+
+	var lcmd tea.Cmd
+
+	// switch m.WMFocused() {
+	// case "list":
+	m.list, lcmd = m.list.Update(msg)
+	// case "post":
+	// 	m.viewport, lcmd = m.viewport.Update(msg)
+	// case "reply":
+	// 	if !m.textarea.Focused() {
+	// 		cmds = append(cmds, m.textarea.Focus())
+	// 	}
+	// 	m.textarea, lcmd = m.textarea.Update(msg)
+	// }
+	cmds = append(cmds, lcmd)
 
 	return m, tea.Batch(cmds...)
 }
