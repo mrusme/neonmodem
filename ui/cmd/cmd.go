@@ -8,6 +8,7 @@ const (
 	WinOpen CallType = iota
 	WinFocus
 	WinBlur
+	WinRefreshData
 
 	ViewFocus
 	ViewBlur
@@ -54,4 +55,14 @@ func (cmd *Command) GetArg(name string) interface{} {
 	}
 
 	return nil
+}
+
+func (cmd *Command) GetArgs() []Arg {
+	var args []Arg
+
+	for name, value := range cmd.Args {
+		args = append(args, Arg{Name: name, Value: value})
+	}
+
+	return args
 }

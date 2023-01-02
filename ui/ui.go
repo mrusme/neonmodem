@@ -74,6 +74,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds := make([]tea.Cmd, 0)
 
 	switch msg := msg.(type) {
+
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.keymap.Close):
@@ -108,6 +109,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				msg.Target,
 				postdialog.NewModel(m.ctx),
 				[4]int{3, 2, 10, 6},
+				msg.GetArgs()...,
 			)
 			m.ctx.Logger.Debugf("got back ccmds: %v\n", ccmds)
 		default:
@@ -116,6 +118,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		cmds = append(cmds, ccmds...)
+
+	default:
+		m.ctx.Logger.Debugf("updating all with default: %v\n", msg)
+		cmds = append(cmds, m.wm.UpdateAll(msg)...)
+
 	}
 
 	v, vcmd := m.views[m.currentView].Update(msg)

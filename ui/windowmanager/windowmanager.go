@@ -23,7 +23,7 @@ func New() *WM {
 	return wm
 }
 
-func (wm *WM) Open(id string, win windows.Window, xywh [4]int) []tea.Cmd {
+func (wm *WM) Open(id string, win windows.Window, xywh [4]int, args ...cmd.Arg) []tea.Cmd {
 	var tcmds []tea.Cmd
 
 	if wm.IsOpen(id) {
@@ -44,6 +44,11 @@ func (wm *WM) Open(id string, win windows.Window, xywh [4]int) []tea.Cmd {
 		Width:  item.XYWH[2],
 		Height: item.XYWH[3],
 	}))
+	tcmds = append(tcmds, wm.Update(id, *cmd.New(
+		cmd.WinRefreshData,
+		id,
+		args...,
+	)))
 
 	fcmds := wm.Focus(id)
 	tcmds = append(tcmds, fcmds...)

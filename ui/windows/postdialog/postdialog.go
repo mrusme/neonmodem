@@ -154,13 +154,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// cmds = append(cmds, viewport.Sync(m.viewport))
 
 	case *post.Post:
-		m.viewport.SetContent(m.renderViewport(msg))
+		m.ctx.Logger.Debug("got *post.Post")
+		m.activePost = msg
+		m.viewport.SetContent(m.renderViewport(m.activePost))
 		m.ctx.Loading = false
 		return m, nil
 
 	case cmd.Command:
 		m.ctx.Logger.Debugf("got command: %v\n", msg)
 		switch msg.Call {
+		case cmd.WinRefreshData:
+			if msg.Target == "post" {
+				m.activePost = msg.GetArg("post").(*post.Post)
+				m.ctx.Logger.Debugf("loading post: %v", m.activePost.ID)
+				m.ctx.Loading = true
+				return m, m.loadPost(m.activePost)
+			}
+			return m, nil
 		case cmd.WinFocus:
 			if msg.Target == "post" {
 				m.focused = true
@@ -171,6 +181,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.focused = false
 			}
 			return m, nil
+		default:
+			m.ctx.Logger.Debugf("received unhandled command: %v\n", msg)
 		}
 
 	default:
@@ -183,6 +195,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
+}
+
+func (m *Model) loadPost(p *post.Post) tea.Cmd {
+	return func() tea.Msg {
+		m.ctx.Logger.Debug("------ EXECUTED -----")
+		if err := m.a.LoadPost(p); err != nil {
+			m.ctx.Logger.Error(err)
+		}
+		return p
+	}
 }
 
 func (m Model) View() string {
