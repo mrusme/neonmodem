@@ -31,7 +31,8 @@ var (
 type KeyMap struct {
 	Refresh key.Binding
 	Select  key.Binding
-	Close   key.Binding
+	Esc     key.Binding
+	Quit    key.Binding
 }
 
 var DefaultKeyMap = KeyMap{
@@ -43,9 +44,12 @@ var DefaultKeyMap = KeyMap{
 		key.WithKeys("r", "enter"),
 		key.WithHelp("r/enter", "read"),
 	),
-	Close: key.NewBinding(
-		key.WithKeys("esc", "q"),
+	Esc: key.NewBinding(
+		key.WithKeys("esc"),
 		key.WithHelp("esc", "close"),
+	),
+	Quit: key.NewBinding(
+		key.WithKeys("q"),
 	),
 }
 
@@ -60,10 +64,11 @@ type Model struct {
 
 	glam *glamour.TermRenderer
 
-	focused   string
-	buffer    string
-	replyIDs  []string
-	viewcache string
+	focused             string
+	buffer              string
+	replyIDs            []string
+	viewcache           string
+	viewcacheTextareaXY []int
 }
 
 func (m Model) Init() tea.Cmd {
@@ -74,10 +79,12 @@ func (m Model) Init() tea.Cmd {
 
 func NewModel(c *ctx.Ctx) Model {
 	m := Model{
-		ctx:     c,
-		keymap:  DefaultKeyMap,
-		focused: "list",
-		buffer:  "",
+		ctx:                 c,
+		keymap:              DefaultKeyMap,
+		focused:             "list",
+		buffer:              "",
+		viewcache:           "",
+		viewcacheTextareaXY: []int{0, 0, 0, 0},
 	}
 
 	listDelegate := list.NewDefaultDelegate()
@@ -122,10 +129,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			} else if m.focused == "post" {
 				m.focused = "reply"
+
+				m.viewcache = m.View()
+
 				return m, m.textarea.Focus()
 			}
 
-		case key.Matches(msg, m.keymap.Close):
+		case key.Matches(msg, m.keymap.Esc), key.Matches(msg, m.keymap.Quit):
 			if m.focused == "list" {
 				return m, tea.Quit
 			} else if m.focused == "post" {
@@ -133,7 +143,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.textarea.Reset()
 				m.focused = "list"
 				return m, nil
-			} else if m.focused == "reply" {
+			} else if m.focused == "reply" && key.Matches(msg, m.keymap.Esc) {
 				m.focused = "post"
 				m.buffer = ""
 				return m, nil
@@ -209,7 +219,12 @@ func (m Model) View() string {
 	var view strings.Builder = strings.Builder{}
 
 	if m.focused == "reply" && m.viewcache != "" {
-		return helpers.PlaceOverlay(3, 2, m.textarea.View(), m.viewcache, false)
+		m.ctx.Logger.Debugln("Cached View()")
+
+		m.textarea.SetWidth(m.viewcacheTextareaXY[2])
+		m.textarea.SetHeight(m.viewcacheTextareaXY[3])
+
+		return helpers.PlaceOverlay(m.viewcacheTextareaXY[0], m.viewcacheTextareaXY[1], m.textarea.View(), m.viewcache, false)
 	}
 
 	m.ctx.Logger.Debugln("View()")
@@ -288,6 +303,11 @@ func (m Model) View() string {
 		tmp := helpers.PlaceOverlay(5, m.ctx.Screen[1]-21,
 			m.ctx.Theme.DialogBox.Window.Focused.Render(replyWindow),
 			view.String(), true)
+
+		m.viewcacheTextareaXY[0] = 6
+		m.viewcacheTextareaXY[1] = m.ctx.Screen[1] - 19
+		m.viewcacheTextareaXY[2] = m.viewport.Width - 2
+		m.viewcacheTextareaXY[3] = 6
 
 		view = strings.Builder{}
 		view.WriteString(tmp)

@@ -22,18 +22,18 @@ type KeyMap struct {
 }
 
 var DefaultKeyMap = KeyMap{
-	Up: key.NewBinding(
-		key.WithKeys("k", "up"),
-		key.WithHelp("↑/k", "move up"),
-	),
-	Down: key.NewBinding(
-		key.WithKeys("j", "down"),
-		key.WithHelp("↓/j", "move down"),
-	),
-	Quit: key.NewBinding(
-		key.WithKeys("q", "ctrl+q", "escape"),
-		key.WithHelp("q/esc", "quit"),
-	),
+	// Up: key.NewBinding(
+	// 	key.WithKeys("k", "up"),
+	// 	key.WithHelp("↑/k", "move up"),
+	// ),
+	// Down: key.NewBinding(
+	// 	key.WithKeys("j", "down"),
+	// 	key.WithHelp("↓/j", "move down"),
+	// ),
+	// Quit: key.NewBinding(
+	// 	key.WithKeys("q", "ctrl+q", "escape"),
+	// 	key.WithHelp("q/esc", "quit"),
+	// ),
 }
 
 type Model struct {
@@ -67,8 +67,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, m.keymap.Quit):
-			return m, tea.Quit
+		// case key.Matches(msg, m.keymap.Quit):
+		// 	return m, tea.Quit
 		}
 
 	case tea.WindowSizeMsg:
