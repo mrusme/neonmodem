@@ -123,25 +123,3 @@ func handleWinFreshDataCmd(mi interface{}, c cmd.Command) (bool, []tea.Cmd) {
 
 	return false, cmds
 }
-
-func (m *Model) loadPost(p *post.Post) tea.Cmd {
-	return func() tea.Msg {
-		m.ctx.Logger.Debug("------ EXECUTED -----")
-		if err := m.a.LoadPost(p); err != nil {
-			m.ctx.Logger.Error(err)
-			c := cmd.New(
-				cmd.MsgError,
-				WIN_ID,
-				cmd.Arg{Name: "error", Value: err},
-			)
-			return *c
-		}
-
-		c := cmd.New(
-			cmd.WinFreshData,
-			WIN_ID,
-			cmd.Arg{Name: "post", Value: p},
-		)
-		return *c
-	}
-}

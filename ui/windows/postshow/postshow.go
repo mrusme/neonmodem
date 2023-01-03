@@ -8,6 +8,7 @@ import (
 	"github.com/mrusme/gobbs/aggregator"
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/models/reply"
+	"github.com/mrusme/gobbs/ui/cmd"
 	"github.com/mrusme/gobbs/ui/ctx"
 	"github.com/mrusme/gobbs/ui/toolkit"
 )
@@ -95,4 +96,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
+}
+
+func (m *Model) loadPost(p *post.Post) tea.Cmd {
+	return func() tea.Msg {
+		m.ctx.Logger.Debug("------ EXECUTED -----")
+		if err := m.a.LoadPost(p); err != nil {
+			m.ctx.Logger.Error(err)
+			c := cmd.New(
+				cmd.MsgError,
+				WIN_ID,
+				cmd.Arg{Name: "error", Value: err},
+			)
+			return *c
+		}
+
+		c := cmd.New(
+			cmd.WinFreshData,
+			WIN_ID,
+			cmd.Arg{Name: "post", Value: p},
+		)
+		return *c
+	}
 }
