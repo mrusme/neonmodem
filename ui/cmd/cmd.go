@@ -54,6 +54,10 @@ func (cmd *Command) Tea() tea.Cmd {
 	}
 }
 
+func (cmd *Command) AddArg(name string, value interface{}) {
+	cmd.Args[name] = value
+}
+
 func (cmd *Command) GetArg(name string) interface{} {
 	if iface, ok := cmd.Args[name]; ok {
 		return iface

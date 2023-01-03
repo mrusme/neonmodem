@@ -43,6 +43,7 @@ func (wm *WM) Open(id string, win windows.Window, xywh [4]int, command *cmd.Comm
 
 	wm.stack = append(wm.stack, *item)
 
+	command.AddArg("xywh", item.XYWH)
 	tcmds = append(tcmds, wm.Update(id, *command))
 	wm.ctx.Logger.Debugf("content: %v\n", wm.ctx.Content)
 	tcmds = append(tcmds, wm.Resize(id, wm.ctx.Content[0], wm.ctx.Content[1])...)

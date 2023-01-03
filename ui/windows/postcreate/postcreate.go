@@ -42,6 +42,7 @@ type Model struct {
 	keymap   KeyMap
 	wh       [2]int
 	focused  bool
+	xywh     [4]int
 	textarea textarea.Model
 
 	a    *aggregator.Aggregator
@@ -71,6 +72,7 @@ func NewModel(c *ctx.Ctx) Model {
 		ctx:     c,
 		keymap:  DefaultKeyMap,
 		focused: false,
+		xywh:    [4]int{0, 0, 0, 0},
 
 		replyToIdx: 0,
 
@@ -141,6 +143,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.Call {
 		case cmd.WinOpen:
 			if msg.Target == WIN_ID {
+				m.xywh = msg.GetArg("xywh").([4]int)
 				return m, m.textarea.Focus()
 			}
 		case cmd.WinClose:
@@ -237,13 +240,10 @@ func (m Model) buildView(cached bool) string {
 		bottombar,
 	)
 
-	replyWindowX := 5
-	replyWindowY := m.ctx.Screen[1] - 21
-
 	tmp := m.ctx.Theme.DialogBox.Window.Focused.Render(replyWindow)
 
-	m.viewcacheTextareaXY[0] = replyWindowX + 1
-	m.viewcacheTextareaXY[1] = replyWindowY + 2
+	m.viewcacheTextareaXY[0] = 1
+	m.viewcacheTextareaXY[1] = 2
 	m.viewcacheTextareaXY[2] = textareaWidth
 	m.viewcacheTextareaXY[3] = textareaHeight
 
