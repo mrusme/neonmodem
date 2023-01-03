@@ -65,14 +65,6 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m Model) Focus() {
-	m.focused = true
-}
-
-func (m Model) Blur() {
-	m.focused = false
-}
-
 func NewModel(c *ctx.Ctx) Model {
 	m := Model{
 		ctx:    c,
@@ -179,14 +171,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case cmd.WinFocus:
 			if msg.Target == WIN_ID ||
 				msg.Target == "*" {
-				m.focused = true
+				m.ctx.Logger.Debug("got WinFocus")
+				m.Focus()
 			}
+			m.ctx.Logger.Debugf("focused: %v", m.focused)
 			return m, nil
 		case cmd.WinBlur:
 			if msg.Target == WIN_ID ||
 				msg.Target == "*" {
-				m.focused = false
+				m.ctx.Logger.Debug("got WinBlur")
+				m.Blur()
 			}
+			m.ctx.Logger.Debugf("focused: %v", m.focused)
 			return m, nil
 		case cmd.WinFreshData:
 			if msg.Target == WIN_ID ||
@@ -235,6 +231,16 @@ func (m *Model) loadPost(p *post.Post) tea.Cmd {
 	}
 }
 
+func (m *Model) Focus() {
+	m.focused = true
+	m.viewcache = m.buildView(false)
+}
+
+func (m *Model) Blur() {
+	m.focused = false
+	m.viewcache = m.buildView(false)
+}
+
 func (m Model) View() string {
 	return m.buildView(true)
 }
@@ -247,6 +253,8 @@ func (m Model) buildView(cached bool) string {
 
 		return m.viewcache
 	}
+	m.ctx.Logger.Debugln("View()")
+	m.ctx.Logger.Debug(m.focused)
 
 	var style lipgloss.Style
 	if m.focused {

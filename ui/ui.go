@@ -51,6 +51,7 @@ type Model struct {
 	ctx         *ctx.Ctx
 
 	viewcache         string
+	viewcacheID       string
 	renderOnlyFocused bool
 }
 
@@ -81,6 +82,8 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds := make([]tea.Cmd, 0)
+
+	m.viewcacheID = m.wm.Focused()
 
 	switch msg := msg.(type) {
 
@@ -129,14 +132,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				)
 			case postcreate.WIN_ID:
 				m.ctx.Logger.Debugln("received WinOpen")
-				m.viewcache = m.buildView(false)
-				m.renderOnlyFocused = true
 				ccmds = m.wm.Open(
 					msg.Target,
 					postcreate.NewModel(m.ctx),
 					[4]int{6, int(m.ctx.Content[1] / 3), 8, 4},
 					&msg,
 				)
+				m.viewcache = m.buildView(false)
 			}
 			m.ctx.Logger.Debugf("got back ccmds: %v\n", ccmds)
 
@@ -144,7 +146,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.Target {
 			case postcreate.WIN_ID:
 				m.ctx.Logger.Debugln("received WinClose")
-				m.renderOnlyFocused = false
 			}
 
 		case cmd.WMCloseWin:
@@ -162,10 +163,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			)
 
 		default:
-			if msg.Call < cmd.ViewFocus {
-				m.ctx.Logger.Debugf("updating all with cmd: %v\n", msg)
-				ccmds = m.wm.UpdateAll(msg)
-			}
+			// if msg.Call < cmd.ViewFocus {
+			m.ctx.Logger.Debugf("updating all with cmd: %v\n", msg)
+			ccmds = m.wm.UpdateAll(msg)
+			// }
 		}
 
 		cmds = append(cmds, ccmds...)
@@ -197,9 +198,15 @@ func (m Model) buildView(cached bool) string {
 	s := strings.Builder{}
 	var tmp string = ""
 
-	if m.viewcache != "" && m.renderOnlyFocused {
+	m.ctx.Logger.Debugf("viewcacheID: %s\n", m.viewcacheID)
+	if cached && m.viewcache != "" && m.viewcacheID == m.wm.Focused() &&
+		m.viewcacheID == postcreate.WIN_ID {
+		m.ctx.Logger.Debug("hitting UI viewcache")
 		tmp = m.viewcache
+		m.renderOnlyFocused = true
 	} else {
+		m.ctx.Logger.Debug("generating UI viewcache")
+		m.renderOnlyFocused = false
 		s.WriteString(m.header.View() + "\n")
 		s.WriteString(m.views[m.currentView].View())
 		tmp = s.String()

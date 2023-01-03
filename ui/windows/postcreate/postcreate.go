@@ -9,7 +9,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mrusme/gobbs/aggregator"
 	"github.com/mrusme/gobbs/models/post"
@@ -39,15 +38,15 @@ var DefaultKeyMap = KeyMap{
 }
 
 type Model struct {
-	ctx      *ctx.Ctx
-	keymap   KeyMap
-	wh       [2]int
-	focused  bool
-	xywh     [4]int
+	ctx     *ctx.Ctx
+	keymap  KeyMap
+	wh      [2]int
+	focused bool
+	xywh    [4]int
+
 	textarea textarea.Model
 
-	a    *aggregator.Aggregator
-	glam *glamour.TermRenderer
+	a *aggregator.Aggregator
 
 	replyToIdx   int
 	replyTo      string
@@ -59,14 +58,6 @@ type Model struct {
 
 func (m Model) Init() tea.Cmd {
 	return nil
-}
-
-func (m Model) Focus() {
-	m.focused = true
-}
-
-func (m Model) Blur() {
-	m.focused = false
 }
 
 func NewModel(c *ctx.Ctx) Model {
@@ -164,14 +155,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case cmd.WinFocus:
 			if msg.Target == WIN_ID ||
 				msg.Target == "*" {
-				m.focused = true
-				m.viewcache = m.buildView(false)
+				m.Focus()
 			}
 			return m, nil
 		case cmd.WinBlur:
 			if msg.Target == WIN_ID ||
 				msg.Target == "*" {
-				m.focused = false
+				m.Blur()
 			}
 			return m, nil
 		default:
@@ -196,14 +186,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m *Model) loadPost(p *post.Post) tea.Cmd {
-	return func() tea.Msg {
-		m.ctx.Logger.Debug("------ EXECUTED -----")
-		if err := m.a.LoadPost(p); err != nil {
-			m.ctx.Logger.Error(err)
-		}
-		return p
-	}
+func (m *Model) Focus() {
+	m.focused = true
+	m.viewcache = m.buildView(false)
+}
+
+func (m *Model) Blur() {
+	m.focused = false
+	m.viewcache = m.buildView(false)
 }
 
 func (m Model) View() string {
@@ -229,8 +219,14 @@ func (m Model) buildView(cached bool) string {
 	if m.replyToIdx != 0 {
 		title += fmt.Sprintf(" to reply #%d", m.replyToIdx)
 	}
-	titlebar := m.ctx.Theme.DialogBox.Titlebar.Focused.
-		Align(lipgloss.Center).
+
+	var style lipgloss.Style
+	if m.focused {
+		style = m.ctx.Theme.DialogBox.Titlebar.Focused
+	} else {
+		style = m.ctx.Theme.DialogBox.Titlebar.Blurred
+	}
+	titlebar := style.Align(lipgloss.Center).
 		Width(m.wh[0]).
 		Render(title)
 
@@ -250,7 +246,12 @@ func (m Model) buildView(cached bool) string {
 		bottombar,
 	)
 
-	tmp := m.ctx.Theme.DialogBox.Window.Focused.Render(replyWindow)
+	var tmp string
+	if m.focused {
+		tmp = m.ctx.Theme.DialogBox.Window.Focused.Render(replyWindow)
+	} else {
+		tmp = m.ctx.Theme.DialogBox.Window.Blurred.Render(replyWindow)
+	}
 
 	m.viewcacheTextareaXY[0] = 1
 	m.viewcacheTextareaXY[1] = 2
