@@ -1,6 +1,7 @@
 package toolkit
 
 import (
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mrusme/gobbs/ui/cmd"
 	"github.com/mrusme/gobbs/ui/theme"
@@ -18,6 +19,8 @@ type ToolKit struct {
 	wh      [2]int
 	focused bool
 
+	keybindings map[string]key.Binding
+
 	viewfunc  ViewFunc
 	viewcache string
 }
@@ -30,6 +33,8 @@ func New(winID string, t *theme.Theme, l *zap.SugaredLogger) *ToolKit {
 
 	tk.wh = [2]int{0, 0}
 	tk.focused = false
+
+	tk.keybindings = make(map[string]key.Binding)
 
 	return tk
 }

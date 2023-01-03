@@ -31,21 +31,9 @@ var (
 			BorderBottom(false)
 )
 
-type KeyMap struct {
-	Reply key.Binding
-}
-
-var DefaultKeyMap = KeyMap{
-	Reply: key.NewBinding(
-		key.WithKeys("r"),
-		key.WithHelp("r", "reply"),
-	),
-}
-
 type Model struct {
 	ctx      *ctx.Ctx
 	tk       *toolkit.ToolKit
-	keymap   KeyMap
 	viewport viewport.Model
 
 	a    *aggregator.Aggregator
@@ -71,7 +59,6 @@ func NewModel(c *ctx.Ctx) Model {
 			c.Theme,
 			c.Logger,
 		),
-		keymap: DefaultKeyMap,
 
 		buffer:   "",
 		replyIDs: []string{},
@@ -79,6 +66,8 @@ func NewModel(c *ctx.Ctx) Model {
 
 	m.tk.SetViewFunc(buildView)
 	m.a, _ = aggregator.New(m.ctx)
+
+	m.tk.KeymapAdd("reply", "reply", "r")
 
 	return m
 }
@@ -95,7 +84,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 
-		case key.Matches(msg, m.keymap.Reply):
+		case key.Matches(msg, m.tk.KeymapGet("reply")):
 			var replyToIdx int = 0
 			var err error
 
