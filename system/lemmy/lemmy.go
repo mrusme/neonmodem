@@ -194,9 +194,44 @@ func (sys *System) LoadPost(p *post.Post) error {
 }
 
 func (sys *System) CreatePost(p *post.Post) error {
+	communityID, err := strconv.Atoi(p.Forum.ID)
+	if err != nil {
+		return err
+	}
+
+	resp, err := sys.client.CreatePost(context.Background(), types.CreatePost{
+		Name:        p.Subject,
+		CommunityID: communityID,
+		Body:        types.NewOptional(p.Body),
+		NSFW:        types.NewOptional(false),
+	})
+	if err != nil {
+		return err
+	}
+
+	p.ID = strconv.Itoa(resp.PostView.Post.ID)
 	return nil
 }
 
 func (sys *System) CreateReply(r *reply.Reply) error {
+	id, err := strconv.Atoi(r.ID)
+	if err != nil {
+		return err
+	}
+	inReplyTo, err := strconv.Atoi(r.InReplyTo)
+	if err != nil {
+		return err
+	}
+
+	resp, err := sys.client.CreateComment(context.Background(), types.CreateComment{
+		PostID:   inReplyTo,
+		ParentID: types.NewOptional(id),
+		Content:  r.Body,
+	})
+	if err != nil {
+		return err
+	}
+
+	r.ID = strconv.Itoa(resp.CommentView.Comment.ID)
 	return nil
 }
