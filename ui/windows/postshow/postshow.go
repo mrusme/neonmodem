@@ -25,8 +25,9 @@ var (
 )
 
 type Model struct {
-	ctx      *ctx.Ctx
-	tk       *toolkit.ToolKit
+	ctx *ctx.Ctx
+	tk  *toolkit.ToolKit
+
 	viewport viewport.Model
 
 	a    *aggregator.Aggregator
@@ -57,11 +58,11 @@ func NewModel(c *ctx.Ctx) Model {
 		replyIDs: []string{},
 	}
 
-	m.tk.SetViewFunc(buildView)
-	m.a, _ = aggregator.New(m.ctx)
-
 	m.tk.KeymapAdd("reply", "reply", "r")
 
+	m.a, _ = aggregator.New(m.ctx)
+
+	m.tk.SetViewFunc(buildView)
 	m.tk.SetMsgHandling(toolkit.MsgHandling{
 		OnKeymapKey: []toolkit.MsgHandlingKeymapKey{
 			{

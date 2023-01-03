@@ -19,6 +19,7 @@ type MsgHandling struct {
 	OnAnyUncaughtKey    func(m interface{}, k tea.KeyMsg) (bool, []tea.Cmd)
 	OnViewResize        func(m interface{}) (bool, []tea.Cmd)
 	OnWinOpenCmd        func(m interface{}, c cmd.Command) (bool, []tea.Cmd)
+	OnWinCloseCmd       func(m interface{}, c cmd.Command) (bool, []tea.Cmd)
 	OnWinRefreshDataCmd func(m interface{}, c cmd.Command) (bool, []tea.Cmd)
 	OnWinFreshDataCmd   func(m interface{}, c cmd.Command) (bool, []tea.Cmd)
 }
@@ -80,6 +81,10 @@ func (tk *ToolKit) HandleMsg(m interface{}, msg tea.Msg) (bool, []tea.Cmd) {
 		case cmd.WinOpen:
 			if tk.mh.OnWinOpenCmd != nil {
 				return tk.mh.OnWinOpenCmd(m, msg)
+			}
+		case cmd.WinClose:
+			if tk.mh.OnWinCloseCmd != nil {
+				return tk.mh.OnWinCloseCmd(m, msg)
 			}
 		case cmd.WinRefreshData:
 			if tk.mh.OnWinRefreshDataCmd != nil {
