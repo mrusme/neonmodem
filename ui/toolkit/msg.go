@@ -22,6 +22,7 @@ type MsgHandling struct {
 	OnWinCloseCmd       func(m interface{}, c cmd.Command) (bool, []tea.Cmd)
 	OnWinRefreshDataCmd func(m interface{}, c cmd.Command) (bool, []tea.Cmd)
 	OnWinFreshDataCmd   func(m interface{}, c cmd.Command) (bool, []tea.Cmd)
+	OnMsgErrorCmd       func(m interface{}, c cmd.Command) (bool, []tea.Cmd)
 }
 
 func (tk *ToolKit) SetMsgHandling(mh MsgHandling) {
@@ -93,6 +94,10 @@ func (tk *ToolKit) HandleMsg(m interface{}, msg tea.Msg) (bool, []tea.Cmd) {
 		case cmd.WinFreshData:
 			if tk.mh.OnWinFreshDataCmd != nil {
 				return tk.mh.OnWinFreshDataCmd(m, msg)
+			}
+		case cmd.MsgError:
+			if tk.mh.OnMsgErrorCmd != nil {
+				return tk.mh.OnMsgErrorCmd(m, msg)
 			}
 		}
 
