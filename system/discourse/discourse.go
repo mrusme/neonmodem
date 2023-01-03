@@ -225,21 +225,39 @@ func (sys *System) CreatePost(p *post.Post) error {
 }
 
 func (sys *System) CreateReply(r *reply.Reply) error {
+	var err error
+
 	sys.logger.Debugf("%v", r)
 	ID, err := strconv.Atoi(r.ID)
 	if err != nil {
 		return err
 	}
-	inReplyTo, err := strconv.Atoi(r.InReplyTo)
-	if err != nil {
-		return err
+
+	var inReplyTo int = -1
+	if r.InReplyTo != "" {
+		inReplyTo, err = strconv.Atoi(r.InReplyTo)
+		if err != nil {
+			return err
+		}
 	}
 
-	ap := api.CreatePostModel{
-		Raw:               r.Body,
-		TopicID:           inReplyTo,
-		ReplyToPostNumber: ID,
-		CreatedAt:         time.Now().Format(time.RFC3339Nano),
+	var ap api.CreatePostModel
+
+	if inReplyTo == -1 {
+		// Looks like we're replying directly to a post
+		ap = api.CreatePostModel{
+			Raw:       r.Body,
+			TopicID:   ID,
+			CreatedAt: time.Now().Format(time.RFC3339Nano),
+		}
+	} else {
+		// Apparently it's a reply to a comment in a post
+		ap = api.CreatePostModel{
+			Raw:               r.Body,
+			TopicID:           inReplyTo,
+			ReplyToPostNumber: ID,
+			CreatedAt:         time.Now().Format(time.RFC3339Nano),
+		}
 	}
 
 	cp, err := sys.client.Posts.Create(context.Background(), &ap)

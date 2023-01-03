@@ -1,6 +1,7 @@
 package postcreate
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -112,8 +113,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				irtSysIDX = pst.SysIDX
 			} else {
 				rply := m.replyToIface.(reply.Reply)
+				b, _ := json.Marshal(rply)
+				m.ctx.Logger.Debug(string(b))
 				irtID = strconv.Itoa(m.replyToIdx + 1)
-				irtIRT = rply.InReplyTo
+				irtIRT = rply.InReplyTo // TODO: THis is empty? Why?
 				irtSysIDX = rply.SysIDX
 			}
 
@@ -123,6 +126,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				Body:      m.textarea.Value(),
 				SysIDX:    irtSysIDX,
 			}
+
+			b, _ := json.Marshal(r)
+			m.ctx.Logger.Debug(string(b))
 
 			err := m.a.CreateReply(&r)
 			if err != nil {
