@@ -2,6 +2,7 @@ package hackernews
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"time"
 
@@ -194,9 +195,9 @@ func (sys *System) loadReplies(replies *[]reply.Reply) error {
 }
 
 func (sys *System) CreatePost(p *post.Post) error {
-	return nil
+	return errors.New("Sorry, this feature isn't available yet for Hacker News!")
 }
 
 func (sys *System) CreateReply(r *reply.Reply) error {
-	return nil
+	return errors.New("Sorry, this feature isn't available yet for Hacker News!")
 }
