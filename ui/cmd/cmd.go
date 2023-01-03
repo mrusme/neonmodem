@@ -18,6 +18,8 @@ const (
 	ViewFreshData
 
 	MsgError
+
+	WMCloseWin
 )
 
 type Arg struct {

@@ -2,6 +2,7 @@ package postshow
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -97,22 +98,39 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 
 		case key.Matches(msg, m.keymap.Reply):
-			// if m.buffer != "" {
-			// 	replyToID, err := strconv.Atoi(m.buffer)
-			// 	if err != nil {
-			// 		// TODO: Handle error
-			// 	}
-			//
-			// 	if replyToID >= len(m.replyIDs) {
-			// 		// TODO: Handle error
-			// 	}
-			// }
+			var replyToIdx int = 0
+			var err error
+
 			m.viewcache = m.buildView(false)
 
-			cmd := cmd.New(cmd.WinOpen, postcreate.WIN_ID, cmd.Arg{
-				Name:  "post",
-				Value: &m.activePost,
-			})
+			if m.buffer != "" {
+				replyToIdx, err = strconv.Atoi(m.buffer)
+
+				if err != nil {
+					// TODO: Handle error
+				}
+
+				if replyToIdx >= len(m.replyIDs) {
+					// TODO: Handle error
+				}
+			}
+
+			m.ctx.Logger.Debugf("replyToIdx: %d", replyToIdx)
+			var rtype cmd.Arg = cmd.Arg{Name: "replyTo"}
+			var rarg cmd.Arg
+			var ridx cmd.Arg = cmd.Arg{Name: "replyToIdx", Value: replyToIdx}
+
+			if replyToIdx == 0 {
+				rtype.Value = "post"
+				rarg.Name = "post"
+				rarg.Value = *m.activePost
+			} else {
+				rtype.Value = "reply"
+				rarg.Name = "reply"
+				rarg.Value = *m.allReplies[(replyToIdx - 1)]
+			}
+
+			cmd := cmd.New(cmd.WinOpen, postcreate.WIN_ID, rtype, rarg, ridx)
 			cmds = append(cmds, cmd.Tea())
 
 			m.ctx.Logger.Debugln("caching view")

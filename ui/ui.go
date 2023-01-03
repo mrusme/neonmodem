@@ -115,6 +115,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var ccmds []tea.Cmd
 
 		switch msg.Call {
+
 		case cmd.WinOpen:
 			switch msg.Target {
 			case postshow.WIN_ID:
@@ -137,12 +138,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				)
 			}
 			m.ctx.Logger.Debugf("got back ccmds: %v\n", ccmds)
+
 		case cmd.WinClose:
 			switch msg.Target {
 			case postcreate.WIN_ID:
 				m.ctx.Logger.Debugln("received WinClose")
 				m.renderOnlyFocused = false
 			}
+
+		case cmd.WMCloseWin:
+			if ok, clcmds := m.wm.Close(msg.Target); ok {
+				cmds = append(cmds, clcmds...)
+			}
+
 		default:
 			if msg.Call < cmd.ViewFocus {
 				m.ctx.Logger.Debugf("updating all with cmd: %v\n", msg)

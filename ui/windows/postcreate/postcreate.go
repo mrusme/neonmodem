@@ -2,6 +2,7 @@ package postcreate
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/cursor"
@@ -48,8 +49,9 @@ type Model struct {
 	a    *aggregator.Aggregator
 	glam *glamour.TermRenderer
 
-	activeReply *reply.Reply
-	replyToIdx  int
+	replyToIdx   int
+	replyTo      string
+	replyToIface interface{}
 
 	viewcache           string
 	viewcacheTextareaXY []int
@@ -74,7 +76,9 @@ func NewModel(c *ctx.Ctx) Model {
 		focused: false,
 		xywh:    [4]int{0, 0, 0, 0},
 
-		replyToIdx: 0,
+		replyToIdx:   0,
+		replyTo:      "",
+		replyToIface: nil,
 
 		viewcache:           "",
 		viewcacheTextareaXY: []int{0, 0, 0, 0},
@@ -97,39 +101,38 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 
 		case key.Matches(msg, m.keymap.Reply):
-			// replyToIdx, _ := strconv.Atoi(m.buffer)
-			//
-			// m.ctx.Logger.Debugf("replyToIdx: %d", replyToIdx)
-			//
-			// var irtID string = ""
-			// var irtIRT string = ""
-			// var irtSysIDX int = 0
-			//
-			// if replyToIdx == 0 {
-			// 	irtID = m.activePost.ID
-			// 	irtSysIDX = m.activePost.SysIDX
-			// } else {
-			// 	irt := m.allReplies[(replyToIdx - 1)]
-			// 	irtID = strconv.Itoa(replyToIdx + 1)
-			// 	irtIRT = irt.InReplyTo
-			// 	irtSysIDX = irt.SysIDX
-			// }
-			//
-			// r := reply.Reply{
-			// 	ID:        irtID,
-			// 	InReplyTo: irtIRT,
-			// 	Body:      m.textarea.Value(),
-			// 	SysIDX:    irtSysIDX,
-			// }
-			// err := m.a.CreateReply(&r)
-			// if err != nil {
-			// 	m.ctx.Logger.Error(err)
-			// }
-			//
-			// m.textarea.Reset()
-			// m.buffer = ""
-			// m.WMClose("reply")
-			// return m, nil
+
+			var irtID string = ""
+			var irtIRT string = ""
+			var irtSysIDX int = 0
+
+			if m.replyToIdx == 0 {
+				pst := m.replyToIface.(post.Post)
+				irtID = pst.ID
+				irtSysIDX = pst.SysIDX
+			} else {
+				rply := m.replyToIface.(reply.Reply)
+				irtID = strconv.Itoa(m.replyToIdx + 1)
+				irtIRT = rply.InReplyTo
+				irtSysIDX = rply.SysIDX
+			}
+
+			r := reply.Reply{
+				ID:        irtID,
+				InReplyTo: irtIRT,
+				Body:      m.textarea.Value(),
+				SysIDX:    irtSysIDX,
+			}
+
+			err := m.a.CreateReply(&r)
+			if err != nil {
+				m.ctx.Logger.Error(err)
+				// TODO
+			}
+
+			m.textarea.Reset()
+			m.replyToIdx = 0
+			return m, cmd.New(cmd.WMCloseWin, WIN_ID).Tea()
 
 		}
 
@@ -144,6 +147,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case cmd.WinOpen:
 			if msg.Target == WIN_ID {
 				m.xywh = msg.GetArg("xywh").([4]int)
+				m.replyToIdx = msg.GetArg("replyToIdx").(int)
+				m.replyTo = msg.GetArg("replyTo").(string)
+				m.replyToIface = msg.GetArg(m.replyTo)
 				return m, m.textarea.Focus()
 			}
 		case cmd.WinClose:
@@ -250,7 +256,5 @@ func (m Model) buildView(cached bool) string {
 	view = strings.Builder{}
 	view.WriteString(tmp)
 
-	// m.viewcache = view.String()
-	// return m.viewcache
 	return view.String()
 }
