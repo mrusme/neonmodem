@@ -15,6 +15,7 @@ import (
 	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/ui/cmd"
 	"github.com/mrusme/gobbs/ui/ctx"
+	"github.com/mrusme/gobbs/ui/toolkit"
 	"github.com/mrusme/gobbs/ui/windows/postcreate"
 )
 
@@ -43,9 +44,8 @@ var DefaultKeyMap = KeyMap{
 
 type Model struct {
 	ctx      *ctx.Ctx
+	tk       *toolkit.ToolKit
 	keymap   KeyMap
-	wh       [2]int
-	focused  bool
 	viewport viewport.Model
 
 	a    *aggregator.Aggregator
@@ -57,8 +57,6 @@ type Model struct {
 	activePost  *post.Post
 	allReplies  []*reply.Reply
 	activeReply *reply.Reply
-
-	viewcache string
 }
 
 func (m Model) Init() tea.Cmd {
@@ -68,15 +66,14 @@ func (m Model) Init() tea.Cmd {
 func NewModel(c *ctx.Ctx) Model {
 	m := Model{
 		ctx:    c,
+		tk:     toolkit.New(WIN_ID, c.Logger),
 		keymap: DefaultKeyMap,
-		wh:     [2]int{0, 0},
 
 		buffer:   "",
 		replyIDs: []string{},
-
-		viewcache: "",
 	}
 
+	m.tk.SetViewFunc(buildView)
 	m.a, _ = aggregator.New(m.ctx)
 
 	return m
@@ -84,6 +81,11 @@ func NewModel(c *ctx.Ctx) Model {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
+
+	ret, cmds := m.tk.HandleMsg(&m, msg)
+	if ret {
+		return m, tea.Batch(cmds...)
+	}
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -93,7 +95,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var replyToIdx int = 0
 			var err error
 
-			m.viewcache = m.buildView(false)
+			// m.viewcache = m.buildView(false)
+			m.tk.CacheView(&m)
 
 			if m.buffer != "" {
 				replyToIdx, err = strconv.Atoi(m.buffer)
@@ -142,11 +145,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.WindowSizeMsg:
-		m.wh[0] = msg.Width
-		m.wh[1] = msg.Height
-		m.ctx.Logger.Debugf("received WindowSizeMsg: %v\n", m.wh)
-		viewportWidth := m.wh[0] - 2
-		viewportHeight := m.wh[1] - 5
+		m.ctx.Logger.Debugf("received WindowSizeMsg: %vx%v\n", m.tk.ViewWidth(), m.tk.ViewHeight())
+		viewportWidth := m.tk.ViewWidth() - 2
+		viewportHeight := m.tk.ViewHeight() - 5
 
 		viewportStyle.Width(viewportWidth)
 		viewportStyle.Height(viewportHeight)
@@ -167,22 +168,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.ctx.Loading = true
 				return m, m.loadPost(m.activePost)
 			}
-			return m, nil
-		case cmd.WinFocus:
-			if msg.Target == WIN_ID ||
-				msg.Target == "*" {
-				m.ctx.Logger.Debug("got WinFocus")
-				m.Focus()
-			}
-			m.ctx.Logger.Debugf("focused: %v", m.focused)
-			return m, nil
-		case cmd.WinBlur:
-			if msg.Target == WIN_ID ||
-				msg.Target == "*" {
-				m.ctx.Logger.Debug("got WinBlur")
-				m.Blur()
-			}
-			m.ctx.Logger.Debugf("focused: %v", m.focused)
 			return m, nil
 		case cmd.WinFreshData:
 			if msg.Target == WIN_ID ||
@@ -231,43 +216,34 @@ func (m *Model) loadPost(p *post.Post) tea.Cmd {
 	}
 }
 
-func (m *Model) Focus() {
-	m.focused = true
-	m.viewcache = m.buildView(false)
-}
-
-func (m *Model) Blur() {
-	m.focused = false
-	m.viewcache = m.buildView(false)
-}
-
 func (m Model) View() string {
-	return m.buildView(true)
+	return m.tk.View(&m, true)
 }
 
-func (m Model) buildView(cached bool) string {
+func buildView(mi interface{}, cached bool) string {
+	var m *Model = mi.(*Model)
 	var view strings.Builder = strings.Builder{}
 
-	if cached && m.focused == false && m.viewcache != "" {
+	if cached && !m.tk.IsFocused() && m.tk.IsCached() {
 		m.ctx.Logger.Debugln("Cached View()")
 
-		return m.viewcache
+		return m.tk.GetCachedView()
 	}
 	m.ctx.Logger.Debugln("View()")
-	m.ctx.Logger.Debug(m.focused)
+	m.ctx.Logger.Debugf("IsFocused: %v\n", m.tk.IsFocused())
 
 	var style lipgloss.Style
-	if m.focused {
+	if m.tk.IsFocused() {
 		style = m.ctx.Theme.DialogBox.Titlebar.Focused
 	} else {
 		style = m.ctx.Theme.DialogBox.Titlebar.Blurred
 	}
 	titlebar := style.Align(lipgloss.Center).
-		Width(m.wh[0]).
+		Width(m.tk.ViewWidth()).
 		Render("Post")
 
 	bottombar := m.ctx.Theme.DialogBox.Bottombar.
-		Width(m.wh[0]).
+		Width(m.tk.ViewWidth()).
 		Render("[#]r reply · esc close")
 
 	ui := lipgloss.JoinVertical(
@@ -278,7 +254,7 @@ func (m Model) buildView(cached bool) string {
 	)
 
 	var tmp string
-	if m.focused {
+	if m.tk.IsFocused() {
 		tmp = m.ctx.Theme.DialogBox.Window.Focused.Render(ui)
 	} else {
 		tmp = m.ctx.Theme.DialogBox.Window.Blurred.Render(ui)
