@@ -65,8 +65,12 @@ func (m Model) Init() tea.Cmd {
 
 func NewModel(c *ctx.Ctx) Model {
 	m := Model{
-		ctx:    c,
-		tk:     toolkit.New(WIN_ID, c.Logger),
+		ctx: c,
+		tk: toolkit.New(
+			WIN_ID,
+			c.Theme,
+			c.Logger,
+		),
 		keymap: DefaultKeyMap,
 
 		buffer:   "",
@@ -222,7 +226,6 @@ func (m Model) View() string {
 
 func buildView(mi interface{}, cached bool) string {
 	var m *Model = mi.(*Model)
-	var view strings.Builder = strings.Builder{}
 
 	if cached && !m.tk.IsFocused() && m.tk.IsCached() {
 		m.ctx.Logger.Debugln("Cached View()")
@@ -232,37 +235,10 @@ func buildView(mi interface{}, cached bool) string {
 	m.ctx.Logger.Debugln("View()")
 	m.ctx.Logger.Debugf("IsFocused: %v\n", m.tk.IsFocused())
 
-	var style lipgloss.Style
-	if m.tk.IsFocused() {
-		style = m.ctx.Theme.DialogBox.Titlebar.Focused
-	} else {
-		style = m.ctx.Theme.DialogBox.Titlebar.Blurred
-	}
-	titlebar := style.Align(lipgloss.Center).
-		Width(m.tk.ViewWidth()).
-		Render("Post")
-
-	bottombar := m.ctx.Theme.DialogBox.Bottombar.
-		Width(m.tk.ViewWidth()).
-		Render("[#]r reply · esc close")
-
-	ui := lipgloss.JoinVertical(
-		lipgloss.Center,
-		titlebar,
+	return m.tk.Dialog(
+		"Post",
 		viewportStyle.Render(m.viewport.View()),
-		bottombar,
 	)
-
-	var tmp string
-	if m.tk.IsFocused() {
-		tmp = m.ctx.Theme.DialogBox.Window.Focused.Render(ui)
-	} else {
-		tmp = m.ctx.Theme.DialogBox.Window.Blurred.Render(ui)
-	}
-
-	view.WriteString(tmp)
-
-	return view.String()
 }
 
 func (m *Model) renderViewport(p *post.Post) string {

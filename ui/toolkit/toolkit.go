@@ -3,6 +3,7 @@ package toolkit
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mrusme/gobbs/ui/cmd"
+	"github.com/mrusme/gobbs/ui/theme"
 	"go.uber.org/zap"
 )
 
@@ -10,6 +11,7 @@ type ViewFunc func(m interface{}, cached bool) string
 
 type ToolKit struct {
 	winID  string
+	theme  *theme.Theme
 	logger *zap.SugaredLogger
 
 	m       interface{}
@@ -20,9 +22,10 @@ type ToolKit struct {
 	viewcache string
 }
 
-func New(winID string, l *zap.SugaredLogger) *ToolKit {
+func New(winID string, t *theme.Theme, l *zap.SugaredLogger) *ToolKit {
 	tk := new(ToolKit)
 	tk.winID = winID
+	tk.theme = t
 	tk.logger = l
 
 	tk.wh = [2]int{0, 0}
