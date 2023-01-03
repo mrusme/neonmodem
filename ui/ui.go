@@ -127,7 +127,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				ccmds = m.wm.Open(
 					msg.Target,
 					postshow.NewModel(m.ctx),
-					[4]int{3, 1, 4, 4},
+					[4]int{
+						3,
+						1,
+						6,
+						4,
+					},
 					&msg,
 				)
 			case postcreate.WIN_ID:
@@ -135,7 +140,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				ccmds = m.wm.Open(
 					msg.Target,
 					postcreate.NewModel(m.ctx),
-					[4]int{6, int(m.ctx.Content[1] / 3), 8, 4},
+					[4]int{
+						6,
+						m.ctx.Content[1] - 16,
+						10,
+						4,
+					},
 					&msg,
 				)
 				m.viewcache = m.buildView(false)
@@ -158,7 +168,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			ccmds = m.wm.Open(
 				msgerror.WIN_ID,
 				msgerror.NewModel(m.ctx),
-				[4]int{9, int(m.ctx.Content[1] / 3), 12, int(m.ctx.Content[1] / 3)},
+				[4]int{
+					int(m.ctx.Content[1] / 2),
+					int(m.ctx.Content[1] / 4),
+					int(m.ctx.Content[1] / 2),
+					int(m.ctx.Content[1] / 4),
+				},
 				&msg,
 			)
 
