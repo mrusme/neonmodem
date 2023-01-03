@@ -196,10 +196,18 @@ func (wm *WM) ResizeAll(w int, h int) []tea.Cmd {
 	return tcmds
 }
 
-func (wm *WM) View(view string) string {
+func (wm *WM) View(view string, onlyFocused bool) string {
 	var v string = view
+	var j int = 0
 
-	for i := 0; i < len(wm.stack); i++ {
+	if onlyFocused {
+		j = len(wm.stack) - 1
+		if j < 0 {
+			j = 0
+		}
+	}
+
+	for i := j; i < len(wm.stack); i++ {
 		v = helpers.PlaceOverlay(
 			wm.stack[i].XYWH[0],
 			wm.stack[i].XYWH[1]+(wm.ctx.Screen[1]-wm.ctx.Content[1]),

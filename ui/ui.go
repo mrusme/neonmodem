@@ -48,6 +48,9 @@ type Model struct {
 	currentView int
 	wm          *windowmanager.WM
 	ctx         *ctx.Ctx
+
+	viewcache         string
+	renderOnlyFocused bool
 }
 
 func NewModel(c *ctx.Ctx) Model {
@@ -56,6 +59,9 @@ func NewModel(c *ctx.Ctx) Model {
 		currentView: 0,
 		wm:          windowmanager.New(c),
 		ctx:         c,
+
+		viewcache:         "",
+		renderOnlyFocused: false,
 	}
 
 	m.header = header.NewModel(m.ctx)
@@ -121,6 +127,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				)
 			case postcreate.WIN_ID:
 				m.ctx.Logger.Debugln("received WinOpen")
+				m.viewcache = m.buildView(false)
+				m.renderOnlyFocused = true
 				ccmds = m.wm.Open(
 					msg.Target,
 					postcreate.NewModel(m.ctx),
@@ -129,6 +137,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				)
 			}
 			m.ctx.Logger.Debugf("got back ccmds: %v\n", ccmds)
+		case cmd.WinClose:
+			switch msg.Target {
+			case postcreate.WIN_ID:
+				m.ctx.Logger.Debugln("received WinClose")
+				m.renderOnlyFocused = false
+			}
 		default:
 			if msg.Call < cmd.ViewFocus {
 				m.ctx.Logger.Debugf("updating all with cmd: %v\n", msg)
@@ -158,11 +172,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	s := strings.Builder{}
-	s.WriteString(m.header.View() + "\n")
-	s.WriteString(m.views[m.currentView].View())
+	return m.buildView(true)
+}
 
-	return m.wm.View(s.String())
+func (m Model) buildView(cached bool) string {
+	s := strings.Builder{}
+	var tmp string = ""
+
+	if m.viewcache != "" && m.renderOnlyFocused {
+		tmp = m.viewcache
+	} else {
+		s.WriteString(m.header.View() + "\n")
+		s.WriteString(m.views[m.currentView].View())
+		tmp = s.String()
+	}
+
+	return m.wm.View(tmp, m.renderOnlyFocused)
 }
 
 func (m Model) setSizes(winWidth int, winHeight int) {

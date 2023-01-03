@@ -15,6 +15,7 @@ import (
 	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/ui/cmd"
 	"github.com/mrusme/gobbs/ui/ctx"
+	"github.com/mrusme/gobbs/ui/helpers"
 )
 
 var (
@@ -151,6 +152,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.Target == WIN_ID ||
 				msg.Target == "*" {
 				m.focused = true
+				m.viewcache = m.buildView(false)
 			}
 			return m, nil
 		case cmd.WinBlur:
@@ -166,8 +168,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cursor.BlinkMsg:
 		m.ctx.Logger.Debugf("textarea is focused: %v\n", m.textarea.Focused())
 
-	default:
-		m.ctx.Logger.Debugf("received unhandled msg: %v\n", msg)
+		// default:
+		// 	m.ctx.Logger.Debugf("received unhandled msg: %v\n", msg)
 	}
 
 	var tcmd tea.Cmd
@@ -198,17 +200,17 @@ func (m Model) View() string {
 func (m Model) buildView(cached bool) string {
 	var view strings.Builder = strings.Builder{}
 
-	// if cached && m.viewcache != "" {
-	// 	m.ctx.Logger.Debugln("Cached View()")
-	//
-	// 	m.textarea.SetWidth(m.viewcacheTextareaXY[2])
-	// 	m.textarea.SetHeight(m.viewcacheTextareaXY[3])
-	//
-	// 	return helpers.PlaceOverlay(
-	// 		m.viewcacheTextareaXY[0], m.viewcacheTextareaXY[1],
-	// 		m.textarea.View(), m.viewcache,
-	// 		false)
-	// }
+	if cached && m.viewcache != "" {
+		m.ctx.Logger.Debugln("Cached View()")
+
+		m.textarea.SetWidth(m.viewcacheTextareaXY[2])
+		m.textarea.SetHeight(m.viewcacheTextareaXY[3])
+
+		return helpers.PlaceOverlay(
+			m.viewcacheTextareaXY[0], m.viewcacheTextareaXY[1],
+			m.textarea.View(), m.viewcache,
+			false)
+	}
 
 	title := "Reply"
 	if m.replyToIdx != 0 {
