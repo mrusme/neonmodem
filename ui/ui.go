@@ -10,6 +10,7 @@ import (
 	"github.com/mrusme/gobbs/ui/header"
 	"github.com/mrusme/gobbs/ui/views/posts"
 	"github.com/mrusme/gobbs/ui/windowmanager"
+	"github.com/mrusme/gobbs/ui/windows/msgerror"
 	"github.com/mrusme/gobbs/ui/windows/postcreate"
 	"github.com/mrusme/gobbs/ui/windows/postshow"
 
@@ -150,6 +151,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if ok, clcmds := m.wm.Close(msg.Target); ok {
 				cmds = append(cmds, clcmds...)
 			}
+
+		case cmd.MsgError:
+			m.ctx.Logger.Debugln("received MsgError")
+			ccmds = m.wm.Open(
+				msgerror.WIN_ID,
+				msgerror.NewModel(m.ctx),
+				[4]int{9, int(m.ctx.Content[1] / 3), 12, int(m.ctx.Content[1] / 3)},
+				&msg,
+			)
 
 		default:
 			if msg.Call < cmd.ViewFocus {

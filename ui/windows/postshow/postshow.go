@@ -220,7 +220,7 @@ func (m *Model) loadPost(p *post.Post) tea.Cmd {
 			m.ctx.Logger.Error(err)
 			c := cmd.New(
 				cmd.MsgError,
-				"*",
+				WIN_ID,
 				cmd.Arg{Name: "error", Value: err},
 			)
 			return *c

@@ -1,7 +1,6 @@
 package postcreate
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -35,7 +34,7 @@ type KeyMap struct {
 var DefaultKeyMap = KeyMap{
 	Reply: key.NewBinding(
 		key.WithKeys("ctrl+s"),
-		key.WithHelp("ctrl+s", "reply"),
+		key.WithHelp("ctrl+s", "send"),
 	),
 }
 
@@ -113,8 +112,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				irtSysIDX = pst.SysIDX
 			} else {
 				rply := m.replyToIface.(reply.Reply)
-				b, _ := json.Marshal(rply)
-				m.ctx.Logger.Debug(string(b))
 				irtID = strconv.Itoa(m.replyToIdx + 1)
 				irtIRT = rply.InReplyTo // TODO: THis is empty? Why?
 				irtSysIDX = rply.SysIDX
@@ -127,13 +124,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				SysIDX:    irtSysIDX,
 			}
 
-			b, _ := json.Marshal(r)
-			m.ctx.Logger.Debug(string(b))
-
 			err := m.a.CreateReply(&r)
 			if err != nil {
 				m.ctx.Logger.Error(err)
-				// TODO
+				return m, cmd.New(
+					cmd.MsgError,
+					WIN_ID,
+					cmd.Arg{Name: "error", Value: err},
+				).Tea()
 			}
 
 			m.textarea.Reset()
@@ -243,7 +241,7 @@ func (m Model) buildView(cached bool) string {
 
 	bottombar := m.ctx.Theme.DialogBox.Bottombar.
 		Width(m.wh[0]).
-		Render("ctrl+enter reply · esc close")
+		Render("ctrl+s send · esc close")
 
 	replyWindow := lipgloss.JoinVertical(
 		lipgloss.Center,
