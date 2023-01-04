@@ -18,6 +18,18 @@ type Theme struct {
 		Bottombar lipgloss.Style
 	}
 
+	ErrorDialogBox struct {
+		Window struct {
+			Focused lipgloss.Style
+			Blurred lipgloss.Style
+		}
+		Titlebar struct {
+			Focused lipgloss.Style
+			Blurred lipgloss.Style
+		}
+		Bottombar lipgloss.Style
+	}
+
 	PostsList struct {
 		List struct {
 			Focused lipgloss.Style
@@ -48,6 +60,28 @@ type Theme struct {
 func New(cfg *config.Config) *Theme {
 	t := new(Theme)
 
+	t.DialogBox.Window.Focused =
+		t.fromConfig(&cfg.Theme.DialogBox.Window.Focused)
+	t.DialogBox.Window.Blurred =
+		t.fromConfig(&cfg.Theme.DialogBox.Window.Blurred)
+	t.DialogBox.Titlebar.Focused =
+		t.fromConfig(&cfg.Theme.DialogBox.Titlebar.Focused)
+	t.DialogBox.Titlebar.Blurred =
+		t.fromConfig(&cfg.Theme.DialogBox.Titlebar.Blurred)
+	t.DialogBox.Bottombar =
+		t.fromConfig(&cfg.Theme.DialogBox.Bottombar)
+
+	t.ErrorDialogBox.Window.Focused =
+		t.fromConfig(&cfg.Theme.ErrorDialogBox.Window.Focused)
+	t.ErrorDialogBox.Window.Blurred =
+		t.fromConfig(&cfg.Theme.ErrorDialogBox.Window.Blurred)
+	t.ErrorDialogBox.Titlebar.Focused =
+		t.fromConfig(&cfg.Theme.ErrorDialogBox.Titlebar.Focused)
+	t.ErrorDialogBox.Titlebar.Blurred =
+		t.fromConfig(&cfg.Theme.ErrorDialogBox.Titlebar.Blurred)
+	t.ErrorDialogBox.Bottombar =
+		t.fromConfig(&cfg.Theme.ErrorDialogBox.Bottombar)
+
 	t.PostsList.List.Focused =
 		t.fromConfig(&cfg.Theme.PostsList.List.Focused)
 	t.PostsList.List.Blurred =
@@ -64,16 +98,7 @@ func New(cfg *config.Config) *Theme {
 		t.fromConfig(&cfg.Theme.PostsList.ItemDetail.Blurred)
 	t.PostsList.ItemDetail.Selected =
 		t.fromConfig(&cfg.Theme.PostsList.ItemDetail.Selected)
-	t.DialogBox.Window.Focused =
-		t.fromConfig(&cfg.Theme.DialogBox.Window.Focused)
-	t.DialogBox.Window.Blurred =
-		t.fromConfig(&cfg.Theme.DialogBox.Window.Blurred)
-	t.DialogBox.Titlebar.Focused =
-		t.fromConfig(&cfg.Theme.DialogBox.Titlebar.Focused)
-	t.DialogBox.Titlebar.Blurred =
-		t.fromConfig(&cfg.Theme.DialogBox.Titlebar.Blurred)
-	t.DialogBox.Bottombar =
-		t.fromConfig(&cfg.Theme.DialogBox.Bottombar)
+
 	t.Post.Author =
 		t.fromConfig(&cfg.Theme.Post.Author)
 	t.Post.Subject =

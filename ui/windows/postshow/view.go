@@ -17,10 +17,9 @@ func (m Model) View() string {
 func buildView(mi interface{}, cached bool) string {
 	var m *Model = mi.(*Model)
 
-	if cached && !m.tk.IsFocused() && m.tk.IsCached() {
+	if vcache := m.tk.DefaultCaching(cached); vcache != "" {
 		m.ctx.Logger.Debugln("Cached View()")
-
-		return m.tk.GetCachedView()
+		return vcache
 	}
 	m.ctx.Logger.Debugln("View()")
 	m.ctx.Logger.Debugf("IsFocused: %v\n", m.tk.IsFocused())

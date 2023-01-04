@@ -19,9 +19,17 @@ func (tk *ToolKit) Dialog(title string, content string) string {
 		Width(tk.ViewWidth()).
 		Render(title)
 
+	var bindings []string
+	for _, binding := range tk.keybindings {
+		var tmp string = ""
+		tmp = binding.Help().Key + " " + binding.Help().Desc
+		bindings = append(bindings, tmp)
+	}
+	bindings = append(bindings, "esc close")
+
 	bottombar := tk.theme.DialogBox.Bottombar.
 		Width(tk.ViewWidth()).
-		Render("[#]r reply · esc close") // TODO
+		Render(strings.Join(bindings, " · "))
 
 	ui := lipgloss.JoinVertical(
 		lipgloss.Center,

@@ -61,6 +61,14 @@ func (tk *ToolKit) IsCached() bool {
 	return tk.viewcache != ""
 }
 
+func (tk *ToolKit) DefaultCaching(cached bool) string {
+	if cached && !tk.IsFocused() && tk.IsCached() {
+		return tk.GetCachedView()
+	}
+
+	return ""
+}
+
 func (tk *ToolKit) View(m interface{}, cached bool) string {
 	return tk.viewfunc(m, cached)
 }

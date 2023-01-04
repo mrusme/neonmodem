@@ -59,7 +59,7 @@ func NewModel(c *ctx.Ctx) Model {
 		replyIDs: []string{},
 	}
 
-	m.tk.KeymapAdd("reply", "reply", "r")
+	m.tk.KeymapAdd("reply", "reply (prefix with #, e.g. '2r')", "r")
 
 	m.a, _ = aggregator.New(m.ctx)
 

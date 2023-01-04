@@ -57,6 +57,18 @@ type Config struct {
 			Bottombar ThemeItemConfig
 		}
 
+		ErrorDialogBox struct {
+			Window struct {
+				Focused ThemeItemConfig
+				Blurred ThemeItemConfig
+			}
+			Titlebar struct {
+				Focused ThemeItemConfig
+				Blurred ThemeItemConfig
+			}
+			Bottombar ThemeItemConfig
+		}
+
 		PostsList struct {
 			List struct {
 				Focused ThemeItemConfig
@@ -153,6 +165,114 @@ func SetDefaults(cacheDir string) {
 	viper.SetDefault("Debug", "true")
 	viper.SetDefault("Log", path.Join(cacheDir, "gobbs.log"))
 
+	// DialogBox Window:Focused
+	viper.SetDefault("Theme.DialogBox.Window.Focused.Margin",
+		[]int{0, 0, 0, 0})
+	viper.SetDefault("Theme.DialogBox.Window.Focused.Padding",
+		[]int{0, 0, 0, 0})
+	viper.SetDefault("Theme.DialogBox.Window.Focused.Border.Border",
+		lipgloss.ThickBorder())
+	viper.SetDefault("Theme.DialogBox.Window.Focused.Border.Sides",
+		[]bool{false, true, true, true},
+	)
+	viper.SetDefault("Theme.DialogBox.Window.Focused.Border.Foreground",
+		lipgloss.AdaptiveColor{Light: "#00ffff", Dark: "#00ffff"})
+
+	// DialogBox Window:Blurred
+	viper.SetDefault("Theme.DialogBox.Window.Blurred.Margin",
+		[]int{0, 0, 0, 0})
+	viper.SetDefault("Theme.DialogBox.Window.Blurred.Padding",
+		[]int{0, 0, 0, 0})
+	viper.SetDefault("Theme.DialogBox.Window.Blurred.Border.Border",
+		lipgloss.ThickBorder())
+	viper.SetDefault("Theme.DialogBox.Window.Blurred.Border.Sides",
+		[]bool{false, true, true, true},
+	)
+	viper.SetDefault("Theme.DialogBox.Window.Blurred.Border.Foreground",
+		lipgloss.AdaptiveColor{Light: "#cccccc", Dark: "#333333"})
+
+	// DialogBox Titlebar:Focused
+	viper.SetDefault("Theme.DialogBox.Titlebar.Focused.Margin",
+		[]int{0, 0, 1, 0})
+	viper.SetDefault("Theme.DialogBox.Titlebar.Focused.Padding",
+		[]int{0, 1, 0, 1})
+	viper.SetDefault("Theme.DialogBox.Titlebar.Focused.Foreground",
+		lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#000000"})
+	viper.SetDefault("Theme.DialogBox.Titlebar.Focused.Background",
+		lipgloss.AdaptiveColor{Light: "#00cccc", Dark: "#00cccc"})
+
+	// DialogBox Titlebar:Blurred
+	viper.SetDefault("Theme.DialogBox.Titlebar.Blurred.Margin",
+		[]int{0, 0, 1, 0})
+	viper.SetDefault("Theme.DialogBox.Titlebar.Blurred.Padding",
+		[]int{0, 1, 0, 1})
+	viper.SetDefault("Theme.DialogBox.Titlebar.Blurred.Foreground",
+		lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#000000"})
+	viper.SetDefault("Theme.DialogBox.Titlebar.Blurred.Background",
+		lipgloss.AdaptiveColor{Light: "#cccccc", Dark: "#333333"})
+
+	// DialogBox Bottombar
+	viper.SetDefault("Theme.DialogBox.Bottombar.Margin",
+		[]int{1, 0, 0, 0})
+	viper.SetDefault("Theme.DialogBox.Bottombar.Padding",
+		[]int{0, 1, 0, 1})
+	viper.SetDefault("Theme.DialogBox.Bottombar.Foreground",
+		lipgloss.AdaptiveColor{Light: "#aaaaaa", Dark: "#999999"})
+
+	// ErrorDialogBox Window:Focused
+	viper.SetDefault("Theme.ErrorDialogBox.Window.Focused.Margin",
+		[]int{0, 0, 0, 0})
+	viper.SetDefault("Theme.ErrorDialogBox.Window.Focused.Padding",
+		[]int{0, 0, 0, 0})
+	viper.SetDefault("Theme.ErrorDialogBox.Window.Focused.Border.Border",
+		lipgloss.ThickBorder())
+	viper.SetDefault("Theme.ErrorDialogBox.Window.Focused.Border.Sides",
+		[]bool{false, true, true, true},
+	)
+	viper.SetDefault("Theme.ErrorDialogBox.Window.Focused.Border.Foreground",
+		lipgloss.AdaptiveColor{Light: "#00ffff", Dark: "#00ffff"})
+
+	// ErrorDialogBox Window:Blurred
+	viper.SetDefault("Theme.ErrorDialogBox.Window.Blurred.Margin",
+		[]int{0, 0, 0, 0})
+	viper.SetDefault("Theme.ErrorDialogBox.Window.Blurred.Padding",
+		[]int{0, 0, 0, 0})
+	viper.SetDefault("Theme.ErrorDialogBox.Window.Blurred.Border.Border",
+		lipgloss.ThickBorder())
+	viper.SetDefault("Theme.ErrorDialogBox.Window.Blurred.Border.Sides",
+		[]bool{false, true, true, true},
+	)
+	viper.SetDefault("Theme.ErrorDialogBox.Window.Blurred.Border.Foreground",
+		lipgloss.AdaptiveColor{Light: "#cccccc", Dark: "#333333"})
+
+	// ErrorDialogBox Titlebar:Focused
+	viper.SetDefault("Theme.ErrorDialogBox.Titlebar.Focused.Margin",
+		[]int{0, 0, 1, 0})
+	viper.SetDefault("Theme.ErrorDialogBox.Titlebar.Focused.Padding",
+		[]int{0, 1, 0, 1})
+	viper.SetDefault("Theme.ErrorDialogBox.Titlebar.Focused.Foreground",
+		lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#000000"})
+	viper.SetDefault("Theme.ErrorDialogBox.Titlebar.Focused.Background",
+		lipgloss.AdaptiveColor{Light: "#00cccc", Dark: "#00cccc"})
+
+	// ErrorDialogBox Titlebar:Blurred
+	viper.SetDefault("Theme.ErrorDialogBox.Titlebar.Blurred.Margin",
+		[]int{0, 0, 1, 0})
+	viper.SetDefault("Theme.ErrorDialogBox.Titlebar.Blurred.Padding",
+		[]int{0, 1, 0, 1})
+	viper.SetDefault("Theme.ErrorDialogBox.Titlebar.Blurred.Foreground",
+		lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#000000"})
+	viper.SetDefault("Theme.ErrorDialogBox.Titlebar.Blurred.Background",
+		lipgloss.AdaptiveColor{Light: "#cccccc", Dark: "#333333"})
+
+	// ErrorDialogBox Bottombar
+	viper.SetDefault("Theme.ErrorDialogBox.Bottombar.Margin",
+		[]int{1, 0, 0, 0})
+	viper.SetDefault("Theme.ErrorDialogBox.Bottombar.Padding",
+		[]int{0, 1, 0, 1})
+	viper.SetDefault("Theme.ErrorDialogBox.Bottombar.Foreground",
+		lipgloss.AdaptiveColor{Light: "#aaaaaa", Dark: "#999999"})
+
 	// PostsList List:Focused
 	viper.SetDefault("Theme.PostsList.List.Focused.Margin",
 		[]int{0, 0, 0, 0})
@@ -228,60 +348,6 @@ func SetDefaults(cacheDir string) {
 		lipgloss.AdaptiveColor{Light: "#ffd500", Dark: "#ffd500"})
 	viper.SetDefault("Theme.PostsList.ItemDetail.Selected.Foreground",
 		lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
-
-	// DialogBox Window:Focused
-	viper.SetDefault("Theme.DialogBox.Window.Focused.Margin",
-		[]int{0, 0, 0, 0})
-	viper.SetDefault("Theme.DialogBox.Window.Focused.Padding",
-		[]int{0, 0, 0, 0})
-	viper.SetDefault("Theme.DialogBox.Window.Focused.Border.Border",
-		lipgloss.ThickBorder())
-	viper.SetDefault("Theme.DialogBox.Window.Focused.Border.Sides",
-		[]bool{false, true, true, true},
-	)
-	viper.SetDefault("Theme.DialogBox.Window.Focused.Border.Foreground",
-		lipgloss.AdaptiveColor{Light: "#00ffff", Dark: "#00ffff"})
-
-	// DialogBox Window:Blurred
-	viper.SetDefault("Theme.DialogBox.Window.Blurred.Margin",
-		[]int{0, 0, 0, 0})
-	viper.SetDefault("Theme.DialogBox.Window.Blurred.Padding",
-		[]int{0, 0, 0, 0})
-	viper.SetDefault("Theme.DialogBox.Window.Blurred.Border.Border",
-		lipgloss.ThickBorder())
-	viper.SetDefault("Theme.DialogBox.Window.Blurred.Border.Sides",
-		[]bool{false, true, true, true},
-	)
-	viper.SetDefault("Theme.DialogBox.Window.Blurred.Border.Foreground",
-		lipgloss.AdaptiveColor{Light: "#cccccc", Dark: "#333333"})
-
-	// DialogBox Titlebar:Focused
-	viper.SetDefault("Theme.DialogBox.Titlebar.Focused.Margin",
-		[]int{0, 0, 1, 0})
-	viper.SetDefault("Theme.DialogBox.Titlebar.Focused.Padding",
-		[]int{0, 1, 0, 1})
-	viper.SetDefault("Theme.DialogBox.Titlebar.Focused.Foreground",
-		lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#000000"})
-	viper.SetDefault("Theme.DialogBox.Titlebar.Focused.Background",
-		lipgloss.AdaptiveColor{Light: "#00cccc", Dark: "#00cccc"})
-
-	// DialogBox Titlebar:Blurred
-	viper.SetDefault("Theme.DialogBox.Titlebar.Blurred.Margin",
-		[]int{0, 0, 1, 0})
-	viper.SetDefault("Theme.DialogBox.Titlebar.Blurred.Padding",
-		[]int{0, 1, 0, 1})
-	viper.SetDefault("Theme.DialogBox.Titlebar.Blurred.Foreground",
-		lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#000000"})
-	viper.SetDefault("Theme.DialogBox.Titlebar.Blurred.Background",
-		lipgloss.AdaptiveColor{Light: "#cccccc", Dark: "#333333"})
-
-	// DialogBox Bottombar
-	viper.SetDefault("Theme.DialogBox.Bottombar.Margin",
-		[]int{1, 0, 0, 0})
-	viper.SetDefault("Theme.DialogBox.Bottombar.Padding",
-		[]int{0, 1, 0, 1})
-	viper.SetDefault("Theme.DialogBox.Bottombar.Foreground",
-		lipgloss.AdaptiveColor{Light: "#aaaaaa", Dark: "#999999"})
 
 	// Post Author
 	viper.SetDefault("Theme.Post.Author.Padding",
