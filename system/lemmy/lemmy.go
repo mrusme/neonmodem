@@ -115,6 +115,9 @@ func (sys *System) Load() error {
 }
 
 func (sys *System) ListForums() ([]forum.Forum, error) {
+	return []forum.Forum{}, nil
+	// Not possible to list forums atm
+
 	resp, err := sys.client.Communities(context.Background(), types.ListCommunities{
 		Type: types.NewOptional(types.ListingSubscribed),
 	})

@@ -51,6 +51,10 @@ func (sys *System) GetCapabilities() adapter.Capabilities {
 
 	caps = append(caps,
 		adapter.Capability{
+			ID:   "list:forums",
+			Name: "List Forums",
+		},
+		adapter.Capability{
 			ID:   "list:posts",
 			Name: "List Posts",
 		},

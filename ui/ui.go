@@ -133,6 +133,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cmd.Arg{Name: "items", Value: listItems},
 				),
 			)
+
 			return m, tea.Batch(ccmds...)
 
 		case key.Matches(msg, m.keymap.ForumSelect):
@@ -166,6 +167,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cmd.Arg{Name: "items", Value: listItems},
 				),
 			)
+
 			return m, tea.Batch(ccmds...)
 
 		default:
@@ -225,8 +227,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case cmd.WinClose:
 			switch msg.Target {
+
 			case postcreate.WIN_ID:
 				m.ctx.Logger.Debugln("received WinClose")
+
 			case popuplist.WIN_ID:
 				selectionIDIf := msg.GetArg("selectionID")
 				if selectionIDIf == nil {
@@ -243,6 +247,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.ctx.SetCurrentSystem(selected.SysIDX)
 					m.ctx.SetCurrentForum(selected)
 				}
+				return m, cmd.New(cmd.ViewRefreshData, "*").Tea()
+
 			}
 
 		case cmd.WMCloseWin:
