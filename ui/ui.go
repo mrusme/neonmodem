@@ -5,37 +5,41 @@ import (
 
 	"strings"
 
+	"github.com/mrusme/gobbs/models/forum"
+	"github.com/mrusme/gobbs/system"
 	"github.com/mrusme/gobbs/ui/cmd"
 	"github.com/mrusme/gobbs/ui/ctx"
 	"github.com/mrusme/gobbs/ui/header"
 	"github.com/mrusme/gobbs/ui/views/posts"
 	"github.com/mrusme/gobbs/ui/windowmanager"
 	"github.com/mrusme/gobbs/ui/windows/msgerror"
+	"github.com/mrusme/gobbs/ui/windows/popuplist"
 	"github.com/mrusme/gobbs/ui/windows/postcreate"
 	"github.com/mrusme/gobbs/ui/windows/postshow"
 
 	"github.com/mrusme/gobbs/ui/views"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type KeyMap struct {
-	Up    key.Binding
-	Down  key.Binding
-	Close key.Binding
+	SystemSelect key.Binding
+	ForumSelect  key.Binding
+	Close        key.Binding
 }
 
 var DefaultKeyMap = KeyMap{
-	// Up: key.NewBinding(
-	// 	key.WithKeys("k", "up"),
-	// 	key.WithHelp("↑/k", "move up"),
-	// ),
-	// Down: key.NewBinding(
-	// 	key.WithKeys("j", "down"),
-	// 	key.WithHelp("↓/j", "move down"),
-	// ),
+	SystemSelect: key.NewBinding(
+		key.WithKeys("ctrl+s"),
+		key.WithHelp("C-s", "System selector"),
+	),
+	ForumSelect: key.NewBinding(
+		key.WithKeys("ctrl+f"),
+		key.WithHelp("C-f", "Forum selector"),
+	),
 	Close: key.NewBinding(
 		key.WithKeys("q", "esc"),
 		key.WithHelp("q/esc", "close"),
@@ -97,6 +101,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			}
 			return m, tea.Batch(ccmds...)
+		case key.Matches(msg, m.keymap.SystemSelect):
+			var listItems []list.Item
+			for _, sys := range m.ctx.Systems {
+				listItems = append(listItems, *sys)
+			}
+
+			ccmds := m.wm.Open(
+				popuplist.WIN_ID,
+				popuplist.NewModel(m.ctx),
+				[4]int{
+					int(m.ctx.Content[1] / 2),
+					int(m.ctx.Content[1] / 4),
+					int(m.ctx.Content[1] / 2),
+					int(m.ctx.Content[1] / 4),
+				},
+				cmd.New(
+					cmd.WinOpen,
+					popuplist.WIN_ID,
+					cmd.Arg{Name: "selectionID", Value: "system"},
+					cmd.Arg{Name: "items", Value: listItems},
+				),
+			)
+			return m, tea.Batch(ccmds...)
+
 		default:
 			if m.wm.GetNumberOpen() > 0 {
 				cmd := m.wm.Update(m.wm.Focused(), msg)
@@ -156,10 +184,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.Target {
 			case postcreate.WIN_ID:
 				m.ctx.Logger.Debugln("received WinClose")
+			case popuplist.WIN_ID:
+				switch msg.GetArg("selectionID").(string) {
+				case "system":
+					selected := msg.GetArg("selected").(system.System)
+					m.ctx.SetCurrentSystem(selected.GetID())
+				case "forum":
+					selected := msg.GetArg("selected").(forum.Forum)
+					m.ctx.SetCurrentForum(selected.ID)
+				}
 			}
 
 		case cmd.WMCloseWin:
-			if ok, clcmds := m.wm.Close(msg.Target); ok {
+			if ok, clcmds := m.wm.Close(msg.Target, msg.GetArgs()...); ok {
 				cmds = append(cmds, clcmds...)
 			}
 

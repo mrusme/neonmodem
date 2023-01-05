@@ -112,9 +112,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.ctx.Theme.PostsList.List.Focused.Height(listHeight)
 		m.ctx.Theme.PostsList.List.Blurred.Height(listHeight)
 		m.list.SetSize(
-			listWidth-2,
+			listWidth-2+60,
 			listHeight-2,
 		)
+		msg.Width = listWidth + 60
+		msg.Height = listHeight
 
 	case cmd.Command:
 		switch msg.Call {

@@ -1,6 +1,8 @@
 package header
 
 import (
+	"fmt"
+
 	"github.com/mrusme/gobbs/config"
 	"github.com/mrusme/gobbs/ui/ctx"
 
@@ -69,7 +71,13 @@ func (m Model) View() string {
 		Padding(0, 1, 0, 1).
 		Width(40)
 
-	systemSelector := selector.Render("⏷  All")
+	curSysIdx := m.ctx.GetCurrentSystem()
+	var currentSystem string = "All"
+	if curSysIdx >= 0 {
+		currentSystem = string((*m.ctx.Systems[curSysIdx]).GetID())
+	}
+
+	systemSelector := selector.Render(fmt.Sprintf("⏷  %s", currentSystem))
 	forumSelector := selector.Render("⏷  All")
 
 	selectorColumn := lipgloss.JoinVertical(lipgloss.Center,
