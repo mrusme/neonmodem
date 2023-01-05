@@ -49,10 +49,10 @@ func (sys *System) GetCapabilities() adapter.Capabilities {
 
 	caps = append(caps,
 		// TODO: https://github.com/Arsen6331/go-lemmy/issues/2
-		// adapter.Capability{
-		// 	ID:   "list:forums",
-		// 	Name: "List Forums",
-		// },
+		adapter.Capability{
+			ID:   "list:forums",
+			Name: "List Forums",
+		},
 		adapter.Capability{
 			ID:   "list:posts",
 			Name: "List Posts",
@@ -129,9 +129,6 @@ func (sys *System) Load() error {
 }
 
 func (sys *System) ListForums() ([]forum.Forum, error) {
-	return []forum.Forum{}, nil
-	// Not possible to list forums atm
-
 	resp, err := sys.client.ListCommunities(context.Background(), types.ListCommunities{
 		Type: types.NewOptional(types.ListingTypeSubscribed),
 	})
