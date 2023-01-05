@@ -150,6 +150,7 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 		i, err := sys.client.GetItem(context.Background(), story)
 		if err != nil {
 			sys.logger.Error(err)
+			// TODO: Handle error
 			continue
 		}
 

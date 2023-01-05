@@ -138,20 +138,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, m.keymap.ForumSelect):
 			var listItems []list.Item
+			ccmds := make([]tea.Cmd, 0)
 
 			all := forum.Forum{ID: "", Name: "All", SysIDX: m.ctx.GetCurrentSystem()}
 			listItems = append(listItems, all)
 
 			forums, errs := m.a.ListForums()
-			if len(errs) > 0 {
-				// TODO: Handle errors
+			for _, err := range errs {
+				if err != nil {
+					m.ctx.Logger.Error(errs)
+					ccmds = append(ccmds, cmd.New(
+						cmd.MsgError,
+						"*",
+						cmd.Arg{Name: "errors", Value: errs},
+					).Tea())
+				}
 			}
+
 			for _, f := range forums {
 				m.ctx.Logger.Debugf("Adding forum to list: %s ID %d\n", f.Title(), f.SysIDX)
 				listItems = append(listItems, f)
 			}
 
-			ccmds := m.wm.Open(
+			ccmds = m.wm.Open(
 				popuplist.WIN_ID,
 				popuplist.NewModel(m.ctx),
 				[4]int{

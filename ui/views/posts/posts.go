@@ -1,7 +1,6 @@
 package posts
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -74,6 +73,11 @@ func NewModel(c *ctx.Ctx) Model {
 	m.list = list.New(m.items, listDelegate, 0, 0)
 	m.list.SetShowTitle(false)
 	m.list.SetShowStatusBar(false)
+
+	m.a, _ = aggregator.New(m.ctx)
+
+	return m
+}
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
@@ -157,25 +161,25 @@ func (m *Model) refresh() tea.Cmd {
 		var items []list.Item
 
 		posts, errs := m.a.ListPosts()
-		if len(errs) > 0 {
-			m.ctx.Logger.Error(err)
-			return *cmd.New(
-				cmd.MsgError,
-				WIN_ID,
-				cmd.Arg{Name: "errors", Value: errs},
-			)
+		for _, err := range errs {
+			if err != nil {
+				m.ctx.Logger.Error(errs)
+				// ccmds = append(ccmds, cmd.New(
+				// 	cmd.MsgError,
+				// 	VIEW_ID,
+				// 	cmd.Arg{Name: "errors", Value: errs},
+				// ).Tea())
+			}
 		}
 		for _, post := range posts {
 			items = append(items, post)
 		}
 
-		c := cmd.New(
+		return *cmd.New(
 			cmd.ViewFreshData,
 			VIEW_ID,
 			cmd.Arg{Name: "items", Value: items},
 		)
-
-		return *c
 	}
 }
 

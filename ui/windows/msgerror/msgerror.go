@@ -84,7 +84,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m *Model) setErrorContent() {
+func (m Model) setErrorContent() {
 	if len(m.errs) > 0 {
 		var tmp string = ""
 		for _, err := range m.errs {

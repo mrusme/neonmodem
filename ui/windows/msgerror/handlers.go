@@ -31,6 +31,7 @@ func handleMsgErrorCmd(mi interface{}, c cmd.Command) (bool, []tea.Cmd) {
 		m.errs = append(m.errs, err.(error))
 	}
 	if errs := c.GetArg("errors"); errs != nil {
+		m.ctx.Logger.Debugf("Setting error: %v", errs)
 		m.errs = append(m.errs, errs.([]error)...)
 	}
 
