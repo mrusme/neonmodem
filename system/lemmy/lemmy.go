@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
-	"time"
 
-	"github.com/araddon/dateparse"
 	"github.com/mrusme/gobbs/models/author"
 	"github.com/mrusme/gobbs/models/forum"
 	"github.com/mrusme/gobbs/models/post"
@@ -65,10 +63,10 @@ func (sys *System) GetCapabilities() adapter.Capabilities {
 		// 	Name: "Create Post",
 		// },
 		// TODO: https://github.com/Arsen6331/go-lemmy/issues/1
-		// adapter.Capability{
-		// 	ID:   "list:replies",
-		// 	Name: "List Replies",
-		// },
+		adapter.Capability{
+			ID:   "list:replies",
+			Name: "List Replies",
+		},
 		// TODO: Maybe possible but kind of pointless without list:replies
 		// adapter.Capability{
 		// 	ID:   "create:reply",
@@ -120,7 +118,7 @@ func (sys *System) Load() error {
 		credentials[k] = v.(string)
 	}
 
-	err = sys.client.Login(context.Background(), types.Login{
+	err = sys.client.ClientLogin(context.Background(), types.Login{
 		UsernameOrEmail: credentials["username"],
 		Password:        credentials["password"],
 	})
@@ -134,8 +132,8 @@ func (sys *System) ListForums() ([]forum.Forum, error) {
 	return []forum.Forum{}, nil
 	// Not possible to list forums atm
 
-	resp, err := sys.client.Communities(context.Background(), types.ListCommunities{
-		Type: types.NewOptional(types.ListingSubscribed),
+	resp, err := sys.client.ListCommunities(context.Background(), types.ListCommunities{
+		Type: types.NewOptional(types.ListingTypeSubscribed),
 	})
 	if err != nil {
 		return []forum.Forum{}, err
@@ -147,8 +145,8 @@ func (sys *System) ListForums() ([]forum.Forum, error) {
 		b, _ := json.Marshal(i)
 		sys.logger.Debug(string(b))
 		models = append(models, forum.Forum{
-			ID:   strconv.Itoa(i.CommunitySafe.ID),
-			Name: i.CommunitySafe.Name,
+			ID:   strconv.Itoa(i.Community.ID),
+			Name: i.Community.Name,
 
 			SysIDX: sys.ID,
 		})
@@ -159,10 +157,11 @@ func (sys *System) ListForums() ([]forum.Forum, error) {
 
 func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 	resp, err := sys.client.Posts(context.Background(), types.GetPosts{
-		Type:  types.NewOptional(types.ListingSubscribed),
-		Sort:  types.NewOptional(types.New),
+		Type:  types.NewOptional(types.ListingTypeSubscribed),
+		Sort:  types.NewOptional(types.SortTypeNew),
 		Limit: types.NewOptional(int64(50)),
 	})
+	sys.logger.Debug("DEEEEBUUUUUUUGGGGGGGG")
 	if err != nil {
 		return []post.Post{}, err
 	}
@@ -172,6 +171,8 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 
 	var models []post.Post
 	for _, i := range resp.Posts {
+		b, _ := json.Marshal(i)
+		sys.logger.Debug(string(b))
 		t := "post"
 		body := i.Post.Body.ValueOr("")
 		if i.Post.URL.IsValid() {
@@ -179,14 +180,8 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 			body = i.Post.URL.ValueOr("")
 		}
 
-		createdAt, err := dateparse.ParseAny(i.Post.Published)
-		if err != nil {
-			createdAt = time.Now() // TODO: Errrr
-		}
-		lastCommentedAt, err := dateparse.ParseAny(i.Counts.NewestCommentTime)
-		if err != nil {
-			lastCommentedAt = time.Now() // TODO: Errrrr
-		}
+		createdAt := i.Post.Published.Time
+		lastCommentedAt := i.Counts.NewestCommentTime.Time
 
 		models = append(models, post.Post{
 			ID: strconv.Itoa(i.Post.ID),
@@ -233,21 +228,15 @@ func (sys *System) LoadPost(p *post.Post) error {
 	// 	return err
 	// }
 
-	resp, err := sys.client.Comments(context.Background(), types.GetComments{
-		Type: types.NewOptional(types.ListingLocal),
-		Sort: types.NewOptional(types.CommentSortHot),
-		// CommunityID: types.NewOptional(cid),
-		PostID: types.NewOptional(pid),
+	resp, err := sys.client.Post(context.Background(), types.GetPost{
+		ID: pid,
 	})
 	if err != nil {
 		return err
 	}
 
 	for _, i := range resp.Comments {
-		createdAt, err := dateparse.ParseAny(i.Comment.Published)
-		if err != nil {
-			createdAt = time.Now() // TODO: Errrrr
-		}
+		createdAt := i.Comment.Published.Time
 
 		p.Replies = append(p.Replies, reply.Reply{
 			ID: strconv.Itoa(i.Comment.ID),
