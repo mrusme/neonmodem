@@ -70,7 +70,7 @@ func (sys *System) FilterValue() string {
 }
 
 func (sys *System) Title() string {
-	return "https://news.ycombinator.com"
+	return "news.ycombinator.com"
 }
 
 func (sys *System) Description() string {

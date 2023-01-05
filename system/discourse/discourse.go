@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -72,7 +73,13 @@ func (sys *System) FilterValue() string {
 }
 
 func (sys *System) Title() string {
-	return sys.config["url"].(string)
+	sysUrl := sys.config["url"].(string)
+	u, err := url.Parse(sysUrl)
+	if err != nil {
+		return sysUrl
+	}
+
+	return u.Hostname()
 }
 
 func (sys *System) Description() string {

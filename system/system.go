@@ -6,6 +6,7 @@ import (
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/system/adapter"
+	"github.com/mrusme/gobbs/system/all"
 	"github.com/mrusme/gobbs/system/discourse"
 	"github.com/mrusme/gobbs/system/hackernews"
 	"github.com/mrusme/gobbs/system/lemmy"
@@ -47,6 +48,8 @@ func New(
 		sys = new(lemmy.System)
 	case "hackernews":
 		sys = new(hackernews.System)
+	case "all":
+		sys = new(all.System)
 	default:
 		return nil, errors.New("No such system")
 	}
