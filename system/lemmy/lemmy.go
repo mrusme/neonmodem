@@ -48,18 +48,16 @@ func (sys *System) SetLogger(logger *zap.SugaredLogger) {
 func (sys *System) GetCapabilities() []adapter.Capability {
 	var caps []adapter.Capability
 
-	caps = append(caps, adapter.Capability{
-		ID:   "posts",
-		Name: "Posts",
-	})
-	caps = append(caps, adapter.Capability{
-		ID:   "groups",
-		Name: "Groups",
-	})
-	caps = append(caps, adapter.Capability{
-		ID:   "search",
-		Name: "Search",
-	})
+	caps = append(caps,
+		adapter.Capability{
+			ID:   "list:posts",
+			Name: "List Posts",
+		},
+		adapter.Capability{
+			ID:   "create:post",
+			Name: "Create Post",
+		},
+	)
 
 	return caps
 }
