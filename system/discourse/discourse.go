@@ -314,11 +314,6 @@ func (sys *System) CreateReply(r *reply.Reply) error {
 		return err
 	}
 
-	inReplyTo, err := strconv.Atoi(r.InReplyTo)
-	if err != nil {
-		return err
-	}
-
 	var ap api.CreatePostModel
 
 	if r.Index == -1 {
@@ -330,10 +325,15 @@ func (sys *System) CreateReply(r *reply.Reply) error {
 		}
 	} else {
 		// Apparently it's a reply to a comment in a post
+		inReplyTo, err := strconv.Atoi(r.InReplyTo)
+		if err != nil {
+			return err
+		}
+
 		ap = api.CreatePostModel{
 			Raw:               r.Body,
 			TopicID:           inReplyTo,
-			ReplyToPostNumber: r.Index,
+			ReplyToPostNumber: r.Index + 1,
 			CreatedAt:         time.Now().Format(time.RFC3339Nano),
 		}
 	}

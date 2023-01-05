@@ -51,7 +51,7 @@ type CategoryModel struct {
 	TopicsYear                   int             `json:"topics_year"`
 	TopicsAllTime                int             `json:"topics_all_time"`
 	IsUncategorized              bool            `json:"is_uncategorized"`
-	SubcategoryIDs               []string        `json:"subcategory_ids"`
+	SubcategoryIDs               []int           `json:"subcategory_ids"`
 	SubcategoryList              []CategoryModel `json:"subcategory_list"`
 	UploadedLogo                 string          `json:"uploaded_logo"`
 	UploadedLogoDark             string          `json:"uploaded_logo_dark"`
