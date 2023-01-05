@@ -15,6 +15,9 @@ type Ctx struct {
 	Loading bool
 	Logger  *zap.SugaredLogger
 	Theme   *theme.Theme
+
+	currentSystem int
+	currentForum  string
 }
 
 func New(
@@ -28,6 +31,9 @@ func New(
 		Loading: false,
 		Logger:  logger,
 		Theme:   theme.New(cfg),
+
+		currentSystem: -1,
+		currentForum:  "",
 	}
 }
 
@@ -38,4 +44,20 @@ func (c *Ctx) AddSystem(sys *system.System) error {
 
 func (c *Ctx) NumSystems() int {
 	return len(c.Systems)
+}
+
+func (c *Ctx) SetCurrentSystem(idx int) {
+	c.currentSystem = idx
+}
+
+func (c *Ctx) GetCurrentSystem() int {
+	return c.currentSystem
+}
+
+func (c *Ctx) SetCurrentForum(id string) {
+	c.currentForum = id
+}
+
+func (c *Ctx) GetCurrentForum() string {
+	return c.currentForum
 }
