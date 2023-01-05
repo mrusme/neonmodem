@@ -30,6 +30,23 @@ type Theme struct {
 		Bottombar lipgloss.Style
 	}
 
+	PopupList struct {
+		List struct {
+			Focused lipgloss.Style
+			Blurred lipgloss.Style
+		}
+		Item struct {
+			Focused  lipgloss.Style
+			Blurred  lipgloss.Style
+			Selected lipgloss.Style
+		}
+		ItemDetail struct {
+			Focused  lipgloss.Style
+			Blurred  lipgloss.Style
+			Selected lipgloss.Style
+		}
+	}
+
 	PostsList struct {
 		List struct {
 			Focused lipgloss.Style
@@ -98,6 +115,23 @@ func New(cfg *config.Config) *Theme {
 		t.fromConfig(&cfg.Theme.PostsList.ItemDetail.Blurred)
 	t.PostsList.ItemDetail.Selected =
 		t.fromConfig(&cfg.Theme.PostsList.ItemDetail.Selected)
+
+	t.PopupList.List.Focused =
+		t.fromConfig(&cfg.Theme.PopupList.List.Focused)
+	t.PopupList.List.Blurred =
+		t.fromConfig(&cfg.Theme.PopupList.List.Blurred)
+	t.PopupList.Item.Focused =
+		t.fromConfig(&cfg.Theme.PopupList.Item.Focused)
+	t.PopupList.Item.Blurred =
+		t.fromConfig(&cfg.Theme.PopupList.Item.Blurred)
+	t.PopupList.Item.Selected =
+		t.fromConfig(&cfg.Theme.PopupList.Item.Selected)
+	t.PopupList.ItemDetail.Focused =
+		t.fromConfig(&cfg.Theme.PopupList.ItemDetail.Focused)
+	t.PopupList.ItemDetail.Blurred =
+		t.fromConfig(&cfg.Theme.PopupList.ItemDetail.Blurred)
+	t.PopupList.ItemDetail.Selected =
+		t.fromConfig(&cfg.Theme.PopupList.ItemDetail.Selected)
 
 	t.Post.Author =
 		t.fromConfig(&cfg.Theme.Post.Author)

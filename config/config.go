@@ -86,6 +86,23 @@ type Config struct {
 			}
 		}
 
+		PopupList struct {
+			List struct {
+				Focused ThemeItemConfig
+				Blurred ThemeItemConfig
+			}
+			Item struct {
+				Focused  ThemeItemConfig
+				Blurred  ThemeItemConfig
+				Selected ThemeItemConfig
+			}
+			ItemDetail struct {
+				Focused  ThemeItemConfig
+				Blurred  ThemeItemConfig
+				Selected ThemeItemConfig
+			}
+		}
+
 		Post struct {
 			Author  ThemeItemConfig
 			Subject ThemeItemConfig
@@ -165,6 +182,7 @@ func SetDefaults(cacheDir string) {
 	viper.SetDefault("Debug", "true")
 	viper.SetDefault("Log", path.Join(cacheDir, "gobbs.log"))
 
+	// --- DialogBox ---
 	// DialogBox Window:Focused
 	viper.SetDefault("Theme.DialogBox.Window.Focused.Margin",
 		[]int{0, 0, 0, 0})
@@ -219,6 +237,7 @@ func SetDefaults(cacheDir string) {
 	viper.SetDefault("Theme.DialogBox.Bottombar.Foreground",
 		lipgloss.AdaptiveColor{Light: "#aaaaaa", Dark: "#999999"})
 
+	// --- ErrorDialogBox ---
 	// ErrorDialogBox Window:Focused
 	viper.SetDefault("Theme.ErrorDialogBox.Window.Focused.Margin",
 		[]int{0, 0, 0, 0})
@@ -273,6 +292,7 @@ func SetDefaults(cacheDir string) {
 	viper.SetDefault("Theme.ErrorDialogBox.Bottombar.Foreground",
 		lipgloss.AdaptiveColor{Light: "#aaaaaa", Dark: "#999999"})
 
+	// --- PostsList ---
 	// PostsList List:Focused
 	viper.SetDefault("Theme.PostsList.List.Focused.Margin",
 		[]int{0, 0, 0, 0})
@@ -349,6 +369,84 @@ func SetDefaults(cacheDir string) {
 	viper.SetDefault("Theme.PostsList.ItemDetail.Selected.Foreground",
 		lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
 
+	// --- PopupList ---
+	// PopupList List:Focused
+	viper.SetDefault("Theme.PopupList.List.Focused.Margin",
+		[]int{0, 0, 0, 0})
+	viper.SetDefault("Theme.PopupList.List.Focused.Padding",
+		[]int{1, 1, 1, 1})
+	viper.SetDefault("Theme.PopupList.List.Focused.Border.Border",
+		lipgloss.HiddenBorder())
+	viper.SetDefault("Theme.PopupList.List.Focused.Border.Sides",
+		[]bool{true, true, true, true},
+	)
+	viper.SetDefault("Theme.PopupList.List.Focused.Border.Foreground",
+		lipgloss.AdaptiveColor{Light: "#00ffff", Dark: "#00ffff"})
+
+	// PopupList List:Blurred
+	viper.SetDefault("Theme.PopupList.List.Blurred.Margin",
+		[]int{0, 0, 0, 0})
+	viper.SetDefault("Theme.PopupList.List.Blurred.Padding",
+		[]int{1, 1, 1, 1})
+	viper.SetDefault("Theme.PopupList.List.Blurred.Border.Border",
+		lipgloss.HiddenBorder())
+	viper.SetDefault("Theme.PopupList.List.Blurred.Border.Sides",
+		[]bool{true, true, true, true},
+	)
+	viper.SetDefault("Theme.PopupList.List.Blurred.Border.Foreground",
+		lipgloss.AdaptiveColor{Light: "#cccccc", Dark: "#333333"})
+
+	// PopupList Item:Focused
+	viper.SetDefault("Theme.PopupList.Item.Focused.Padding",
+		[]int{0, 0, 0, 2})
+	viper.SetDefault("Theme.PopupList.Item.Focused.Foreground",
+		lipgloss.AdaptiveColor{Light: "#333333", Dark: "#cccccc"})
+
+	// PopupList Item:Blurred
+	viper.SetDefault("Theme.PopupList.Item.Blurred.Padding",
+		[]int{0, 0, 0, 2})
+	viper.SetDefault("Theme.PopupList.Item.Blurred.Foreground",
+		lipgloss.AdaptiveColor{Light: "#cccccc", Dark: "#333333"})
+
+	// PopupList Item:Selected
+	viper.SetDefault("Theme.PopupList.Item.Selected.Padding",
+		[]int{0, 0, 0, 1})
+	viper.SetDefault("Theme.PopupList.Item.Selected.Border.Border",
+		lipgloss.NormalBorder())
+	viper.SetDefault("Theme.PopupList.Item.Selected.Border.Sides",
+		[]bool{false, false, false, true},
+	)
+	viper.SetDefault("Theme.PopupList.Item.Selected.Border.Foreground",
+		lipgloss.AdaptiveColor{Light: "#ffd500", Dark: "#ffd500"})
+	viper.SetDefault("Theme.PopupList.Item.Selected.Foreground",
+		lipgloss.AdaptiveColor{Light: "#F25D94", Dark: "#F25D94"})
+
+	// PopupList ItemDetail:Focused
+	viper.SetDefault("Theme.PopupList.ItemDetail.Focused.Padding",
+		[]int{0, 0, 0, 2})
+	viper.SetDefault("Theme.PopupList.ItemDetail.Focused.Foreground",
+		lipgloss.AdaptiveColor{Light: "#666666", Dark: "#4d4d4d"})
+
+	// PopupList ItemDetail:Blurred
+	viper.SetDefault("Theme.PopupList.ItemDetail.Blurred.Padding",
+		[]int{0, 0, 0, 2})
+	viper.SetDefault("Theme.PopupList.ItemDetail.Blurred.Foreground",
+		lipgloss.AdaptiveColor{Light: "#666666", Dark: "#4d4d4d"})
+
+	// PopupList ItemDetail:Selected
+	viper.SetDefault("Theme.PopupList.ItemDetail.Selected.Padding",
+		[]int{0, 0, 0, 1})
+	viper.SetDefault("Theme.PopupList.ItemDetail.Selected.Border.Border",
+		lipgloss.NormalBorder())
+	viper.SetDefault("Theme.PopupList.ItemDetail.Selected.Border.Sides",
+		[]bool{false, false, false, true},
+	)
+	viper.SetDefault("Theme.PopupList.ItemDetail.Selected.Border.Foreground",
+		lipgloss.AdaptiveColor{Light: "#ffd500", Dark: "#ffd500"})
+	viper.SetDefault("Theme.PopupList.ItemDetail.Selected.Foreground",
+		lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
+
+	// --- Post ---
 	// Post Author
 	viper.SetDefault("Theme.Post.Author.Padding",
 		[]int{0, 1, 0, 1})
