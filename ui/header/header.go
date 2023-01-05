@@ -74,7 +74,7 @@ func (m Model) View() string {
 	curSysIdx := m.ctx.GetCurrentSystem()
 	var currentSystem string = "All"
 	if curSysIdx >= 0 {
-		currentSystem = string((*m.ctx.Systems[curSysIdx]).GetID())
+		currentSystem = (*m.ctx.Systems[curSysIdx]).Title()
 	}
 
 	systemSelector := selector.Render(fmt.Sprintf("⏷  %s", currentSystem))

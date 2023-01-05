@@ -103,6 +103,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(ccmds...)
 		case key.Matches(msg, m.keymap.SystemSelect):
 			var listItems []list.Item
+
+			all, _ := system.New("all", nil, m.ctx.Logger)
+			all.SetID(-1)
+			listItems = append(listItems, all)
+
 			for _, sys := range m.ctx.Systems {
 				listItems = append(listItems, *sys)
 			}
@@ -185,7 +190,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case postcreate.WIN_ID:
 				m.ctx.Logger.Debugln("received WinClose")
 			case popuplist.WIN_ID:
-				switch msg.GetArg("selectionID").(string) {
+				selectionIDIf := msg.GetArg("selectionID")
+				if selectionIDIf == nil {
+					return m, nil
+				}
+				switch selectionIDIf.(string) {
 				case "system":
 					selected := msg.GetArg("selected").(system.System)
 					m.ctx.SetCurrentSystem(selected.GetID())
