@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/mrusme/gobbs/config"
@@ -47,7 +48,7 @@ func connectBase() *cobra.Command {
 				LOG.Panicln(err)
 			}
 
-			LOG.Infoln("Successfully added new connection!")
+			fmt.Println("Successfully added new connection!")
 			os.Exit(0)
 		},
 	}
@@ -58,7 +59,7 @@ func connectBase() *cobra.Command {
 			&sysType,
 			"type",
 			"",
-			"Type of system to connect to (discourse, lemmy, hackernews)",
+			"Type of system to connect to (discourse, lemmy, lobsers, hackernews)",
 		)
 	cmd.MarkFlagRequired("type")
 

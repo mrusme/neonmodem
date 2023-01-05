@@ -11,6 +11,7 @@ import (
 	"github.com/mrusme/gobbs/system/discourse"
 	"github.com/mrusme/gobbs/system/hackernews"
 	"github.com/mrusme/gobbs/system/lemmy"
+	"github.com/mrusme/gobbs/system/lobsters"
 	"go.uber.org/zap"
 )
 
@@ -48,6 +49,8 @@ func New(
 		sys = new(discourse.System)
 	case "lemmy":
 		sys = new(lemmy.System)
+	case "lobsters":
+		sys = new(lobsters.System)
 	case "hackernews":
 		sys = new(hackernews.System)
 	case "all":
