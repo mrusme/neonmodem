@@ -34,12 +34,12 @@ type KeyMap struct {
 
 var DefaultKeyMap = KeyMap{
 	SystemSelect: key.NewBinding(
-		key.WithKeys("ctrl+s"),
-		key.WithHelp("C-s", "System selector"),
+		key.WithKeys("ctrl+e"),
+		key.WithHelp("C-e", "System selector"),
 	),
 	ForumSelect: key.NewBinding(
-		key.WithKeys("ctrl+f"),
-		key.WithHelp("C-f", "Forum selector"),
+		key.WithKeys("ctrl+t"),
+		key.WithHelp("C-t", "Forum selector"),
 	),
 	Close: key.NewBinding(
 		key.WithKeys("q", "esc"),

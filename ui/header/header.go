@@ -88,10 +88,10 @@ func (m Model) View() string {
 
 	selectorColumn := lipgloss.JoinVertical(lipgloss.Center,
 		lipgloss.JoinHorizontal(lipgloss.Bottom, "System: \n   "+
-			lipgloss.NewStyle().Foreground(m.ctx.Theme.DialogBox.Bottombar.GetForeground()).Render("c-s"),
+			lipgloss.NewStyle().Foreground(m.ctx.Theme.DialogBox.Bottombar.GetForeground()).Render("C-e"),
 			systemSelector),
 		lipgloss.JoinHorizontal(lipgloss.Bottom, "Forum: \n  "+
-			lipgloss.NewStyle().Foreground(m.ctx.Theme.DialogBox.Bottombar.GetForeground()).Render("c-f"),
+			lipgloss.NewStyle().Foreground(m.ctx.Theme.DialogBox.Bottombar.GetForeground()).Render("C-t"),
 			forumSelector),
 	)
 

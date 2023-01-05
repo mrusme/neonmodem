@@ -48,7 +48,6 @@ func (sys *System) GetCapabilities() adapter.Capabilities {
 	var caps []adapter.Capability
 
 	caps = append(caps,
-		// TODO: https://github.com/Arsen6331/go-lemmy/issues/2
 		adapter.Capability{
 			ID:   "list:forums",
 			Name: "List Forums",
@@ -57,21 +56,19 @@ func (sys *System) GetCapabilities() adapter.Capabilities {
 			ID:   "list:posts",
 			Name: "List Posts",
 		},
-		// TODO: Not possible without list:forums
+		// TODO
 		// adapter.Capability{
 		// 	ID:   "create:post",
 		// 	Name: "Create Post",
 		// },
-		// TODO: https://github.com/Arsen6331/go-lemmy/issues/1
 		adapter.Capability{
 			ID:   "list:replies",
 			Name: "List Replies",
 		},
-		// TODO: Maybe possible but kind of pointless without list:replies
-		// adapter.Capability{
-		// 	ID:   "create:reply",
-		// 	Name: "Create Reply",
-		// },
+		adapter.Capability{
+			ID:   "create:reply",
+			Name: "Create Reply",
+		},
 	)
 
 	return caps
@@ -238,6 +235,8 @@ func (sys *System) LoadPost(p *post.Post) error {
 		p.Replies = append(p.Replies, reply.Reply{
 			ID: strconv.Itoa(i.Comment.ID),
 
+			InReplyTo: p.ID,
+
 			Body: i.Comment.Content,
 
 			CreatedAt: createdAt,
@@ -274,20 +273,32 @@ func (sys *System) CreatePost(p *post.Post) error {
 }
 
 func (sys *System) CreateReply(r *reply.Reply) error {
-	id, err := strconv.Atoi(r.ID)
-	if err != nil {
-		return err
-	}
-	inReplyTo, err := strconv.Atoi(r.InReplyTo)
+	ID, err := strconv.Atoi(r.ID)
 	if err != nil {
 		return err
 	}
 
-	resp, err := sys.client.CreateComment(context.Background(), types.CreateComment{
-		PostID:   inReplyTo,
-		ParentID: types.NewOptional(id),
-		Content:  r.Body,
-	})
+	var create types.CreateComment
+	if r.InReplyTo != "" {
+		// Reply to a reply of a post
+		InReplyTo, err := strconv.Atoi(r.InReplyTo)
+		if err != nil {
+			return err
+		}
+		create = types.CreateComment{
+			PostID:   InReplyTo,
+			ParentID: types.NewOptional(ID),
+			Content:  r.Body,
+		}
+	} else {
+		// Reply to a post
+		create = types.CreateComment{
+			PostID:  ID,
+			Content: r.Body,
+		}
+	}
+
+	resp, err := sys.client.CreateComment(context.Background(), create)
 	if err != nil {
 		return err
 	}
