@@ -27,6 +27,7 @@ func buildView(mi interface{}, cached bool) string {
 	return m.tk.Dialog(
 		"Post",
 		viewportStyle.Render(m.viewport.View()),
+		true,
 	)
 }
 

@@ -46,6 +46,7 @@ func buildView(mi interface{}, cached bool) string {
 	return m.tk.Dialog(
 		title,
 		m.textarea.View(),
+		true,
 	)
 
 }

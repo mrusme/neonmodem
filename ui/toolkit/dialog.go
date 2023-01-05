@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-func (tk *ToolKit) Dialog(title string, content string) string {
+func (tk *ToolKit) Dialog(title string, content string, bbar bool) string {
 	var view strings.Builder = strings.Builder{}
 
 	var style lipgloss.Style
@@ -27,16 +27,25 @@ func (tk *ToolKit) Dialog(title string, content string) string {
 	}
 	bindings = append(bindings, "esc close")
 
-	bottombar := tk.theme.DialogBox.Bottombar.
-		Width(tk.ViewWidth()).
-		Render(strings.Join(bindings, " · "))
+	var ui string
+	if bbar {
+		bottombar := tk.theme.DialogBox.Bottombar.
+			Width(tk.ViewWidth()).
+			Render(strings.Join(bindings, " · "))
 
-	ui := lipgloss.JoinVertical(
-		lipgloss.Center,
-		titlebar,
-		content,
-		bottombar,
-	)
+		ui = lipgloss.JoinVertical(
+			lipgloss.Center,
+			titlebar,
+			content,
+			bottombar,
+		)
+	} else {
+		ui = lipgloss.JoinVertical(
+			lipgloss.Center,
+			titlebar,
+			content,
+		)
+	}
 
 	var tmp string
 	if tk.IsFocused() {
