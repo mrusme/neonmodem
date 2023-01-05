@@ -20,6 +20,10 @@ type System interface {
 	SetLogger(logger *zap.SugaredLogger)
 	GetCapabilities() []adapter.Capability
 
+	FilterValue() string
+	Title() string
+	Description() string
+
 	Connect(sysURL string) error
 	Load() error
 

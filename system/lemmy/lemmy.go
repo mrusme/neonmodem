@@ -2,6 +2,7 @@ package lemmy
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -60,6 +61,23 @@ func (sys *System) GetCapabilities() []adapter.Capability {
 	})
 
 	return caps
+}
+
+func (sys *System) FilterValue() string {
+	return fmt.Sprintf(
+		"Lemmy %s",
+		sys.config["url"],
+	)
+}
+
+func (sys *System) Title() string {
+	return sys.config["url"].(string)
+}
+
+func (sys *System) Description() string {
+	return fmt.Sprintf(
+		"Lemmy",
+	)
 }
 
 func (sys *System) Load() error {

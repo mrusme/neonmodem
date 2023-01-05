@@ -2,6 +2,7 @@ package discourse
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -61,6 +62,23 @@ func (sys *System) GetCapabilities() []adapter.Capability {
 	})
 
 	return caps
+}
+
+func (sys *System) FilterValue() string {
+	return fmt.Sprintf(
+		"Discourse %s",
+		sys.config["url"],
+	)
+}
+
+func (sys *System) Title() string {
+	return sys.config["url"].(string)
+}
+
+func (sys *System) Description() string {
+	return fmt.Sprintf(
+		"Discourse",
+	)
 }
 
 func (sys *System) Load() error {

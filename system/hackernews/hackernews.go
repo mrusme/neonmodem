@@ -3,6 +3,7 @@ package hackernews
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -60,6 +61,22 @@ func (sys *System) GetCapabilities() []adapter.Capability {
 	})
 
 	return caps
+}
+
+func (sys *System) FilterValue() string {
+	return fmt.Sprintf(
+		"Hacker News https://news.ycombinator.com",
+	)
+}
+
+func (sys *System) Title() string {
+	return "https://news.ycombinator.com"
+}
+
+func (sys *System) Description() string {
+	return fmt.Sprintf(
+		"Hacker News",
+	)
 }
 
 func (sys *System) Load() error {
