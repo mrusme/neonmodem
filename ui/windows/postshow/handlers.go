@@ -94,6 +94,8 @@ func handleOpen(mi interface{}) (bool, []tea.Cmd) {
 	var cmds []tea.Cmd
 
 	openURL := m.activePost.URL
+	browser.Stderr = nil
+	browser.Stdout = nil
 	if err := browser.OpenURL(openURL); err != nil {
 		m.ctx.Logger.Error(err)
 		cmds = append(cmds, cmd.New(
