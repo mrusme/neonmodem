@@ -75,11 +75,6 @@ func NewModel(c *ctx.Ctx) Model {
 	m.list.SetShowTitle(false)
 	m.list.SetShowStatusBar(false)
 
-	m.a, _ = aggregator.New(m.ctx)
-
-	return m
-}
-
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
@@ -163,7 +158,12 @@ func (m *Model) refresh() tea.Cmd {
 
 		posts, errs := m.a.ListPosts()
 		if len(errs) > 0 {
-			fmt.Printf("%s", errs) // TODO: Implement error message
+			m.ctx.Logger.Error(err)
+			return *cmd.New(
+				cmd.MsgError,
+				WIN_ID,
+				cmd.Arg{Name: "errors", Value: errs},
+			)
 		}
 		for _, post := range posts {
 			items = append(items, post)
