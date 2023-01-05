@@ -34,13 +34,28 @@ func handleReply(mi interface{}) (bool, []tea.Cmd) {
 
 	if m.buffer != "" {
 		replyToIdx, err = strconv.Atoi(m.buffer)
-
 		if err != nil {
-			// TODO: Handle error
+			cmds = append(cmds, cmd.New(
+				cmd.MsgError,
+				WIN_ID,
+				cmd.Arg{
+					Name:  "error",
+					Value: err,
+				},
+			).Tea())
+			return true, cmds
 		}
 
 		if replyToIdx >= len(m.replyIDs) {
-			// TODO: Handle error
+			cmds = append(cmds, cmd.New(
+				cmd.MsgError,
+				WIN_ID,
+				cmd.Arg{
+					Name:  "error",
+					Value: errors.New("Reply # does not exist!"),
+				},
+			).Tea())
+			return true, cmds
 		}
 	}
 
