@@ -56,10 +56,20 @@ func (sys *System) GetCapabilities() adapter.Capabilities {
 			ID:   "list:posts",
 			Name: "List Posts",
 		},
+		// TODO: https://github.com/hermanschaaf/hackernews/issues/1
+		// adapter.Capability{
+		// 	ID:   "create:post",
+		// 	Name: "Create Post",
+		// },
 		adapter.Capability{
 			ID:   "list:replies",
 			Name: "List Replies",
 		},
+		// TODO: https://github.com/hermanschaaf/hackernews/issues/1
+		// adapter.Capability{
+		// 	ID:   "create:reply",
+		// 	Name: "Create Reply",
+		// },
 	)
 
 	return caps

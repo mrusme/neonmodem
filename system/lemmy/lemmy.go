@@ -50,14 +50,30 @@ func (sys *System) GetCapabilities() adapter.Capabilities {
 	var caps []adapter.Capability
 
 	caps = append(caps,
+		// TODO: https://github.com/Arsen6331/go-lemmy/issues/2
+		// adapter.Capability{
+		// 	ID:   "list:forums",
+		// 	Name: "List Forums",
+		// },
 		adapter.Capability{
 			ID:   "list:posts",
 			Name: "List Posts",
 		},
-		adapter.Capability{
-			ID:   "create:post",
-			Name: "Create Post",
-		},
+		// TODO: Not possible without list:forums
+		// adapter.Capability{
+		// 	ID:   "create:post",
+		// 	Name: "Create Post",
+		// },
+		// TODO: https://github.com/Arsen6331/go-lemmy/issues/1
+		// adapter.Capability{
+		// 	ID:   "list:replies",
+		// 	Name: "List Replies",
+		// },
+		// TODO: Maybe possible but kind of pointless without list:replies
+		// adapter.Capability{
+		// 	ID:   "create:reply",
+		// 	Name: "Create Reply",
+		// },
 	)
 
 	return caps
