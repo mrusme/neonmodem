@@ -214,6 +214,8 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 
 			Replies: replies,
 
+			URL: fmt.Sprintf("https://news.ycombinator.com/item?id=%d", i.ID),
+
 			SysIDX: sys.ID,
 		})
 	}

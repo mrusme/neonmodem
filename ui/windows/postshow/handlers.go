@@ -9,6 +9,7 @@ import (
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/ui/cmd"
 	"github.com/mrusme/gobbs/ui/windows/postcreate"
+	"github.com/pkg/browser"
 )
 
 func handleReply(mi interface{}) (bool, []tea.Cmd) {
@@ -25,8 +26,12 @@ func handleReply(mi interface{}) (bool, []tea.Cmd) {
 			cmd.MsgError,
 			WIN_ID,
 			cmd.Arg{
-				Name:  "error",
-				Value: errors.New("This system doesn't support replies yet!"),
+				Name: "error",
+				Value: errors.New(
+					"This system doesn't support replies yet!\n" +
+						"However, you can use `o` to open this post in your browser and " +
+						"reply there!",
+				),
 			},
 		).Tea())
 		return true, cmds
@@ -80,6 +85,27 @@ func handleReply(mi interface{}) (bool, []tea.Cmd) {
 	m.ctx.Logger.Debugln("caching view")
 	m.ctx.Logger.Debugf("buffer: %s", m.buffer)
 	// m.viewcache = m.buildView(false)
+
+	return true, cmds
+}
+
+func handleOpen(mi interface{}) (bool, []tea.Cmd) {
+	var m *Model = mi.(*Model)
+	var cmds []tea.Cmd
+
+	openURL := m.activePost.URL
+	if err := browser.OpenURL(openURL); err != nil {
+		m.ctx.Logger.Error(err)
+		cmds = append(cmds, cmd.New(
+			cmd.MsgError,
+			WIN_ID,
+			cmd.Arg{
+				Name:  "error",
+				Value: err,
+			},
+		).Tea())
+		return true, cmds
+	}
 
 	return true, cmds
 }

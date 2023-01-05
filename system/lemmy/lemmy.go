@@ -167,6 +167,9 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 		return []post.Post{}, err
 	}
 
+	cfg := sys.GetConfig()
+	baseURL := cfg["url"].(string)
+
 	var models []post.Post
 	for _, i := range resp.Posts {
 		t := "post"
@@ -210,6 +213,8 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 
 				SysIDX: sys.ID,
 			},
+
+			URL: fmt.Sprintf("%s/post/%d", baseURL, i.Post.ID),
 
 			SysIDX: sys.ID,
 		})

@@ -28,6 +28,8 @@ type Post struct {
 
 	Replies []reply.Reply
 
+	URL string
+
 	SysIDX int
 }
 

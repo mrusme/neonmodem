@@ -175,6 +175,8 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 				SysIDX: sys.ID,
 			},
 
+			URL: i.ShortIDURL,
+
 			SysIDX: sys.ID,
 		})
 	}

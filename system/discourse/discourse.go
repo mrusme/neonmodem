@@ -202,6 +202,9 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 			}
 		}
 
+		cfg := sys.GetConfig()
+		baseURL := cfg["url"].(string)
+
 		models = append(models, post.Post{
 			ID: strconv.Itoa(i.ID),
 
@@ -226,6 +229,8 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 
 				SysIDX: sys.ID,
 			},
+
+			URL: fmt.Sprintf("%s/t/%d", baseURL, i.ID),
 
 			SysIDX: sys.ID,
 		})
