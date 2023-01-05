@@ -1,8 +1,6 @@
 package postcreate
 
 import (
-	"strconv"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/models/reply"
@@ -12,27 +10,25 @@ import (
 func handleSubmit(mi interface{}) (bool, []tea.Cmd) {
 	var m *Model = mi.(*Model)
 	var cmds []tea.Cmd
-	var irtID string = ""
-	var irtIRT string = ""
-	var irtSysIDX int = 0
 
+	var r reply.Reply
 	if m.replyToIdx == 0 {
-		pst := m.replyToIface.(post.Post)
-		irtID = pst.ID
-		irtSysIDX = pst.SysIDX
+		// No numbers were typed before hitting `r` so we're replying to the actual
+		// Post
+		x := m.replyToIface.(post.Post)
+		r = reply.Reply{
+			ID:        x.ID,
+			InReplyTo: "",
+			Index:     -1,
+			SysIDX:    x.SysIDX,
+		}
 	} else {
-		rply := m.replyToIface.(reply.Reply)
-		irtID = strconv.Itoa(m.replyToIdx + 1)
-		irtIRT = rply.InReplyTo // TODO: THis is empty? Why?
-		irtSysIDX = rply.SysIDX
+		// Numbers were typed before hitting `r`, so we're taking the actual reply
+		// here
+		r = m.replyToIface.(reply.Reply)
 	}
 
-	r := reply.Reply{
-		ID:        irtID,
-		InReplyTo: irtIRT,
-		Body:      m.textarea.Value(),
-		SysIDX:    irtSysIDX,
-	}
+	r.Body = m.textarea.Value()
 
 	err := m.a.CreateReply(&r)
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 type Reply struct {
 	ID        string
 	InReplyTo string
+	Index     int
 
 	Body string
 

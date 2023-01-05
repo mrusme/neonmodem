@@ -265,6 +265,7 @@ func (sys *System) LoadPost(p *post.Post) error {
 		p.Replies = append(p.Replies, reply.Reply{
 			ID:        strconv.Itoa(i.ID),
 			InReplyTo: p.ID,
+			Index:     idx,
 
 			Body: cookedMd,
 
@@ -313,17 +314,14 @@ func (sys *System) CreateReply(r *reply.Reply) error {
 		return err
 	}
 
-	var inReplyTo int = -1
-	if r.InReplyTo != "" {
-		inReplyTo, err = strconv.Atoi(r.InReplyTo)
-		if err != nil {
-			return err
-		}
+	inReplyTo, err := strconv.Atoi(r.InReplyTo)
+	if err != nil {
+		return err
 	}
 
 	var ap api.CreatePostModel
 
-	if inReplyTo == -1 {
+	if r.Index == -1 {
 		// Looks like we're replying directly to a post
 		ap = api.CreatePostModel{
 			Raw:       r.Body,
@@ -335,7 +333,7 @@ func (sys *System) CreateReply(r *reply.Reply) error {
 		ap = api.CreatePostModel{
 			Raw:               r.Body,
 			TopicID:           inReplyTo,
-			ReplyToPostNumber: ID,
+			ReplyToPostNumber: r.Index,
 			CreatedAt:         time.Now().Format(time.RFC3339Nano),
 		}
 	}
