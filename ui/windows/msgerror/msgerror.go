@@ -30,7 +30,7 @@ type Model struct {
 
 	a *aggregator.Aggregator
 
-	err error
+	errs []error
 
 	viewcache           string
 	viewcacheTextareaXY []int
@@ -50,7 +50,7 @@ func NewModel(c *ctx.Ctx) Model {
 		),
 		xywh: [4]int{0, 0, 0, 0},
 
-		err: nil,
+		errs: []error{},
 
 		viewcache:           "",
 		viewcacheTextareaXY: []int{0, 0, 0, 0},
@@ -77,12 +77,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var vcmd tea.Cmd
 
-	m.ctx.Logger.Debugf("ERROR IS: %v\n", m.err)
-	if m.err != nil {
-		m.viewport.SetContent(m.err.Error())
-	}
+	m.setErrorContent()
 	m.viewport, vcmd = m.viewport.Update(msg)
 	cmds = append(cmds, vcmd)
 
 	return m, tea.Batch(cmds...)
+}
+
+func (m *Model) setErrorContent() {
+	if len(m.errs) > 0 {
+		var tmp string = ""
+		for _, err := range m.errs {
+			tmp += err.Error() + "\n"
+		}
+		m.viewport.SetContent(tmp)
+	}
 }

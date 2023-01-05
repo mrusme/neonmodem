@@ -27,11 +27,15 @@ func handleMsgErrorCmd(mi interface{}, c cmd.Command) (bool, []tea.Cmd) {
 	var m *Model = mi.(*Model)
 	var cmds []tea.Cmd
 
-	m.err = c.GetArg("error").(error)
-	if m.err != nil {
-		m.viewport.SetContent(m.err.Error())
-		m.tk.CacheView(m)
+	if err := c.GetArg("error"); err != nil {
+		m.errs = append(m.errs, err.(error))
 	}
+	if errs := c.GetArg("errors"); errs != nil {
+		m.errs = append(m.errs, errs.([]error)...)
+	}
+
+	m.setErrorContent()
+	m.tk.CacheView(m)
 	return true, cmds
 }
 
@@ -40,7 +44,7 @@ func handleWinCloseCmd(mi interface{}, c cmd.Command) (bool, []tea.Cmd) {
 	var cmds []tea.Cmd
 
 	if c.Target == WIN_ID {
-		m.err = nil
+		m.errs = []error{}
 		return true, cmds
 	}
 
