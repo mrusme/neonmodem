@@ -138,7 +138,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keymap.ForumSelect):
 			var listItems []list.Item
 
-			all := forum.Forum{ID: "", Name: "All", SysIDX: -1}
+			all := forum.Forum{ID: "", Name: "All", SysIDX: m.ctx.GetCurrentSystem()}
 			listItems = append(listItems, all)
 
 			forums, errs := m.a.ListForums()
