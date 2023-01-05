@@ -62,12 +62,12 @@ func (wm *WM) CloseFocused() (bool, []tea.Cmd) {
 	return wm.Close(wm.Focused())
 }
 
-func (wm *WM) Close(id string) (bool, []tea.Cmd) {
+func (wm *WM) Close(id string, args ...cmd.Arg) (bool, []tea.Cmd) {
 	var tcmds []tea.Cmd
 	for i := len(wm.stack) - 1; i >= 0; i-- {
 		if wm.stack[i].ID == id {
 			wm.stack = append(wm.stack[:i], wm.stack[i+1:]...)
-			tcmds = append(tcmds, cmd.New(cmd.WinClose, id).Tea())
+			tcmds = append(tcmds, cmd.New(cmd.WinClose, id, args...).Tea())
 			wm.ctx.Loading = false
 
 			nrOpen := wm.GetNumberOpen()
