@@ -111,7 +111,6 @@ func (sys *System) Connect(sysURL string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(decodedUserAPIKey))
 
 	decryptedUserAPIKey, err := privateKey.Decrypt(
 		rand.Reader,
@@ -121,14 +120,12 @@ func (sys *System) Connect(sysURL string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(decryptedUserAPIKey))
 
 	var userAPIKey UserAPIKey
 	err = json.Unmarshal(decryptedUserAPIKey, &userAPIKey)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%v\n", userAPIKey)
 
 	// Credentials
 	credentials := make(map[string]string)
