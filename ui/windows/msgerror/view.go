@@ -15,8 +15,8 @@ func buildView(mi interface{}, cached bool) string {
 	m.ctx.Logger.Debugln("View()")
 	m.ctx.Logger.Debugf("IsFocused: %v\n", m.tk.IsFocused())
 
-	return m.tk.Dialog(
-		"Post",
+	return m.tk.ErrorDialog(
+		"Error",
 		viewportStyle.Render(m.viewport.View()),
 	)
 }

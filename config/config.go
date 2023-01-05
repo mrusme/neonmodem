@@ -230,7 +230,7 @@ func SetDefaults(cacheDir string) {
 		[]bool{false, true, true, true},
 	)
 	viper.SetDefault("Theme.ErrorDialogBox.Window.Focused.Border.Foreground",
-		lipgloss.AdaptiveColor{Light: "#00ffff", Dark: "#00ffff"})
+		lipgloss.AdaptiveColor{Light: "#dc143c", Dark: "#dc143c"})
 
 	// ErrorDialogBox Window:Blurred
 	viper.SetDefault("Theme.ErrorDialogBox.Window.Blurred.Margin",
@@ -253,7 +253,7 @@ func SetDefaults(cacheDir string) {
 	viper.SetDefault("Theme.ErrorDialogBox.Titlebar.Focused.Foreground",
 		lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#000000"})
 	viper.SetDefault("Theme.ErrorDialogBox.Titlebar.Focused.Background",
-		lipgloss.AdaptiveColor{Light: "#00cccc", Dark: "#00cccc"})
+		lipgloss.AdaptiveColor{Light: "#dc143c", Dark: "#dc143c"})
 
 	// ErrorDialogBox Titlebar:Blurred
 	viper.SetDefault("Theme.ErrorDialogBox.Titlebar.Blurred.Margin",
