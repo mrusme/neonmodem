@@ -28,6 +28,7 @@ func handleMsgErrorCmd(mi interface{}, c cmd.Command) (bool, []tea.Cmd) {
 	var cmds []tea.Cmd
 
 	if err := c.GetArg("error"); err != nil {
+		m.ctx.Logger.Debugf("Setting error: %v", err)
 		m.errs = append(m.errs, err.(error))
 	}
 	if errs := c.GetArg("errors"); errs != nil {
