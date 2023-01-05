@@ -2,6 +2,7 @@ package ctx
 
 import (
 	"github.com/mrusme/gobbs/config"
+	"github.com/mrusme/gobbs/models/forum"
 	"github.com/mrusme/gobbs/system"
 	"github.com/mrusme/gobbs/ui/theme"
 	"go.uber.org/zap"
@@ -17,7 +18,7 @@ type Ctx struct {
 	Theme   *theme.Theme
 
 	currentSystem int
-	currentForum  string
+	currentForum  forum.Forum
 }
 
 func New(
@@ -33,7 +34,7 @@ func New(
 		Theme:   theme.New(cfg),
 
 		currentSystem: -1,
-		currentForum:  "",
+		currentForum:  forum.Forum{},
 	}
 }
 
@@ -54,10 +55,10 @@ func (c *Ctx) GetCurrentSystem() int {
 	return c.currentSystem
 }
 
-func (c *Ctx) SetCurrentForum(id string) {
-	c.currentForum = id
+func (c *Ctx) SetCurrentForum(f forum.Forum) {
+	c.currentForum = f
 }
 
-func (c *Ctx) GetCurrentForum() string {
+func (c *Ctx) GetCurrentForum() forum.Forum {
 	return c.currentForum
 }

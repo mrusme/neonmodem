@@ -2,6 +2,7 @@ package lemmy
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -113,7 +114,31 @@ func (sys *System) Load() error {
 	return nil
 }
 
-func (sys *System) ListPosts() ([]post.Post, error) {
+func (sys *System) ListForums() ([]forum.Forum, error) {
+	resp, err := sys.client.Communities(context.Background(), types.ListCommunities{
+		Type: types.NewOptional(types.ListingSubscribed),
+	})
+	if err != nil {
+		return []forum.Forum{}, err
+	}
+
+	var models []forum.Forum
+	for _, i := range resp.Communities {
+		sys.logger.Debugf("FORUM:")
+		b, _ := json.Marshal(i)
+		sys.logger.Debug(string(b))
+		models = append(models, forum.Forum{
+			ID:   strconv.Itoa(i.CommunitySafe.ID),
+			Name: i.CommunitySafe.Name,
+
+			SysIDX: sys.ID,
+		})
+	}
+
+	return models, nil
+}
+
+func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 	resp, err := sys.client.Posts(context.Background(), types.GetPosts{
 		Type:  types.NewOptional(types.ListingSubscribed),
 		Sort:  types.NewOptional(types.New),
@@ -163,6 +188,8 @@ func (sys *System) ListPosts() ([]post.Post, error) {
 			Forum: forum.Forum{
 				ID:   strconv.Itoa(i.Post.CommunityID),
 				Name: i.Community.Name,
+
+				SysIDX: sys.ID,
 			},
 
 			SysIDX: sys.ID,

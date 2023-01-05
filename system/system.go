@@ -3,6 +3,7 @@ package system
 import (
 	"errors"
 
+	"github.com/mrusme/gobbs/models/forum"
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/system/adapter"
@@ -28,7 +29,8 @@ type System interface {
 	Connect(sysURL string) error
 	Load() error
 
-	ListPosts() ([]post.Post, error)
+	ListForums() ([]forum.Forum, error)
+	ListPosts(forumID string) ([]post.Post, error)
 	LoadPost(p *post.Post) error
 	CreatePost(p *post.Post) error
 	CreateReply(r *reply.Reply) error

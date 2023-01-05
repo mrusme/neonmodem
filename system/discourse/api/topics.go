@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 )
 
@@ -82,6 +83,8 @@ type TopicsService interface {
 	) (*SingleTopicResponse, error)
 	ListLatest(
 		ctx context.Context,
+		categorySlug string,
+		categoryID int,
 	) (*LatestTopicsResponse, error)
 }
 
@@ -112,8 +115,15 @@ func (a *TopicServiceHandler) Show(
 // List
 func (a *TopicServiceHandler) ListLatest(
 	ctx context.Context,
+	categorySlug string,
+	categoryID int,
 ) (*LatestTopicsResponse, error) {
-	uri := "/latest.json"
+	var uri string
+	if categoryID == -1 {
+		uri = "/latest.json"
+	} else {
+		uri = fmt.Sprintf("/c/%s/%d.json", categorySlug, categoryID)
+	}
 
 	req, err := a.client.NewRequest(ctx, http.MethodGet, uri, nil)
 	if err != nil {

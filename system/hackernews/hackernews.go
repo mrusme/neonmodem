@@ -82,8 +82,59 @@ func (sys *System) Load() error {
 	return nil
 }
 
-func (sys *System) ListPosts() ([]post.Post, error) {
-	stories, err := sys.client.TopStories(context.Background())
+func (sys *System) ListForums() ([]forum.Forum, error) {
+	return []forum.Forum{
+		{
+			ID:     "top",
+			Name:   "Top HN Stories",
+			SysIDX: sys.ID,
+		},
+		{
+			ID:     "best",
+			Name:   "Best HN Stories",
+			SysIDX: sys.ID,
+		},
+		{
+			ID:     "new",
+			Name:   "New HN Stories",
+			SysIDX: sys.ID,
+		},
+		{
+			ID:     "ask",
+			Name:   "Ask HN",
+			SysIDX: sys.ID,
+		},
+		{
+			ID:     "show",
+			Name:   "Show HN",
+			SysIDX: sys.ID,
+		},
+		{
+			ID:     "jobs",
+			Name:   "Jobs HN",
+			SysIDX: sys.ID,
+		},
+	}, nil
+}
+
+func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
+	var stories []int
+	var err error
+
+	switch forumID {
+	case "top":
+		stories, err = sys.client.TopStories(context.Background())
+	case "best":
+		stories, err = sys.client.BestStories(context.Background())
+	case "ask":
+		stories, err = sys.client.AskStories(context.Background())
+	case "show":
+		stories, err = sys.client.ShowStories(context.Background())
+	case "jobs":
+		stories, err = sys.client.JobStories(context.Background())
+	default:
+		stories, err = sys.client.NewStories(context.Background())
+	}
 	if err != nil {
 		return []post.Post{}, err
 	}
@@ -142,6 +193,8 @@ func (sys *System) ListPosts() ([]post.Post, error) {
 			Forum: forum.Forum{
 				ID:   "new",
 				Name: "New",
+
+				SysIDX: sys.ID,
 			},
 
 			Replies: replies,

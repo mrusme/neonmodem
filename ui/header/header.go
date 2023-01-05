@@ -77,8 +77,14 @@ func (m Model) View() string {
 		currentSystem = (*m.ctx.Systems[curSysIdx]).Title()
 	}
 
+	curForum := m.ctx.GetCurrentForum()
+	var currentForum string = "All"
+	if curForum.ID != "" {
+		currentForum = curForum.Title()
+	}
+
 	systemSelector := selector.Render(fmt.Sprintf("⏷  %s", currentSystem))
-	forumSelector := selector.Render("⏷  All")
+	forumSelector := selector.Render(fmt.Sprintf("⏷  %s", currentForum))
 
 	selectorColumn := lipgloss.JoinVertical(lipgloss.Center,
 		lipgloss.JoinHorizontal(lipgloss.Bottom, "System: \n   "+

@@ -92,6 +92,7 @@ func loadSystems(c *ctx.Ctx) []error {
 		}
 
 		c.AddSystem(&sys)
+		c.Logger.Debugf("setting system ID to %d", c.NumSystems()-1)
 		sys.SetID(c.NumSystems() - 1)
 	}
 

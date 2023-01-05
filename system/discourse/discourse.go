@@ -115,13 +115,51 @@ func (sys *System) Load() error {
 	return nil
 }
 
-func (sys *System) ListPosts() ([]post.Post, error) {
+func (sys *System) ListForums() ([]forum.Forum, error) {
+	var models []forum.Forum
+
+	cats, err := sys.client.Categories.List(context.Background())
+	if err != nil {
+		return []forum.Forum{}, err
+	}
+
+	for _, cat := range cats.CategoryList.Categories {
+		models = append(models, forum.Forum{
+			ID:   strconv.Itoa(cat.ID),
+			Name: cat.Name,
+
+			SysIDX: sys.ID,
+		})
+	}
+
+	return models, nil
+}
+
+func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
+	var catSlug string = ""
+	var catID int = -1
+	var err error
+
 	cats, err := sys.client.Categories.List(context.Background())
 	if err != nil {
 		return []post.Post{}, err
 	}
 
-	items, err := sys.client.Topics.ListLatest(context.Background())
+	if forumID != "" {
+		catID, err = strconv.Atoi(forumID)
+		if err != nil {
+			return []post.Post{}, err
+		}
+
+		for _, cat := range cats.CategoryList.Categories {
+			if cat.ID == catID {
+				catSlug = cat.Slug
+				break
+			}
+		}
+	}
+
+	items, err := sys.client.Topics.ListLatest(context.Background(), catSlug, catID)
 	if err != nil {
 		return []post.Post{}, err
 	}
@@ -181,6 +219,8 @@ func (sys *System) ListPosts() ([]post.Post, error) {
 			Forum: forum.Forum{
 				ID:   strconv.Itoa(i.CategoryID),
 				Name: forumName,
+
+				SysIDX: sys.ID,
 			},
 
 			SysIDX: sys.ID,

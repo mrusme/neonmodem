@@ -5,6 +5,7 @@ import (
 
 	"strings"
 
+	"github.com/mrusme/gobbs/aggregator"
 	"github.com/mrusme/gobbs/models/forum"
 	"github.com/mrusme/gobbs/system"
 	"github.com/mrusme/gobbs/ui/cmd"
@@ -54,6 +55,8 @@ type Model struct {
 	wm          *windowmanager.WM
 	ctx         *ctx.Ctx
 
+	a *aggregator.Aggregator
+
 	viewcache         string
 	viewcacheID       string
 	renderOnlyFocused bool
@@ -72,6 +75,8 @@ func NewModel(c *ctx.Ctx) Model {
 
 	m.header = header.NewModel(m.ctx)
 	m.views = append(m.views, posts.NewModel(m.ctx))
+
+	m.a, _ = aggregator.New(m.ctx)
 
 	return m
 }
@@ -125,6 +130,39 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cmd.WinOpen,
 					popuplist.WIN_ID,
 					cmd.Arg{Name: "selectionID", Value: "system"},
+					cmd.Arg{Name: "items", Value: listItems},
+				),
+			)
+			return m, tea.Batch(ccmds...)
+
+		case key.Matches(msg, m.keymap.ForumSelect):
+			var listItems []list.Item
+
+			all := forum.Forum{ID: "", Name: "All", SysIDX: -1}
+			listItems = append(listItems, all)
+
+			forums, errs := m.a.ListForums()
+			if len(errs) > 0 {
+				// TODO: Handle errors
+			}
+			for _, f := range forums {
+				m.ctx.Logger.Debugf("Adding forum to list: %s ID %d\n", f.Title(), f.SysIDX)
+				listItems = append(listItems, f)
+			}
+
+			ccmds := m.wm.Open(
+				popuplist.WIN_ID,
+				popuplist.NewModel(m.ctx),
+				[4]int{
+					int(m.ctx.Content[1] / 2),
+					int(m.ctx.Content[1] / 4),
+					int(m.ctx.Content[1] / 2),
+					int(m.ctx.Content[1] / 4),
+				},
+				cmd.New(
+					cmd.WinOpen,
+					popuplist.WIN_ID,
+					cmd.Arg{Name: "selectionID", Value: "forum"},
 					cmd.Arg{Name: "items", Value: listItems},
 				),
 			)
@@ -198,9 +236,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case "system":
 					selected := msg.GetArg("selected").(system.System)
 					m.ctx.SetCurrentSystem(selected.GetID())
+					m.ctx.SetCurrentForum(forum.Forum{})
 				case "forum":
 					selected := msg.GetArg("selected").(forum.Forum)
-					m.ctx.SetCurrentForum(selected.ID)
+					m.ctx.Logger.Debugf("selecting system ID %d\n", selected.SysIDX)
+					m.ctx.SetCurrentSystem(selected.SysIDX)
+					m.ctx.SetCurrentForum(selected)
 				}
 			}
 

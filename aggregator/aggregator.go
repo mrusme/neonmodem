@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"os"
 	"sort"
+	"strings"
 
+	"github.com/mrusme/gobbs/models/forum"
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/ui/ctx"
@@ -19,6 +21,33 @@ func New(c *ctx.Ctx) (*Aggregator, error) {
 	a.ctx = c
 
 	return a, nil
+}
+
+func (a *Aggregator) ListForums() ([]forum.Forum, []error) {
+	var errs []error = make([]error, len(a.ctx.Systems))
+	var forums []forum.Forum
+
+	for idx, sys := range a.ctx.Systems {
+		if curSysIDX := a.ctx.GetCurrentSystem(); curSysIDX != -1 {
+			if idx != curSysIDX {
+				continue
+			}
+		}
+
+		sysForums, err := (*sys).ListForums()
+		if err != nil {
+			errs[idx] = err
+			continue
+		}
+		forums = append(forums, sysForums...)
+	}
+
+	sort.SliceStable(forums, func(i, j int) bool {
+		return strings.Compare(forums[i].Name, forums[j].Name) == 1
+	})
+
+	return forums, errs
+
 }
 
 func (a *Aggregator) ListPosts() ([]post.Post, []error) {
@@ -37,7 +66,13 @@ func (a *Aggregator) ListPosts() ([]post.Post, []error) {
 	}
 
 	for idx, sys := range a.ctx.Systems {
-		sysPosts, err := (*sys).ListPosts()
+		if curSysIDX := a.ctx.GetCurrentSystem(); curSysIDX != -1 {
+			if idx != curSysIDX {
+				continue
+			}
+		}
+
+		sysPosts, err := (*sys).ListPosts(a.ctx.GetCurrentForum().ID)
 		if err != nil {
 			errs[idx] = err
 			continue

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/mrusme/gobbs/models/forum"
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/models/reply"
 	"github.com/mrusme/gobbs/system/adapter"
@@ -65,7 +66,11 @@ func (sys *System) Connect(sysURL string) error {
 	return errors.New("This system can't be connected to")
 }
 
-func (sys *System) ListPosts() ([]post.Post, error) {
+func (sys *System) ListForums() ([]forum.Forum, error) {
+	return []forum.Forum{}, nil
+}
+
+func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 	return []post.Post{}, nil
 }
 
