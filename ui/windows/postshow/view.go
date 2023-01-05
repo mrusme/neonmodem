@@ -65,7 +65,11 @@ func (m *Model) renderViewport(p *post.Post) string {
 
 	m.replyIDs = []string{p.ID}
 	m.activePost = p
-	out += m.renderReplies(0, p.Author.Name, &p.Replies)
+
+	caps := (*m.ctx.Systems[p.SysIDX]).GetCapabilities()
+	if caps.IsCapableOf("list:replies") {
+		out += m.renderReplies(0, p.Author.Name, &p.Replies)
+	}
 
 	return out
 }

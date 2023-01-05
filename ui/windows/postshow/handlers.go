@@ -1,6 +1,7 @@
 package postshow
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/charmbracelet/bubbles/viewport"
@@ -17,6 +18,19 @@ func handleReply(mi interface{}) (bool, []tea.Cmd) {
 	var err error
 
 	m.tk.CacheView(m)
+
+	caps := (*m.ctx.Systems[m.activePost.SysIDX]).GetCapabilities()
+	if !caps.IsCapableOf("create:reply") {
+		cmds = append(cmds, cmd.New(
+			cmd.MsgError,
+			WIN_ID,
+			cmd.Arg{
+				Name:  "error",
+				Value: errors.New("This system doesn't support replies yet!"),
+			},
+		).Tea())
+		return true, cmds
+	}
 
 	if m.buffer != "" {
 		replyToIdx, err = strconv.Atoi(m.buffer)
