@@ -19,7 +19,7 @@ type System interface {
 	GetConfig() map[string]interface{}
 	SetConfig(cfg *map[string]interface{})
 	SetLogger(logger *zap.SugaredLogger)
-	GetCapabilities() []adapter.Capability
+	GetCapabilities() adapter.Capabilities
 
 	FilterValue() string
 	Title() string

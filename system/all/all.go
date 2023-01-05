@@ -35,7 +35,7 @@ func (sys *System) SetLogger(logger *zap.SugaredLogger) {
 	sys.logger = logger
 }
 
-func (sys *System) GetCapabilities() []adapter.Capability {
+func (sys *System) GetCapabilities() adapter.Capabilities {
 	var caps []adapter.Capability
 
 	return caps
