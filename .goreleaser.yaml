@@ -1,4 +1,8 @@
 # .goreleaser.yaml
+changelog:
+  skip: false
+  use: github
+
 builds:
   -
     env:
