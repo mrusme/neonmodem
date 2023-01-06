@@ -2,8 +2,10 @@ package post
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/mergestat/timediff"
 	"github.com/mrusme/gobbs/models/author"
 	"github.com/mrusme/gobbs/models/forum"
 	"github.com/mrusme/gobbs/models/reply"
@@ -43,9 +45,9 @@ func (post Post) Title() string {
 
 func (post Post) Description() string {
 	return fmt.Sprintf(
-		"in %s by %s on %s",
-		post.Forum.Name,
+		"by %s %s in %s",
 		post.Author.Name,
-		post.CreatedAt.Local().Format("02 Jan 06 15:04 MST"),
+		timediff.TimeDiff(post.CreatedAt.Local()),
+		strings.Title(post.Forum.Name),
 	)
 }
