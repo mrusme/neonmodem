@@ -1,6 +1,8 @@
 package postcreate
 
 import (
+	"net/url"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/models/reply"
@@ -32,36 +34,72 @@ func handleSubmit(mi interface{}) (bool, []tea.Cmd) {
 	var m *Model = mi.(*Model)
 	var cmds []tea.Cmd
 
-	var r reply.Reply
-	if m.replyToIdx == 0 {
-		// No numbers were typed before hitting `r` so we're replying to the actual
-		// Post
-		x := m.iface.(post.Post)
-		r = reply.Reply{
-			ID:        x.ID,
-			InReplyTo: "",
-			Index:     -1,
-			SysIDX:    x.SysIDX,
+	if m.action == "post" {
+		// --- NEW POST ---
+		subject := m.textinput.Value()
+		body := m.textarea.Value()
+		typ := "post"
+
+		if _, err := url.Parse(body); err == nil {
+			typ = "url"
 		}
-	} else {
-		// Numbers were typed before hitting `r`, so we're taking the actual reply
-		// here
-		r = m.iface.(reply.Reply)
-	}
 
-	r.Body = m.textarea.Value()
+		x := m.iface.(*post.Post)
+		p := post.Post{
+			Subject: subject,
+			Body:    body,
+			Type:    typ,
 
-	err := m.a.CreateReply(&r)
-	if err != nil {
-		m.ctx.Logger.Error(err)
-		cmds = append(cmds, cmd.New(
-			cmd.MsgError,
-			WIN_ID,
-			cmd.Arg{Name: "error", Value: err},
-		).Tea())
-		return true, cmds
-	}
+			Forum: x.Forum,
 
+			SysIDX: x.SysIDX,
+		}
+
+		err := m.a.CreatePost(&p)
+		if err != nil {
+			m.ctx.Logger.Error(err)
+			cmds = append(cmds, cmd.New(
+				cmd.MsgError,
+				WIN_ID,
+				cmd.Arg{Name: "error", Value: err},
+			).Tea())
+			return true, cmds
+		}
+	} else if m.action == "reply" {
+		// --- REPLY TO EXISTING POST ---
+		var r reply.Reply
+		if m.replyToIdx == 0 {
+			// No numbers were typed before hitting `r` so we're replying to the actual
+			// Post
+			x := m.iface.(post.Post)
+			r = reply.Reply{
+				ID:        x.ID,
+				InReplyTo: "",
+				Index:     -1,
+				SysIDX:    x.SysIDX,
+			}
+		} else {
+			// Numbers were typed before hitting `r`, so we're taking the actual reply
+			// here
+			r = m.iface.(reply.Reply)
+		}
+
+		r.Body = m.textarea.Value()
+
+		err := m.a.CreateReply(&r)
+		if err != nil {
+			m.ctx.Logger.Error(err)
+			cmds = append(cmds, cmd.New(
+				cmd.MsgError,
+				WIN_ID,
+				cmd.Arg{Name: "error", Value: err},
+			).Tea())
+			return true, cmds
+		}
+	} // </IF POST || REPLY>
+
+	m.inputFocused = 0
+	m.textinput.Reset()
 	m.textarea.Reset()
 	m.replyToIdx = 0
 	cmds = append(cmds, cmd.New(cmd.WMCloseWin, WIN_ID).Tea())
