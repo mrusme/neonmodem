@@ -43,7 +43,7 @@ func (a *Aggregator) ListForums() ([]forum.Forum, []error) {
 	}
 
 	sort.SliceStable(forums, func(i, j int) bool {
-		return strings.Compare(forums[i].Name, forums[j].Name) == 1
+		return strings.Compare(forums[i].Name, forums[j].Name) == -1
 	})
 
 	return forums, errs

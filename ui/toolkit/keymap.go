@@ -1,6 +1,11 @@
 package toolkit
 
-import "github.com/charmbracelet/bubbles/key"
+import (
+	"sort"
+	"strings"
+
+	"github.com/charmbracelet/bubbles/key"
+)
 
 func (tk *ToolKit) KeymapAdd(id string, help string, keys ...string) {
 	keysview := ""
@@ -27,4 +32,20 @@ func (tk *ToolKit) KeymapGet(id string) key.Binding {
 	}
 
 	return key.NewBinding()
+}
+
+func (tk *ToolKit) KeymapHelpStrings() []string {
+	var bindings []string
+	for _, binding := range tk.keybindings {
+		var tmp string = ""
+		tmp = binding.Help().Key + " " + binding.Help().Desc
+		bindings = append(bindings, tmp)
+	}
+	sort.SliceStable(bindings, func(i, j int) bool {
+		return strings.Compare(bindings[i], bindings[j]) == -1
+	})
+
+	bindings = append(bindings, "esc close")
+
+	return bindings
 }

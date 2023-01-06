@@ -19,13 +19,7 @@ func (tk *ToolKit) Dialog(title string, content string, bbar bool) string {
 		Width(tk.ViewWidth()).
 		Render(title)
 
-	var bindings []string
-	for _, binding := range tk.keybindings {
-		var tmp string = ""
-		tmp = binding.Help().Key + " " + binding.Help().Desc
-		bindings = append(bindings, tmp)
-	}
-	bindings = append(bindings, "esc close")
+	bindings := tk.KeymapHelpStrings()
 
 	var ui string
 	if bbar {
@@ -72,13 +66,7 @@ func (tk *ToolKit) ErrorDialog(title string, content string) string {
 		Width(tk.ViewWidth()).
 		Render(title)
 
-	var bindings []string
-	for _, binding := range tk.keybindings {
-		var tmp string = ""
-		tmp = binding.Help().Key + " " + binding.Help().Desc
-		bindings = append(bindings, tmp)
-	}
-	bindings = append(bindings, "esc close")
+	bindings := tk.KeymapHelpStrings()
 
 	bottombar := tk.theme.ErrorDialogBox.Bottombar.
 		Width(tk.ViewWidth()).
