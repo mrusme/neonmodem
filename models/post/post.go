@@ -46,6 +46,6 @@ func (post Post) Description() string {
 		"in %s by %s on %s",
 		post.Forum.Name,
 		post.Author.Name,
-		post.CreatedAt.Format("02 Jan 06 15:04 MST"),
+		post.CreatedAt.Local().Format("02 Jan 06 15:04 MST"),
 	)
 }
