@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/hashicorp/go-retryablehttp"
 )
@@ -145,6 +146,10 @@ func (c *Client) NewRequest(
 	return req, nil
 }
 
+type ErrorBody struct {
+	Errors []string `json:"errors"`
+}
+
 func (c *Client) Do(
 	ctx context.Context,
 	req *http.Request,
@@ -180,8 +185,15 @@ func (c *Client) Do(
 
 	if res.StatusCode < http.StatusOK ||
 		res.StatusCode > http.StatusNoContent {
+		var errbody ErrorBody
+		if err := json.Unmarshal(body, &errbody); err == nil {
+			return &RequestError{
+				Err: errors.New(strings.Join(errbody.Errors, "\n")),
+			}
+		}
+
 		return &RequestError{
-			Err: errors.New("Non-2xx status code"),
+			Err: errors.New(string(body)),
 		}
 	}
 
