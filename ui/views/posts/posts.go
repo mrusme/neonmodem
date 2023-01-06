@@ -11,6 +11,7 @@ import (
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/ui/cmd"
 	"github.com/mrusme/gobbs/ui/ctx"
+	"github.com/mrusme/gobbs/ui/windows/postcreate"
 	"github.com/mrusme/gobbs/ui/windows/postshow"
 )
 
@@ -20,6 +21,7 @@ var (
 
 type KeyMap struct {
 	Refresh key.Binding
+	NewPost key.Binding
 	Select  key.Binding
 }
 
@@ -27,6 +29,10 @@ var DefaultKeyMap = KeyMap{
 	Refresh: key.NewBinding(
 		key.WithKeys("ctrl+r"),
 		key.WithHelp("ctrl+r", "refresh"),
+	),
+	NewPost: key.NewBinding(
+		key.WithKeys("n"),
+		key.WithHelp("n", "new post"),
 	),
 	Select: key.NewBinding(
 		key.WithKeys("r", "enter"),
@@ -98,6 +104,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					Name:  "post",
 					Value: &i,
 				})
+				cmds = append(cmds, cmd.Tea())
+			}
+
+		case key.Matches(msg, m.keymap.NewPost):
+			i, ok := m.list.SelectedItem().(post.Post)
+			if ok {
+				m.viewcache = m.buildView(false)
+				cmd := cmd.New(
+					cmd.WinOpen,
+					postcreate.WIN_ID,
+					cmd.Arg{
+						Name:  "action",
+						Value: "post",
+					},
+					cmd.Arg{
+						Name:  "post",
+						Value: &i,
+					},
+				)
 				cmds = append(cmds, cmd.Tea())
 			}
 		}

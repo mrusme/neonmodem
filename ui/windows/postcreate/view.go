@@ -3,6 +3,8 @@ package postcreate
 import (
 	"fmt"
 
+	"github.com/charmbracelet/lipgloss"
+	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/ui/helpers"
 )
 
@@ -25,10 +27,19 @@ func buildView(mi interface{}, cached bool) string {
 			false)
 	}
 
-	title := "Reply"
-	if m.replyToIdx != 0 {
-		title += fmt.Sprintf(" to reply #%d", m.replyToIdx)
+	title := ""
+
+	if m.action == "reply" {
+		title = "Reply"
+		if m.replyToIdx != 0 {
+			title += fmt.Sprintf(" to reply #%d", m.replyToIdx)
+		}
+	} else if m.action == "post" {
+		title = fmt.Sprintf("New Post in %s", m.iface.(*post.Post).Forum.Name)
 	}
+
+	// textinputWidth := m.tk.ViewWidth() - 2
+	// m.textinput.SetWidth(textinputWidth)
 
 	textareaWidth := m.tk.ViewWidth() - 2
 	textareaHeight := 6
@@ -43,9 +54,21 @@ func buildView(mi interface{}, cached bool) string {
 	m.ctx.Logger.Debugln("View()")
 	m.ctx.Logger.Debugf("IsFocused: %v\n", m.tk.IsFocused())
 
+	var tmp string = ""
+	if m.action == "post" {
+		tmp = lipgloss.JoinVertical(
+			lipgloss.Left,
+			m.textinput.View(),
+			"",
+			m.textarea.View(),
+		)
+	} else if m.action == "reply" {
+		tmp = m.textarea.View()
+	}
+
 	return m.tk.Dialog(
 		title,
-		m.textarea.View(),
+		tmp,
 		true,
 	)
 

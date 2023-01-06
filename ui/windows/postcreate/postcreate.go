@@ -2,6 +2,7 @@ package postcreate
 
 import (
 	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mrusme/gobbs/aggregator"
 	"github.com/mrusme/gobbs/ui/ctx"
@@ -18,13 +19,16 @@ type Model struct {
 
 	xywh [4]int
 
-	textarea textarea.Model
+	textinput    textinput.Model
+	textarea     textarea.Model
+	inputFocused int
 
 	a *aggregator.Aggregator
 
-	replyToIdx   int
-	replyTo      string
-	replyToIface interface{}
+	action     string
+	iface      interface{}
+	replyToIdx int
+	replyTo    string
 
 	viewcache           string
 	viewcacheTextareaXY []int
@@ -44,18 +48,26 @@ func NewModel(c *ctx.Ctx) Model {
 		),
 		xywh: [4]int{0, 0, 0, 0},
 
-		replyToIdx:   0,
-		replyTo:      "",
-		replyToIface: nil,
+		inputFocused: 0,
+
+		action:     "",
+		iface:      nil,
+		replyToIdx: 0,
+		replyTo:    "",
 
 		viewcache:           "",
 		viewcacheTextareaXY: []int{0, 0, 0, 0},
 	}
 
+	m.textinput = textinput.New()
+	m.textinput.Placeholder = "Subject goes here"
+	m.textinput.Prompt = ""
+
 	m.textarea = textarea.New()
-	m.textarea.Placeholder = "Type in your reply ..."
+	m.textarea.Placeholder = "Type in your post ..."
 	m.textarea.Prompt = ""
 
+	m.tk.KeymapAdd("tab", "tab", "tab") // TODO CONTINUE HERE
 	m.tk.KeymapAdd("submit", "submit", "ctrl+s")
 
 	m.a, _ = aggregator.New(m.ctx)
@@ -63,6 +75,10 @@ func NewModel(c *ctx.Ctx) Model {
 	m.tk.SetViewFunc(buildView)
 	m.tk.SetMsgHandling(toolkit.MsgHandling{
 		OnKeymapKey: []toolkit.MsgHandlingKeymapKey{
+			{
+				ID:      "tab",
+				Handler: handleTab,
+			},
 			{
 				ID:      "submit",
 				Handler: handleSubmit,
@@ -85,10 +101,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var tcmd tea.Cmd
 
-	if !m.textarea.Focused() {
-		cmds = append(cmds, m.textarea.Focus())
+	switch m.inputFocused {
+
+	case 0:
+		if !m.textinput.Focused() {
+			cmds = append(cmds, m.textinput.Focus())
+		}
+		m.textinput, tcmd = m.textinput.Update(msg)
+
+	case 1:
+		if !m.textarea.Focused() {
+			cmds = append(cmds, m.textarea.Focus())
+		}
+		m.textarea, tcmd = m.textarea.Update(msg)
+
 	}
-	m.textarea, tcmd = m.textarea.Update(msg)
 	cmds = append(cmds, tcmd)
 
 	return m, tea.Batch(cmds...)

@@ -65,6 +65,7 @@ func handleReply(mi interface{}) (bool, []tea.Cmd) {
 	}
 
 	m.ctx.Logger.Debugf("replyToIdx: %d", replyToIdx)
+	var ract cmd.Arg = cmd.Arg{Name: "action", Value: "reply"}
 	var rtype cmd.Arg = cmd.Arg{Name: "replyTo"}
 	var rarg cmd.Arg
 	var ridx cmd.Arg = cmd.Arg{Name: "replyToIdx", Value: replyToIdx}
@@ -79,7 +80,7 @@ func handleReply(mi interface{}) (bool, []tea.Cmd) {
 		rarg.Value = *m.allReplies[(replyToIdx - 1)]
 	}
 
-	cmd := cmd.New(cmd.WinOpen, postcreate.WIN_ID, rtype, rarg, ridx)
+	cmd := cmd.New(cmd.WinOpen, postcreate.WIN_ID, ract, rtype, rarg, ridx)
 	cmds = append(cmds, cmd.Tea())
 
 	m.ctx.Logger.Debugln("caching view")

@@ -7,6 +7,27 @@ import (
 	"github.com/mrusme/gobbs/ui/cmd"
 )
 
+func handleTab(mi interface{}) (bool, []tea.Cmd) {
+	var m *Model = mi.(*Model)
+	var cmds []tea.Cmd
+
+	if m.action == "reply" {
+		return false, cmds
+	}
+
+	if m.inputFocused == 0 {
+		m.inputFocused = 1
+		m.textinput.Blur()
+		cmds = append(cmds, m.textarea.Focus())
+	} else {
+		m.inputFocused = 0
+		m.textarea.Blur()
+		cmds = append(cmds, m.textinput.Focus())
+	}
+
+	return true, cmds
+}
+
 func handleSubmit(mi interface{}) (bool, []tea.Cmd) {
 	var m *Model = mi.(*Model)
 	var cmds []tea.Cmd
@@ -15,7 +36,7 @@ func handleSubmit(mi interface{}) (bool, []tea.Cmd) {
 	if m.replyToIdx == 0 {
 		// No numbers were typed before hitting `r` so we're replying to the actual
 		// Post
-		x := m.replyToIface.(post.Post)
+		x := m.iface.(post.Post)
 		r = reply.Reply{
 			ID:        x.ID,
 			InReplyTo: "",
@@ -25,7 +46,7 @@ func handleSubmit(mi interface{}) (bool, []tea.Cmd) {
 	} else {
 		// Numbers were typed before hitting `r`, so we're taking the actual reply
 		// here
-		r = m.replyToIface.(reply.Reply)
+		r = m.iface.(reply.Reply)
 	}
 
 	r.Body = m.textarea.Value()
@@ -53,10 +74,21 @@ func handleWinOpenCmd(mi interface{}, c cmd.Command) (bool, []tea.Cmd) {
 
 	if c.Target == WIN_ID {
 		m.xywh = c.GetArg("xywh").([4]int)
-		m.replyToIdx = c.GetArg("replyToIdx").(int)
-		m.replyTo = c.GetArg("replyTo").(string)
-		m.replyToIface = c.GetArg(m.replyTo)
-		cmds = append(cmds, m.textarea.Focus())
+
+		m.action = c.GetArg("action").(string)
+
+		if m.action == "post" {
+			m.iface = c.GetArg("post").(*post.Post)
+			m.inputFocused = 0
+			cmds = append(cmds, m.textinput.Focus())
+		} else if m.action == "reply" {
+			m.replyToIdx = c.GetArg("replyToIdx").(int)
+			m.replyTo = c.GetArg("replyTo").(string)
+			m.iface = c.GetArg(m.replyTo)
+			m.inputFocused = 1
+			cmds = append(cmds, m.textarea.Focus())
+		}
+
 		return true, cmds
 	}
 
