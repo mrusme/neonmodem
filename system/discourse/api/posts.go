@@ -113,8 +113,6 @@ func (a *PostServiceHandler) Create(
 		return PostModel{}, err
 	}
 
-	a.client.logger.Debug(response)
-
 	return *response, nil
 }
 

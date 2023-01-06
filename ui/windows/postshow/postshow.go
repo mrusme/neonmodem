@@ -105,7 +105,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) loadPost(p *post.Post) tea.Cmd {
 	return func() tea.Msg {
-		m.ctx.Logger.Debug("------ EXECUTED -----")
 		if err := m.a.LoadPost(p); err != nil {
 			m.ctx.Logger.Error(err)
 			c := cmd.New(

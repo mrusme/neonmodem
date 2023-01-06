@@ -228,12 +228,9 @@ func (m Model) buildView(cached bool) string {
 	var view strings.Builder = strings.Builder{}
 
 	if cached && m.focused == false && m.viewcache != "" {
-		m.ctx.Logger.Debugln("Cached View()")
-
 		return m.viewcache
 	}
 
-	m.ctx.Logger.Debugln("Posts.View()")
 	var l string = ""
 	if m.focused {
 		l = m.ctx.Theme.PostsList.List.Focused.Render(m.list.View())

@@ -23,7 +23,6 @@ func handleViewResize(mi interface{}) (bool, []tea.Cmd) {
 	var m *Model = mi.(*Model)
 	var cmds []tea.Cmd
 
-	m.ctx.Logger.Debugf("received WindowSizeMsg: %vx%v\n", m.tk.ViewWidth(), m.tk.ViewHeight())
 	listWidth := m.tk.ViewWidth() - 2
 	listHeight := m.tk.ViewHeight() - 1
 
@@ -44,7 +43,6 @@ func handleWinOpenCmd(mi interface{}, c cmd.Command) (bool, []tea.Cmd) {
 	var cmds []tea.Cmd
 
 	if c.Target == WIN_ID {
-		m.ctx.Logger.Debug("got own WinOpen command")
 		m.selectionID = c.GetArg("selectionID").(string)
 		m.items = c.GetArg("items").([]list.Item)
 		m.list.SetItems(m.items)

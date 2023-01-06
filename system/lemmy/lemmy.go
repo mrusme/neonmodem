@@ -2,7 +2,6 @@ package lemmy
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -135,9 +134,6 @@ func (sys *System) ListForums() ([]forum.Forum, error) {
 
 	var models []forum.Forum
 	for _, i := range resp.Communities {
-		sys.logger.Debugf("FORUM:")
-		b, _ := json.Marshal(i)
-		sys.logger.Debug(string(b))
 		models = append(models, forum.Forum{
 			ID:   strconv.Itoa(i.Community.ID),
 			Name: i.Community.Name,
@@ -157,7 +153,7 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 		Sort:  types.NewOptional(types.SortTypeNew),
 		Limit: types.NewOptional(int64(50)),
 	})
-	sys.logger.Debug("DEEEEBUUUUUUUGGGGGGGG")
+
 	if err != nil {
 		return []post.Post{}, err
 	}
@@ -167,8 +163,6 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 
 	var models []post.Post
 	for _, i := range resp.Posts {
-		b, _ := json.Marshal(i)
-		sys.logger.Debug(string(b))
 		t := "post"
 		body := i.Post.Body.ValueOr("")
 		if i.Post.URL.IsValid() {

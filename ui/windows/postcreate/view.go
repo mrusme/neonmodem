@@ -16,8 +16,6 @@ func buildView(mi interface{}, cached bool) string {
 	var m *Model = mi.(*Model)
 
 	if cached && m.viewcache != "" {
-		m.ctx.Logger.Debugln("Cached View()")
-
 		m.textarea.SetWidth(m.viewcacheTextareaXY[2])
 		m.textarea.SetHeight(m.viewcacheTextareaXY[3])
 
@@ -52,9 +50,6 @@ func buildView(mi interface{}, cached bool) string {
 	m.viewcacheTextareaXY[1] = 2
 	m.viewcacheTextareaXY[2] = textareaWidth
 	m.viewcacheTextareaXY[3] = textareaHeight
-
-	m.ctx.Logger.Debugln("View()")
-	m.ctx.Logger.Debugf("IsFocused: %v\n", m.tk.IsFocused())
 
 	var tmp string = ""
 	if m.action == "post" {

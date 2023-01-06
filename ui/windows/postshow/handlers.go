@@ -64,7 +64,6 @@ func handleReply(mi interface{}) (bool, []tea.Cmd) {
 		}
 	}
 
-	m.ctx.Logger.Debugf("replyToIdx: %d", replyToIdx)
 	var ract cmd.Arg = cmd.Arg{Name: "action", Value: "reply"}
 	var rtype cmd.Arg = cmd.Arg{Name: "replyTo"}
 	var rarg cmd.Arg
@@ -82,10 +81,6 @@ func handleReply(mi interface{}) (bool, []tea.Cmd) {
 
 	cmd := cmd.New(cmd.WinOpen, postcreate.WIN_ID, ract, rtype, rarg, ridx)
 	cmds = append(cmds, cmd.Tea())
-
-	m.ctx.Logger.Debugln("caching view")
-	m.ctx.Logger.Debugf("buffer: %s", m.buffer)
-	// m.viewcache = m.buildView(false)
 
 	return true, cmds
 }
@@ -135,7 +130,6 @@ func handleViewResize(mi interface{}) (bool, []tea.Cmd) {
 	var m *Model = mi.(*Model)
 	var cmds []tea.Cmd
 
-	m.ctx.Logger.Debugf("received WindowSizeMsg: %vx%v\n", m.tk.ViewWidth(), m.tk.ViewHeight())
 	viewportWidth := m.tk.ViewWidth() - 2
 	viewportHeight := m.tk.ViewHeight() - 5
 
@@ -154,10 +148,9 @@ func handleWinOpenCmd(mi interface{}, c cmd.Command) (bool, []tea.Cmd) {
 	var cmds []tea.Cmd
 
 	if c.Target == WIN_ID {
-		m.ctx.Logger.Debug("got own WinOpen command")
 		m.activePost = c.GetArg("post").(*post.Post)
 		m.viewport.SetContent(m.renderViewport(m.activePost))
-		m.ctx.Logger.Debugf("loading post: %v", m.activePost.ID)
+		m.ctx.Logger.Debugf("loading post: %s\n", m.activePost.ID)
 		m.ctx.Loading = true
 		cmds = append(cmds, m.loadPost(m.activePost))
 		return true, cmds
@@ -172,7 +165,6 @@ func handleWinFreshDataCmd(mi interface{}, c cmd.Command) (bool, []tea.Cmd) {
 
 	if c.Target == WIN_ID ||
 		c.Target == "*" {
-		m.ctx.Logger.Debug("got *post.Post")
 		m.activePost = c.GetArg("post").(*post.Post)
 		m.viewport.SetContent(m.renderViewport(m.activePost))
 		m.ctx.Loading = false

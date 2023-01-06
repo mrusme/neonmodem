@@ -10,7 +10,6 @@ func handleViewResize(mi interface{}) (bool, []tea.Cmd) {
 	var m *Model = mi.(*Model)
 	var cmds []tea.Cmd
 
-	m.ctx.Logger.Debugf("received WindowSizeMsg: %vx%v\n", m.tk.ViewWidth(), m.tk.ViewHeight())
 	viewportWidth := m.tk.ViewWidth() - 2
 	viewportHeight := m.tk.ViewHeight() - 5
 
@@ -28,11 +27,9 @@ func handleMsgErrorCmd(mi interface{}, c cmd.Command) (bool, []tea.Cmd) {
 	var cmds []tea.Cmd
 
 	if err := c.GetArg("error"); err != nil {
-		m.ctx.Logger.Debugf("Setting error: %v", err)
 		m.errs = append(m.errs, err.(error))
 	}
 	if errs := c.GetArg("errors"); errs != nil {
-		m.ctx.Logger.Debugf("Setting error: %v", errs)
 		m.errs = append(m.errs, errs.([]error)...)
 	}
 

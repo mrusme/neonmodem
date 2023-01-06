@@ -73,8 +73,8 @@ func (a *Aggregator) ListPosts() ([]post.Post, []error) {
 		}
 
 		sysPosts, err := (*sys).ListPosts(a.ctx.GetCurrentForum().ID)
-		a.ctx.Logger.Debugf("AGGEGATOR ERROR: %v", err)
 		if err != nil {
+			a.ctx.Logger.Errorf("aggregator error: %v\n", err)
 			errs[idx] = err
 			continue
 		}

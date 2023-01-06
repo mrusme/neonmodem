@@ -61,23 +61,18 @@ func (tk *ToolKit) HandleMsg(m interface{}, msg tea.Msg) (bool, []tea.Cmd) {
 		return false, cmds
 
 	case cmd.Command:
-		tk.logger.Debugf("got command: %v\n", msg)
 		switch msg.Call {
 		case cmd.WinFocus:
 			if msg.Target == tk.winID ||
 				msg.Target == "*" {
-				tk.logger.Debug("got WinFocus")
 				tk.Focus(m)
 			}
-			tk.logger.Debugf("focused: %v", tk.focused)
 			return true, nil
 		case cmd.WinBlur:
 			if msg.Target == tk.winID ||
 				msg.Target == "*" {
-				tk.logger.Debug("got WinBlur")
 				tk.Blur(m)
 			}
-			tk.logger.Debugf("focused: %v", tk.focused)
 			return true, nil
 		case cmd.WinOpen:
 			if tk.mh.OnWinOpenCmd != nil {

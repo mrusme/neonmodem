@@ -99,10 +99,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.keymap.Close):
-			m.ctx.Logger.Debug("close received")
 			closed, ccmds := m.wm.CloseFocused()
 			if !closed {
-				m.ctx.Logger.Debug("CloseFocused() was false, quitting")
 				return m, tea.Quit
 			}
 			return m, tea.Batch(ccmds...)
@@ -146,7 +144,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			forums, errs := m.a.ListForums()
 			for _, err := range errs {
 				if err != nil {
-					m.ctx.Logger.Error(errs)
+					m.ctx.Logger.Error(err)
 					ccmds = append(ccmds, cmd.New(
 						cmd.MsgError,
 						"*",
@@ -156,7 +154,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			for _, f := range forums {
-				m.ctx.Logger.Debugf("Adding forum to list: %s ID %d\n", f.Title(), f.SysIDX)
 				listItems = append(listItems, f)
 			}
 
@@ -205,7 +202,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case cmd.WinOpen:
 			switch msg.Target {
 			case postshow.WIN_ID:
-				m.ctx.Logger.Debugln("received WinOpen")
 				ccmds = m.wm.Open(
 					msg.Target,
 					postshow.NewModel(m.ctx),
@@ -218,7 +214,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					&msg,
 				)
 			case postcreate.WIN_ID:
-				m.ctx.Logger.Debugln("received WinOpen")
 				ccmds = m.wm.Open(
 					msg.Target,
 					postcreate.NewModel(m.ctx),
@@ -232,13 +227,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				)
 				m.viewcache = m.buildView(false)
 			}
-			m.ctx.Logger.Debugf("got back ccmds: %v\n", ccmds)
 
 		case cmd.WinClose:
 			switch msg.Target {
 
 			case postcreate.WIN_ID:
-				m.ctx.Logger.Debugln("received WinClose")
+				// TODO: Anything?
 
 			case popuplist.WIN_ID:
 				selectionIDIf := msg.GetArg("selectionID")
@@ -252,7 +246,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.ctx.SetCurrentForum(forum.Forum{})
 				case "forum":
 					selected := msg.GetArg("selected").(forum.Forum)
-					m.ctx.Logger.Debugf("selecting system ID %d\n", selected.SysIDX)
 					m.ctx.SetCurrentSystem(selected.SysIDX)
 					m.ctx.SetCurrentForum(selected)
 				}
@@ -266,7 +259,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case cmd.MsgError:
-			m.ctx.Logger.Debugln("received MsgError")
 			ccmds = m.wm.Open(
 				msgerror.WIN_ID,
 				msgerror.NewModel(m.ctx),
@@ -280,10 +272,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			)
 
 		default:
-			// if msg.Call < cmd.ViewFocus {
 			m.ctx.Logger.Debugf("updating all with cmd: %v\n", msg)
 			ccmds = m.wm.UpdateAll(msg)
-			// }
 		}
 
 		cmds = append(cmds, ccmds...)

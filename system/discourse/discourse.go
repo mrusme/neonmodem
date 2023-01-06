@@ -310,7 +310,6 @@ func (sys *System) CreatePost(p *post.Post) error {
 func (sys *System) CreateReply(r *reply.Reply) error {
 	var err error
 
-	sys.logger.Debugf("%v", r)
 	ID, err := strconv.Atoi(r.ID)
 	if err != nil {
 		return err

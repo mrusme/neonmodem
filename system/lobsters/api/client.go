@@ -120,8 +120,6 @@ func (c *Client) NewRequest(
 		}
 	}
 
-	c.logger.Debug(buffer.String())
-
 	if req, err = http.NewRequest(
 		method,
 		parsedURL.String(),
@@ -167,13 +165,10 @@ func (c *Client) Do(
 		}
 	}
 
-	c.logger.Debug(res)
-	c.logger.Debug(string(body))
-
 	if res.StatusCode < http.StatusOK ||
 		res.StatusCode > http.StatusNoContent {
 		return &RequestError{
-			Err: errors.New("Non-2xx status code"),
+			Err: errors.New(string(body)),
 		}
 	}
 
