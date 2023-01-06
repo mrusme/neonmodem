@@ -64,23 +64,31 @@ func (m Model) View() string {
 	var row string
 	var spinner string = ""
 
+	selectorWidth := 40
+	selectorTextLen := selectorWidth - 7
 	selector := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#7fffd4")).
 		BorderForeground(lipgloss.Color("#7fffd4")).
 		Border(lipgloss.NormalBorder()).
 		Padding(0, 1, 0, 1).
-		Width(40)
+		Width(selectorWidth)
 
 	curSysIdx := m.ctx.GetCurrentSystem()
 	var currentSystem string = "All"
 	if curSysIdx >= 0 {
 		currentSystem = (*m.ctx.Systems[curSysIdx]).Title()
+		if len(currentSystem) > selectorTextLen {
+			currentSystem = currentSystem[0:selectorTextLen]
+		}
 	}
 
 	curForum := m.ctx.GetCurrentForum()
 	var currentForum string = "All"
 	if curForum.ID != "" {
 		currentForum = curForum.Title()
+		if len(currentForum) > selectorTextLen {
+			currentForum = currentForum[0:selectorTextLen]
+		}
 	}
 
 	systemSelector := selector.Render(fmt.Sprintf("⏷  %s", currentSystem))

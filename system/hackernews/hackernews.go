@@ -101,31 +101,37 @@ func (sys *System) ListForums() ([]forum.Forum, error) {
 		{
 			ID:     "top",
 			Name:   "Top HN Stories",
+			Info:   "Top stories on Hacker News",
 			SysIDX: sys.ID,
 		},
 		{
 			ID:     "best",
 			Name:   "Best HN Stories",
+			Info:   "Best stories on Hacker News",
 			SysIDX: sys.ID,
 		},
 		{
 			ID:     "new",
 			Name:   "New HN Stories",
+			Info:   "New stories on Hacker News",
 			SysIDX: sys.ID,
 		},
 		{
 			ID:     "ask",
 			Name:   "Ask HN",
+			Info:   "Ask Hacker News about the world",
 			SysIDX: sys.ID,
 		},
 		{
 			ID:     "show",
 			Name:   "Show HN",
+			Info:   "Show Hacker News something awesome",
 			SysIDX: sys.ID,
 		},
 		{
 			ID:     "jobs",
 			Name:   "Jobs HN",
+			Info:   "... because we can't *all* become Astronauts",
 			SysIDX: sys.ID,
 		},
 	}, nil

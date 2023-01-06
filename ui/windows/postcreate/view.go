@@ -35,7 +35,9 @@ func buildView(mi interface{}, cached bool) string {
 			title += fmt.Sprintf(" to reply #%d", m.replyToIdx)
 		}
 	} else if m.action == "post" {
-		title = fmt.Sprintf("New Post in %s", m.iface.(*post.Post).Forum.Name)
+		p := m.iface.(*post.Post)
+		sysTitle := (*m.ctx.Systems[p.SysIDX]).Title()
+		title = fmt.Sprintf("New Post in %s on %s", p.Forum.Name, sysTitle)
 	}
 
 	// textinputWidth := m.tk.ViewWidth() - 2

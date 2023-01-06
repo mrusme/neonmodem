@@ -110,6 +110,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keymap.NewPost):
 			i, ok := m.list.SelectedItem().(post.Post)
 			if ok {
+				m.focused = false // TODO: Refactor and use ToolKit
 				m.viewcache = m.buildView(false)
 				cmd := cmd.New(
 					cmd.WinOpen,
@@ -124,6 +125,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					},
 				)
 				cmds = append(cmds, cmd.Tea())
+				return m, tea.Batch(cmds...)
 			}
 		}
 

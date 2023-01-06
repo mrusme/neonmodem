@@ -1,8 +1,12 @@
 package forum
 
+import "strings"
+
 type Forum struct {
 	ID   string
 	Name string
+
+	Info string
 
 	SysIDX int
 }
@@ -12,9 +16,9 @@ func (forum Forum) FilterValue() string {
 }
 
 func (forum Forum) Title() string {
-	return forum.Name
+	return strings.Title(forum.Name)
 }
 
 func (forum Forum) Description() string {
-	return forum.ID
+	return forum.Info
 }

@@ -132,6 +132,8 @@ func (sys *System) ListForums() ([]forum.Forum, error) {
 			ID:   strconv.Itoa(cat.ID),
 			Name: cat.Name,
 
+			Info: cat.Description,
+
 			SysIDX: sys.ID,
 		})
 	}

@@ -126,7 +126,9 @@ func (sys *System) ListForums() ([]forum.Forum, error) {
 	for _, tag := range *tags {
 		models = append(models, forum.Forum{
 			ID:   tag.Tag,
-			Name: tag.Description,
+			Name: tag.Tag,
+
+			Info: tag.Description,
 
 			SysIDX: sys.ID,
 		})
