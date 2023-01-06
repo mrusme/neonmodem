@@ -179,7 +179,7 @@ func (cfg *Config) Save() error {
 }
 
 func SetDefaults(cacheDir string) {
-	viper.SetDefault("Debug", "true")
+	viper.SetDefault("Debug", "false")
 	viper.SetDefault("Log", path.Join(cacheDir, "gobbs.log"))
 
 	// --- DialogBox ---
