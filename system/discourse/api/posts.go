@@ -74,6 +74,10 @@ type PostModel struct {
 	ReviewableScorePendingCount int    `json:"reviewable_score_pending_count"`
 }
 
+type ShowPostResponse struct {
+	Post PostModel `json:"post,omitempty"`
+}
+
 type ListPostsResponse struct {
 	LatestPosts []PostModel `json:"latest_posts,omitempty"`
 }
@@ -128,7 +132,7 @@ func (a *PostServiceHandler) Show(
 		return PostModel{}, err
 	}
 
-	response := new(Response)
+	response := new(ShowPostResponse)
 	if err = a.client.Do(ctx, req, response); err != nil {
 		return PostModel{}, err
 	}

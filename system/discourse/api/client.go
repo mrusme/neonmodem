@@ -13,10 +13,6 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 )
 
-type Response struct {
-	Post PostModel `json:"post,omitempty"`
-}
-
 type RequestError struct {
 	Err error
 }
