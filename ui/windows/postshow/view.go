@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mrusme/gobbs/models/post"
 	"github.com/mrusme/gobbs/models/reply"
+	"github.com/mrusme/gobbs/system/lib"
 )
 
 func (m Model) View() string {
@@ -51,6 +52,11 @@ func (m *Model) renderViewport(p *post.Post) string {
 		m.ctx.Logger.Error(err)
 		body = p.Body
 	}
+
+	if m.ctx.Config.RenderImages {
+		body = lib.RenderInlineImages(m.ctx, body, m.tk.ViewWidth()-8)
+	}
+
 	out += fmt.Sprintf(
 		" %s\n\n %s\n%s",
 		m.ctx.Theme.Post.Author.Render(

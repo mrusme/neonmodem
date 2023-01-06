@@ -42,6 +42,8 @@ type Config struct {
 	Debug bool
 	Log   string
 
+	RenderImages bool
+
 	Systems []SystemConfig
 
 	Theme struct {
@@ -181,6 +183,8 @@ func (cfg *Config) Save() error {
 func SetDefaults(cacheDir string) {
 	viper.SetDefault("Debug", "false")
 	viper.SetDefault("Log", path.Join(cacheDir, "gobbs.log"))
+
+	viper.SetDefault("RenderImages", "true")
 
 	// --- DialogBox ---
 	// DialogBox Window:Focused
