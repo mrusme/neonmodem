@@ -13,6 +13,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.2
 	github.com/hermanschaaf/hackernews v1.0.1
 	github.com/mattn/go-runewidth v0.0.14
+	github.com/mergestat/timediff v0.0.3
 	github.com/muesli/ansi v0.0.0-20221106050444-61f0cd9a192a
 	github.com/muesli/reflow v0.3.0
 	github.com/muesli/termenv v0.13.0
@@ -46,7 +47,6 @@ require (
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
-	github.com/mergestat/timediff v0.0.3 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.21 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect

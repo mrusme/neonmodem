@@ -55,11 +55,10 @@ func (sys *System) GetCapabilities() adapter.Capabilities {
 			ID:   "list:posts",
 			Name: "List Posts",
 		},
-		// TODO
-		// adapter.Capability{
-		// 	ID:   "create:post",
-		// 	Name: "Create Post",
-		// },
+		adapter.Capability{
+			ID:   "create:post",
+			Name: "Create Post",
+		},
 		adapter.Capability{
 			ID:   "list:replies",
 			Name: "List Replies",

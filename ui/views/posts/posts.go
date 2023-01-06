@@ -1,6 +1,7 @@
 package posts
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -110,6 +111,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keymap.NewPost):
 			i, ok := m.list.SelectedItem().(post.Post)
 			if ok {
+				caps := (*m.ctx.Systems[i.SysIDX]).GetCapabilities()
+				if !caps.IsCapableOf("create:post") {
+					cmds = append(cmds, cmd.New(
+						cmd.MsgError,
+						VIEW_ID,
+						cmd.Arg{
+							Name: "error",
+							Value: errors.New(
+								"This system doesn't support posting yet!\n",
+							),
+						},
+					).Tea())
+					return m, tea.Batch(cmds...)
+				}
+
 				m.focused = false // TODO: Refactor and use ToolKit
 				m.viewcache = m.buildView(false)
 				cmd := cmd.New(
