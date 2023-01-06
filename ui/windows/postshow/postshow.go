@@ -1,6 +1,8 @@
 package postshow
 
 import (
+	"time"
+
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
@@ -80,7 +82,7 @@ func NewModel(c *ctx.Ctx) Model {
 		OnAnyUncaughtKey:    handleUncaughtKeys,
 		OnViewResize:        handleViewResize,
 		OnWinOpenCmd:        handleWinOpenCmd,
-		OnWinRefreshDataCmd: handleWinOpenCmd,
+		OnWinRefreshDataCmd: handleWinRefreshDataCmd,
 		OnWinFreshDataCmd:   handleWinFreshDataCmd,
 	})
 
@@ -103,8 +105,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m *Model) loadPost(p *post.Post) tea.Cmd {
+func (m *Model) loadPost(p *post.Post, delay ...time.Duration) tea.Cmd {
 	return func() tea.Msg {
+		if len(delay) == 1 {
+			time.Sleep(delay[0])
+		}
+
 		if err := m.a.LoadPost(p); err != nil {
 			m.ctx.Logger.Error(err)
 			c := cmd.New(

@@ -2,6 +2,7 @@ package postcreate
 
 import (
 	"net/url"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mrusme/gobbs/models/post"
@@ -103,6 +104,9 @@ func handleSubmit(mi interface{}) (bool, []tea.Cmd) {
 	m.textarea.Reset()
 	m.replyToIdx = 0
 	cmds = append(cmds, cmd.New(cmd.WMCloseWin, WIN_ID).Tea())
+	cmds = append(cmds, cmd.New(cmd.WinRefreshData, "*", cmd.Arg{
+		Name: "delay", Value: (3 * time.Second),
+	}).Tea())
 	return true, cmds
 }
 

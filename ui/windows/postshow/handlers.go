@@ -3,6 +3,7 @@ package postshow
 import (
 	"errors"
 	"strconv"
+	"time"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -156,6 +157,23 @@ func handleWinOpenCmd(mi interface{}, c cmd.Command) (bool, []tea.Cmd) {
 		return true, cmds
 	}
 
+	return false, cmds
+}
+
+func handleWinRefreshDataCmd(mi interface{}, c cmd.Command) (bool, []tea.Cmd) {
+	var m *Model = mi.(*Model)
+	var cmds []tea.Cmd
+
+	if c.Target == WIN_ID ||
+		c.Target == "*" {
+		m.ctx.Loading = true
+		if delay := c.GetArg("delay"); delay != nil {
+			cmds = append(cmds, m.loadPost(m.activePost, delay.(time.Duration)))
+		} else {
+			cmds = append(cmds, m.loadPost(m.activePost))
+		}
+		return true, cmds
+	}
 	return false, cmds
 }
 

@@ -194,6 +194,7 @@ func (sys *System) LoadPost(p *post.Post) error {
 
 	converter := md.NewConverter("", true, nil)
 
+	p.Replies = []reply.Reply{}
 	for idx, i := range item.Comments {
 		cookedMd, err := converter.ConvertString(i.Comment)
 		if err != nil {

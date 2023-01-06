@@ -249,6 +249,7 @@ func (sys *System) LoadPost(p *post.Post) error {
 
 	converter := md.NewConverter("", true, nil)
 
+	p.Replies = []reply.Reply{}
 	for idx, i := range item.PostStream.Posts {
 		cookedMd, err := converter.ConvertString(i.Cooked)
 		if err != nil {

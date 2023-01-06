@@ -224,6 +224,7 @@ func (sys *System) LoadPost(p *post.Post) error {
 		return err
 	}
 
+	p.Replies = []reply.Reply{}
 	for _, i := range resp.Comments {
 		createdAt := i.Comment.Published.Time
 

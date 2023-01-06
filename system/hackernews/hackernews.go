@@ -230,6 +230,7 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 }
 
 func (sys *System) LoadPost(p *post.Post) error {
+	p.Replies = []reply.Reply{}
 	return sys.loadReplies(&p.Replies)
 }
 
