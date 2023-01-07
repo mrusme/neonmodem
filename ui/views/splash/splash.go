@@ -59,7 +59,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.ctx.Screen[1],
 			m.ctx.Screen[0],
 			color.Transparent,
-			ansimage.ScaleModeResize,
+			ansimage.ScaleModeFill,
 			ansimage.NoDithering,
 		)
 		if err != nil {
