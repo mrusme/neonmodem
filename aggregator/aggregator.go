@@ -55,7 +55,7 @@ func (a *Aggregator) ListPosts() ([]post.Post, []error) {
 	var posts []post.Post
 
 	// TODO: Clean up implementation
-	if os.Getenv("neonmodem_TEST") == "true" {
+	if os.Getenv("NEONMODEM_TEST") == "true" {
 		jsonPosts, err := os.ReadFile("posts.db")
 		if err == nil {
 			err = json.Unmarshal(jsonPosts, &posts)
@@ -86,9 +86,11 @@ func (a *Aggregator) ListPosts() ([]post.Post, []error) {
 	})
 
 	// TODO: Clean up implementation
-	jsonPosts, err := json.Marshal(posts)
-	if err == nil {
-		os.WriteFile("posts.db", jsonPosts, 0600)
+	if os.Getenv("NEONMODEM_TEST") == "true" {
+		jsonPosts, err := json.Marshal(posts)
+		if err == nil {
+			os.WriteFile("posts.db", jsonPosts, 0600)
+		}
 	}
 
 	return posts, errs

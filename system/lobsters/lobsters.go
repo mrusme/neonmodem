@@ -49,6 +49,11 @@ func (sys *System) GetCapabilities() adapter.Capabilities {
 	var caps []adapter.Capability
 
 	caps = append(caps,
+		// TODO: Requires accounts
+		// adapter.Capability{
+		// 	ID:   "connect:multiple",
+		// 	Name: "Connect Multiple",
+		// },
 		adapter.Capability{
 			ID:   "list:forums",
 			Name: "List Forums",

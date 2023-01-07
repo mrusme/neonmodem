@@ -128,7 +128,7 @@ func (c *Client) NewRequest(
 		return nil, err
 	}
 
-	req.Header.Add("User-Agent", "neonmodem")
+	req.Header.Add("User-Agent", "Neon Modem Overdrive")
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/json")
 

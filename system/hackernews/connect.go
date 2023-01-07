@@ -9,6 +9,7 @@ func (sys *System) Connect(sysURL string) error {
 	if sys.config == nil {
 		sys.config = make(map[string]interface{})
 	}
+	sys.config["url"] = "https://news.ycombinator.com"
 	sys.config["credentials"] = credentials
 
 	return nil
