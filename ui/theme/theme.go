@@ -6,6 +6,10 @@ import (
 )
 
 type Theme struct {
+	Header struct {
+		Selector lipgloss.Style
+	}
+
 	DialogBox struct {
 		Window struct {
 			Focused lipgloss.Style
@@ -76,6 +80,9 @@ type Theme struct {
 
 func New(cfg *config.Config) *Theme {
 	t := new(Theme)
+
+	t.Header.Selector =
+		t.fromConfig(&cfg.Theme.Header.Selector)
 
 	t.DialogBox.Window.Focused =
 		t.fromConfig(&cfg.Theme.DialogBox.Window.Focused)

@@ -67,12 +67,6 @@ func (m Model) View() string {
 
 	selectorWidth := 40
 	selectorTextLen := selectorWidth - 7
-	selector := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7fffd4")).
-		BorderForeground(lipgloss.Color("#7fffd4")).
-		Border(lipgloss.NormalBorder()).
-		Padding(0, 1, 0, 1).
-		Width(selectorWidth)
 
 	curSysIdx := m.ctx.GetCurrentSystem()
 	var currentSystem string = "All"
@@ -92,15 +86,21 @@ func (m Model) View() string {
 		}
 	}
 
-	systemSelector := selector.Render(fmt.Sprintf("⏷  %s", currentSystem))
-	forumSelector := selector.Render(fmt.Sprintf("⏷  %s", currentForum))
+	systemSelector := m.ctx.Theme.Header.Selector.
+		Width(selectorWidth).Render(fmt.Sprintf("⏷  %s", currentSystem))
+	forumSelector := m.ctx.Theme.Header.Selector.
+		Width(selectorWidth).Render(fmt.Sprintf("⏷  %s", currentForum))
 
 	selectorColumn := lipgloss.JoinVertical(lipgloss.Center,
 		lipgloss.JoinHorizontal(lipgloss.Bottom, "System: \n   "+
-			lipgloss.NewStyle().Foreground(m.ctx.Theme.DialogBox.Bottombar.GetForeground()).Render("C-e"),
+			lipgloss.NewStyle().Foreground(
+				m.ctx.Theme.DialogBox.Bottombar.GetForeground(),
+			).Render("C-e"),
 			systemSelector),
 		lipgloss.JoinHorizontal(lipgloss.Bottom, "Forum: \n  "+
-			lipgloss.NewStyle().Foreground(m.ctx.Theme.DialogBox.Bottombar.GetForeground()).Render("C-t"),
+			lipgloss.NewStyle().Foreground(
+				m.ctx.Theme.DialogBox.Bottombar.GetForeground(),
+			).Render("C-t"),
 			forumSelector),
 	)
 
@@ -108,7 +108,13 @@ func (m Model) View() string {
 		spinner = m.spinner.View()
 	}
 
-	row = lipgloss.JoinHorizontal(lipgloss.Top, banner, "   ", selectorColumn, " ", spinner)
+	row = lipgloss.JoinHorizontal(lipgloss.Top,
+		banner,
+		"   ",
+		selectorColumn,
+		" ",
+		spinner,
+	)
 
 	return row
 }
