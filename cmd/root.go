@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"embed"
 	"net/url"
 	"os"
 	"runtime"
@@ -15,6 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
+var EMBEDFS *embed.FS
 var LOG *zap.SugaredLogger
 var CFG config.Config
 
@@ -109,7 +111,7 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
 
-		c := ctx.New(&CFG, LOG)
+		c := ctx.New(EMBEDFS, &CFG, LOG)
 		_ = loadSystems(&c) // TODO: Handle errs
 
 		tui := tea.NewProgram(ui.NewModel(&c), tea.WithAltScreen())
@@ -120,7 +122,8 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-func Execute() {
+func Execute(efs *embed.FS) {
+	EMBEDFS = efs
 	if err := rootCmd.Execute(); err != nil {
 		// LOG.Errorln(err)
 	}

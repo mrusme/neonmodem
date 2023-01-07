@@ -12,6 +12,7 @@ import (
 	"github.com/mrusme/gobbs/ui/ctx"
 	"github.com/mrusme/gobbs/ui/header"
 	"github.com/mrusme/gobbs/ui/views/posts"
+	"github.com/mrusme/gobbs/ui/views/splash"
 	"github.com/mrusme/gobbs/ui/windowmanager"
 	"github.com/mrusme/gobbs/ui/windows/msgerror"
 	"github.com/mrusme/gobbs/ui/windows/popuplist"
@@ -74,6 +75,7 @@ func NewModel(c *ctx.Ctx) Model {
 	}
 
 	m.header = header.NewModel(m.ctx)
+	m.views = append(m.views, splash.NewModel(m.ctx))
 	m.views = append(m.views, posts.NewModel(m.ctx))
 
 	m.a, _ = aggregator.New(m.ctx)
@@ -84,8 +86,6 @@ func NewModel(c *ctx.Ctx) Model {
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		tea.EnterAltScreen,
-		cmd.New(cmd.ViewFocus, "*").Tea(),
-		cmd.New(cmd.ViewRefreshData, "*").Tea(),
 	)
 }
 
@@ -198,6 +198,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var ccmds []tea.Cmd
 
 		switch msg.Call {
+
+		case cmd.ViewOpen:
+			m.ctx.Logger.Debug("got cmd.ViewOpen")
+			switch msg.Target {
+			case posts.VIEW_ID:
+				m.currentView = 1
+				m.viewcache = m.buildView(false)
+				ccmds = append(ccmds,
+					cmd.New(cmd.ViewFocus, "*").Tea(),
+					cmd.New(cmd.ViewRefreshData, "*").Tea(),
+				)
+				return m, tea.Batch(ccmds...)
+			}
 
 		case cmd.WinOpen:
 			switch msg.Target {
@@ -314,7 +327,9 @@ func (m Model) buildView(cached bool) string {
 	} else {
 		m.ctx.Logger.Debug("generating UI viewcache")
 		m.renderOnlyFocused = false
-		s.WriteString(m.header.View() + "\n")
+		if m.currentView > 0 {
+			s.WriteString(m.header.View() + "\n")
+		}
 		s.WriteString(m.views[m.currentView].View())
 		tmp = s.String()
 	}

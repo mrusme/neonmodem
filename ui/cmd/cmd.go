@@ -12,6 +12,7 @@ const (
 	WinRefreshData
 	WinFreshData
 
+	ViewOpen
 	ViewFocus
 	ViewBlur
 	ViewRefreshData

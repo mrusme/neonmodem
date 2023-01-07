@@ -1,6 +1,8 @@
 package ctx
 
 import (
+	"embed"
+
 	"github.com/mrusme/gobbs/config"
 	"github.com/mrusme/gobbs/models/forum"
 	"github.com/mrusme/gobbs/system"
@@ -12,6 +14,7 @@ type Ctx struct {
 	Screen  [2]int
 	Content [2]int
 	Config  *config.Config
+	EmbedFS *embed.FS
 	Systems []*system.System
 	Loading bool
 	Logger  *zap.SugaredLogger
@@ -22,6 +25,7 @@ type Ctx struct {
 }
 
 func New(
+	efs *embed.FS,
 	cfg *config.Config,
 	logger *zap.SugaredLogger,
 ) Ctx {
@@ -29,6 +33,7 @@ func New(
 		Screen:  [2]int{0, 0},
 		Content: [2]int{0, 0},
 		Config:  cfg,
+		EmbedFS: efs,
 		Loading: false,
 		Logger:  logger,
 		Theme:   theme.New(cfg),
