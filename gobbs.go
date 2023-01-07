@@ -3,7 +3,7 @@ package main
 import (
 	"embed"
 
-	"github.com/mrusme/gobbs/cmd"
+	"github.com/mrusme/neonmodem/cmd"
 )
 
 //go:embed splashscreen.png

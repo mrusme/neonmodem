@@ -8,12 +8,12 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mrusme/gobbs/aggregator"
-	"github.com/mrusme/gobbs/models/post"
-	"github.com/mrusme/gobbs/ui/cmd"
-	"github.com/mrusme/gobbs/ui/ctx"
-	"github.com/mrusme/gobbs/ui/windows/postcreate"
-	"github.com/mrusme/gobbs/ui/windows/postshow"
+	"github.com/mrusme/neonmodem/aggregator"
+	"github.com/mrusme/neonmodem/models/post"
+	"github.com/mrusme/neonmodem/ui/cmd"
+	"github.com/mrusme/neonmodem/ui/ctx"
+	"github.com/mrusme/neonmodem/ui/windows/postcreate"
+	"github.com/mrusme/neonmodem/ui/windows/postshow"
 )
 
 var (

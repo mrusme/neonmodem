@@ -3,7 +3,7 @@ package header
 import (
 	"fmt"
 
-	"github.com/mrusme/gobbs/ui/ctx"
+	"github.com/mrusme/neonmodem/ui/ctx"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"

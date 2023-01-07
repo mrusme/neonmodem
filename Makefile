@@ -4,7 +4,7 @@ VERSION := $(shell git describe --tags 2> /dev/null || git rev-parse --short HEA
 all: install-deps build
 
 build:
-	go build -ldflags "-X github.com/mrusme/gobbs/config.VERSION=$(VERSION)"
+	go build -ldflags "-X github.com/mrusme/neonmodem/config.VERSION=$(VERSION)"
 
 install-deps: install-deps-go
 

@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/mrusme/gobbs/models/forum"
-	"github.com/mrusme/gobbs/models/post"
-	"github.com/mrusme/gobbs/models/reply"
-	"github.com/mrusme/gobbs/system/adapter"
+	"github.com/mrusme/neonmodem/models/forum"
+	"github.com/mrusme/neonmodem/models/post"
+	"github.com/mrusme/neonmodem/models/reply"
+	"github.com/mrusme/neonmodem/system/adapter"
 	"go.uber.org/zap"
 )
 

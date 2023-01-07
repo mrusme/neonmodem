@@ -3,10 +3,10 @@ package ctx
 import (
 	"embed"
 
-	"github.com/mrusme/gobbs/config"
-	"github.com/mrusme/gobbs/models/forum"
-	"github.com/mrusme/gobbs/system"
-	"github.com/mrusme/gobbs/ui/theme"
+	"github.com/mrusme/neonmodem/config"
+	"github.com/mrusme/neonmodem/models/forum"
+	"github.com/mrusme/neonmodem/system"
+	"github.com/mrusme/neonmodem/ui/theme"
 	"go.uber.org/zap"
 )
 

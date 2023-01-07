@@ -9,12 +9,12 @@ import (
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/araddon/dateparse"
-	"github.com/mrusme/gobbs/models/author"
-	"github.com/mrusme/gobbs/models/forum"
-	"github.com/mrusme/gobbs/models/post"
-	"github.com/mrusme/gobbs/models/reply"
-	"github.com/mrusme/gobbs/system/adapter"
-	"github.com/mrusme/gobbs/system/lobsters/api"
+	"github.com/mrusme/neonmodem/models/author"
+	"github.com/mrusme/neonmodem/models/forum"
+	"github.com/mrusme/neonmodem/models/post"
+	"github.com/mrusme/neonmodem/models/reply"
+	"github.com/mrusme/neonmodem/system/adapter"
+	"github.com/mrusme/neonmodem/system/lobsters/api"
 	"go.uber.org/zap"
 )
 

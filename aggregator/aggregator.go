@@ -6,10 +6,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mrusme/gobbs/models/forum"
-	"github.com/mrusme/gobbs/models/post"
-	"github.com/mrusme/gobbs/models/reply"
-	"github.com/mrusme/gobbs/ui/ctx"
+	"github.com/mrusme/neonmodem/models/forum"
+	"github.com/mrusme/neonmodem/models/post"
+	"github.com/mrusme/neonmodem/models/reply"
+	"github.com/mrusme/neonmodem/ui/ctx"
 )
 
 type Aggregator struct {
@@ -55,7 +55,7 @@ func (a *Aggregator) ListPosts() ([]post.Post, []error) {
 	var posts []post.Post
 
 	// TODO: Clean up implementation
-	if os.Getenv("GOBBS_TEST") == "true" {
+	if os.Getenv("neonmodem_TEST") == "true" {
 		jsonPosts, err := os.ReadFile("posts.db")
 		if err == nil {
 			err = json.Unmarshal(jsonPosts, &posts)

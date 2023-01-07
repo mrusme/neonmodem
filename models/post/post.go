@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/mergestat/timediff"
-	"github.com/mrusme/gobbs/models/author"
-	"github.com/mrusme/gobbs/models/forum"
-	"github.com/mrusme/gobbs/models/reply"
+	"github.com/mrusme/neonmodem/models/author"
+	"github.com/mrusme/neonmodem/models/forum"
+	"github.com/mrusme/neonmodem/models/reply"
 )
 
 type Post struct {

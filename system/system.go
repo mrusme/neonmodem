@@ -3,15 +3,15 @@ package system
 import (
 	"errors"
 
-	"github.com/mrusme/gobbs/models/forum"
-	"github.com/mrusme/gobbs/models/post"
-	"github.com/mrusme/gobbs/models/reply"
-	"github.com/mrusme/gobbs/system/adapter"
-	"github.com/mrusme/gobbs/system/all"
-	"github.com/mrusme/gobbs/system/discourse"
-	"github.com/mrusme/gobbs/system/hackernews"
-	"github.com/mrusme/gobbs/system/lemmy"
-	"github.com/mrusme/gobbs/system/lobsters"
+	"github.com/mrusme/neonmodem/models/forum"
+	"github.com/mrusme/neonmodem/models/post"
+	"github.com/mrusme/neonmodem/models/reply"
+	"github.com/mrusme/neonmodem/system/adapter"
+	"github.com/mrusme/neonmodem/system/all"
+	"github.com/mrusme/neonmodem/system/discourse"
+	"github.com/mrusme/neonmodem/system/hackernews"
+	"github.com/mrusme/neonmodem/system/lemmy"
+	"github.com/mrusme/neonmodem/system/lobsters"
 	"go.uber.org/zap"
 )
 

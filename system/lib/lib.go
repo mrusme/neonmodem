@@ -6,7 +6,7 @@ import (
 	"regexp"
 
 	"github.com/eliukblau/pixterm/pkg/ansimage"
-	"github.com/mrusme/gobbs/ui/ctx"
+	"github.com/mrusme/neonmodem/ui/ctx"
 )
 
 func RenderInlineImages(c *ctx.Ctx, s string, w int) string {

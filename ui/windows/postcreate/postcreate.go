@@ -4,9 +4,9 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mrusme/gobbs/aggregator"
-	"github.com/mrusme/gobbs/ui/ctx"
-	"github.com/mrusme/gobbs/ui/toolkit"
+	"github.com/mrusme/neonmodem/aggregator"
+	"github.com/mrusme/neonmodem/ui/ctx"
+	"github.com/mrusme/neonmodem/ui/toolkit"
 )
 
 var (

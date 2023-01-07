@@ -7,9 +7,9 @@ import (
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mrusme/gobbs/models/post"
-	"github.com/mrusme/gobbs/ui/cmd"
-	"github.com/mrusme/gobbs/ui/windows/postcreate"
+	"github.com/mrusme/neonmodem/models/post"
+	"github.com/mrusme/neonmodem/ui/cmd"
+	"github.com/mrusme/neonmodem/ui/windows/postcreate"
 	"github.com/pkg/browser"
 )
 

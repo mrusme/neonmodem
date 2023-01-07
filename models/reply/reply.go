@@ -3,7 +3,7 @@ package reply
 import (
 	"time"
 
-	"github.com/mrusme/gobbs/models/author"
+	"github.com/mrusme/neonmodem/models/author"
 )
 
 type Reply struct {

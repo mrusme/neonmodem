@@ -3,7 +3,7 @@ package msgerror
 import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mrusme/gobbs/ui/cmd"
+	"github.com/mrusme/neonmodem/ui/cmd"
 )
 
 func handleViewResize(mi interface{}) (bool, []tea.Cmd) {

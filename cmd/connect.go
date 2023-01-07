@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mrusme/gobbs/config"
-	"github.com/mrusme/gobbs/system"
+	"github.com/mrusme/neonmodem/config"
+	"github.com/mrusme/neonmodem/system"
 	"github.com/spf13/cobra"
 )
 

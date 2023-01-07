@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mrusme/gobbs/models/post"
-	"github.com/mrusme/gobbs/ui/helpers"
+	"github.com/mrusme/neonmodem/models/post"
+	"github.com/mrusme/neonmodem/ui/helpers"
 )
 
 func (m Model) View() string {

@@ -80,7 +80,7 @@ func (sys *System) Connect(sysURL string) error {
 	// URL
 	baseURL := fmt.Sprintf("%s/user-api-key/new", sysURL)
 	values := url.Values{}
-	values.Set("application_name", "gobbs")
+	values.Set("application_name", "neonmodem")
 	values.Set("client_id", clientID)
 	values.Set("scopes", "read,write")
 	values.Set("public_key", publicKeyPEM)

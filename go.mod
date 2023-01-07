@@ -1,4 +1,4 @@
-module github.com/mrusme/gobbs
+module github.com/mrusme/neonmodem
 
 go 1.19
 

@@ -7,9 +7,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/eliukblau/pixterm/pkg/ansimage"
-	"github.com/mrusme/gobbs/ui/cmd"
-	"github.com/mrusme/gobbs/ui/ctx"
-	"github.com/mrusme/gobbs/ui/views/posts"
+	"github.com/mrusme/neonmodem/ui/cmd"
+	"github.com/mrusme/neonmodem/ui/ctx"
+	"github.com/mrusme/neonmodem/ui/views/posts"
 )
 
 var (

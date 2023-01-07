@@ -6,9 +6,9 @@ import (
 
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mrusme/gobbs/models/post"
-	"github.com/mrusme/gobbs/models/reply"
-	"github.com/mrusme/gobbs/system/lib"
+	"github.com/mrusme/neonmodem/models/post"
+	"github.com/mrusme/neonmodem/models/reply"
+	"github.com/mrusme/neonmodem/system/lib"
 )
 
 func (m Model) View() string {

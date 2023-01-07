@@ -2,10 +2,10 @@ package windowmanager
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mrusme/gobbs/ui/cmd"
-	"github.com/mrusme/gobbs/ui/ctx"
-	"github.com/mrusme/gobbs/ui/helpers"
-	"github.com/mrusme/gobbs/ui/windows"
+	"github.com/mrusme/neonmodem/ui/cmd"
+	"github.com/mrusme/neonmodem/ui/ctx"
+	"github.com/mrusme/neonmodem/ui/helpers"
+	"github.com/mrusme/neonmodem/ui/windows"
 )
 
 type StackItem struct {

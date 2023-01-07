@@ -7,12 +7,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mrusme/gobbs/aggregator"
-	"github.com/mrusme/gobbs/models/post"
-	"github.com/mrusme/gobbs/models/reply"
-	"github.com/mrusme/gobbs/ui/cmd"
-	"github.com/mrusme/gobbs/ui/ctx"
-	"github.com/mrusme/gobbs/ui/toolkit"
+	"github.com/mrusme/neonmodem/aggregator"
+	"github.com/mrusme/neonmodem/models/post"
+	"github.com/mrusme/neonmodem/models/reply"
+	"github.com/mrusme/neonmodem/ui/cmd"
+	"github.com/mrusme/neonmodem/ui/ctx"
+	"github.com/mrusme/neonmodem/ui/toolkit"
 )
 
 var (

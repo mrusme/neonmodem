@@ -7,10 +7,10 @@ import (
 	"runtime"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mrusme/gobbs/config"
-	"github.com/mrusme/gobbs/system"
-	"github.com/mrusme/gobbs/ui"
-	"github.com/mrusme/gobbs/ui/ctx"
+	"github.com/mrusme/neonmodem/config"
+	"github.com/mrusme/neonmodem/system"
+	"github.com/mrusme/neonmodem/ui"
+	"github.com/mrusme/neonmodem/ui/ctx"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -102,12 +102,12 @@ func loadSystems(c *ctx.Ctx) []error {
 }
 
 var rootCmd = &cobra.Command{
-	Use:        "gobbs",
+	Use:        "neonmodem",
 	SuggestFor: []string{"bbs", "discourse", "lemmy"},
-	Short:      "Gobbs, the bulletin board system TUI",
-	Long: "Gobbs is a bulletin board system (BBS) text user interface written " +
+	Short:      "neonmodem, the bulletin board system TUI",
+	Long: "neonmodem is a bulletin board system (BBS) text user interface written " +
 		"in Go, supporting Discourse and Lemmy.\n" +
-		"More info available on https://xn--gckvb8fzb.com/projects/gobbs",
+		"More info available on https://xn--gckvb8fzb.com/projects/neonmodem",
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
 

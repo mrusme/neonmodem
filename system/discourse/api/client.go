@@ -131,7 +131,7 @@ func (c *Client) NewRequest(
 		return nil, err
 	}
 
-	req.Header.Add("User-Agent", "gobbs")
+	req.Header.Add("User-Agent", "neonmodem")
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("User-Api-Client-Id", c.credentials["client_id"])

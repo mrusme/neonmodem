@@ -3,7 +3,7 @@ package popuplist
 import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mrusme/gobbs/ui/cmd"
+	"github.com/mrusme/neonmodem/ui/cmd"
 )
 
 func handleSelect(mi interface{}) (bool, []tea.Cmd) {

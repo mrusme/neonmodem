@@ -132,12 +132,12 @@ func Load() (Config, error) {
 
 	SetDefaults(cacheDir)
 
-	viper.SetConfigName("gobbs")
+	viper.SetConfigName("neonmodem")
 	viper.SetConfigType("toml")
 	viper.AddConfigPath(cfgDir)
 	viper.AddConfigPath(homeDir)
 
-	viper.SetEnvPrefix("gobbs")
+	viper.SetEnvPrefix("neonmodem")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
@@ -164,7 +164,7 @@ func (cfg *Config) Save() error {
 		if err != nil {
 			return err
 		}
-		cfgFile = path.Join(cfgDir, "gobbs.toml")
+		cfgFile = path.Join(cfgDir, "neonmodem.toml")
 	}
 
 	fd, err := os.OpenFile(cfgFile, os.O_WRONLY|os.O_CREATE, 0600)
@@ -182,7 +182,7 @@ func (cfg *Config) Save() error {
 
 func SetDefaults(cacheDir string) {
 	viper.SetDefault("Debug", "false")
-	viper.SetDefault("Log", path.Join(cacheDir, "gobbs.log"))
+	viper.SetDefault("Log", path.Join(cacheDir, "neonmodem.log"))
 
 	viper.SetDefault("RenderImages", "true")
 

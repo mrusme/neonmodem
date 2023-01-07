@@ -2,7 +2,7 @@ package toolkit
 
 import (
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/mrusme/gobbs/ui/theme"
+	"github.com/mrusme/neonmodem/ui/theme"
 	"go.uber.org/zap"
 )
 
