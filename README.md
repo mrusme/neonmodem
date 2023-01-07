@@ -7,11 +7,11 @@ supports [Discourse][discourse], [Lemmy][lemmy], [Lobsters][lobsters] and
 a streamlined TUI. And yes, you heard that right, I really called it *Neon Modem 
 Overdrive*.
 
-*Neon Modem* is built in Go, using [Charm's Bubbletea][bubbletea] TUI framework, 
-but implements an own *window manager* (or *compositor* if you want) that allows 
-it to use a third dimension, on top of the two dimensional rendering that 
-Bubbletea offers today. With that it is possible to display dialogs on top of 
-one another, in order to offer a smoother UI experience.
+*Neon Modem* is built in Go, using [Charm's Bubble Tea][bubbletea] TUI 
+framework, but implements an own *window manager* (or *compositor* if you want) 
+that allows it to use a third dimension, on top of the two dimensional rendering 
+that Bubble Tea offers today. With that it is possible to display dialogs on top 
+of one another, in order to offer a smoother UI experience.
 
 [neonmodem]: https://neonmodem.com
 [discourse]: https://github.com/discourse
