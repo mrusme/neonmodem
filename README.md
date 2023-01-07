@@ -130,4 +130,8 @@ In the new post / new reply dialog:
   **A:** Turning off image rendering will improve performance significantly on 
   very large terminal windows and can be done by setting `RenderImages = false` 
   in the configuration.
+- **Q:** Can I haz Reddit?\
+  **A:** I won't do the heavy lifting of integrating a proprietary platform with 
+  a $15 billion valuation that can't even be bothered to maintain a solid set of 
+  client API libraries. If you feel like, go ahead and PR!
 
