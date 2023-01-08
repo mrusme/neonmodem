@@ -56,7 +56,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.ctx.Screen[1] = msg.Height
 		m.pix, err = ansimage.NewScaledFromReader(
 			bytes.NewReader(m.splashscreen),
-			m.ctx.Screen[1],
+			m.ctx.Screen[1]*2,
 			m.ctx.Screen[0],
 			color.Transparent,
 			ansimage.ScaleModeFill,
