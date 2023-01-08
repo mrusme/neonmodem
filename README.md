@@ -1,6 +1,8 @@
 Neon Modem Overdrive
 --------------------
 
+![Neon Modem Overdrive](splashscreen.png)
+
 [*Neon Modem Overdrive*][neonmodem] is a BBS-like command line client that 
 supports [Discourse][discourse], [Lemmy][lemmy], [Lobsters][lobsters] and 
 [Hacker News][hackernews] as backends and seamlessly integrates all of them into 
@@ -99,7 +101,12 @@ list, which will aggregate the latest posts from all connected systems. A
 progress icon will be visible in the header while network requests are loading.
 
 
-### Navigation
+### Usage
+
+![Neon Modem Overdrive](neonmodem.gif)
+
+
+#### Navigation
 
 In the posts list:
 
