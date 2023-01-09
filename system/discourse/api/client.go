@@ -1,5 +1,7 @@
 package api
 
+// https://docs.discourse.org
+
 import (
 	"bytes"
 	"context"
