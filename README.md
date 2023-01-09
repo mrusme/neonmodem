@@ -3,7 +3,7 @@ Neon Modem Overdrive
 
 ![Neon Modem Overdrive](splashscreen.png)
 
-[*Neon Modem Overdrive*][neonmodem] is a BBS-like command line client that 
+[*Neon Modem Overdrive*][neonmodem] is a [BBS][wiki-bbs]-style command line client that 
 supports [Discourse][discourse], [Lemmy][lemmy], [Lobsters][lobsters] and 
 [Hacker News][hackernews] as backends, and seamlessly integrates all of them 
 into a streamlined TUI. And yes, you heard that right, I really did call it 
@@ -16,6 +16,7 @@ that Bubble Tea offers today. With that it is possible to display dialogs on top
 of one another, in order to offer a smoother UI experience.
 
 [neonmodem]: https://neonmodem.com
+[wiki-bbs]: https://en.wikipedia.org/wiki/Bulletin_board_system
 [discourse]: https://github.com/discourse
 [lemmy]: https://github.com/LemmyNet
 [lobsters]: https://github.com/lobsters/lobsters
