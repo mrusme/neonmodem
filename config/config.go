@@ -148,8 +148,6 @@ func Load() (Config, error) {
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return Config{}, err
-		} else {
-			return Config{}, nil
 		}
 	}
 
