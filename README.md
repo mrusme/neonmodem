@@ -5,9 +5,9 @@ Neon Modem Overdrive
 
 [*Neon Modem Overdrive*][neonmodem] is a BBS-like command line client that 
 supports [Discourse][discourse], [Lemmy][lemmy], [Lobsters][lobsters] and 
-[Hacker News][hackernews] as backends and seamlessly integrates all of them into 
-a streamlined TUI. And yes, you heard that right, I really called it *Neon Modem 
-Overdrive*.
+[Hacker News][hackernews] as backends, and seamlessly integrates all of them 
+into a streamlined TUI. And yes, you heard that right, I really did call it 
+*Neon Modem Overdrive*.
 
 *Neon Modem* is built in Go, using [Charm's Bubble Tea][bubbletea] TUI 
 framework, but implements an own *window manager* (or *compositor* if you want) 
