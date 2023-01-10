@@ -92,7 +92,7 @@ neonmodem connect --type hackernews
 ### UI
 
 The UI can be fully customized via the `Theme` section in the configuration 
-file. To reset settings, all Theme related configurations can simply be deleted 
+file. To reset settings, all theme related configurations can simply be deleted 
 from the configuration.
 
 
