@@ -28,7 +28,9 @@ type Post struct {
 
 	Forum forum.Forum
 
-	Replies []reply.Reply
+	TotalReplies           int
+	CurrentRepliesStartIDX int
+	Replies                []reply.Reply
 
 	URL string
 

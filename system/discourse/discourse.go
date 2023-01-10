@@ -236,6 +236,9 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 				SysIDX: sys.ID,
 			},
 
+			TotalReplies:           0,
+			CurrentRepliesStartIDX: -1,
+
 			URL: fmt.Sprintf("%s/t/%d", baseURL, i.ID),
 
 			SysIDX: sys.ID,
@@ -254,11 +257,28 @@ func (sys *System) LoadPost(p *post.Post) error {
 	// API seems to return 20 posts by default. If the stream is greater than 20
 	// posts, we need to fetch the latest posts on our own, as we'd only get the
 	// first 20 posts otherwise.
-	if len(item.PostStream.Stream) > 20 {
+	p.TotalReplies = len(item.PostStream.Stream)
+	if p.TotalReplies > 20 {
+		if p.CurrentRepliesStartIDX == -1 ||
+			// Explain to me standard GoFmt logic:
+			p.CurrentRepliesStartIDX > (p.TotalReplies-20) {
+			p.CurrentRepliesStartIDX = (p.TotalReplies - 20)
+			// /)_-)
+		}
+
+		var postIDs []int
+		if p.CurrentRepliesStartIDX > 0 {
+			postIDs = append(postIDs,
+				item.PostStream.Stream[0])
+			p.CurrentRepliesStartIDX++
+		}
+		postIDs = append(postIDs,
+			item.PostStream.Stream[p.CurrentRepliesStartIDX:]...)
+
 		replies, err := sys.client.Topics.ShowPosts(
 			context.Background(),
 			p.ID,
-			item.PostStream.Stream[len(item.PostStream.Stream)-20:],
+			postIDs,
 		)
 		if err != nil {
 			sys.logger.Error(err)
