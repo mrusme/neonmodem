@@ -125,6 +125,7 @@ In the post view dialog:
 
 - `r`: Reply to post
 - `#r`: Reply to specific comment # in post, e.g. `3r` to reply to the reply #3
+- `z`: Load older replies (if available)
 - `esc`: Close dialog
 
 In the new post / new reply dialog:
