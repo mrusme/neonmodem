@@ -63,6 +63,7 @@ func NewModel(c *ctx.Ctx) Model {
 
 	m.tk.KeymapAdd("reply", "reply (prefix with #, e.g. '2r')", "r")
 	m.tk.KeymapAdd("open", "open", "o")
+	m.tk.KeymapAdd("older", "older replies", "z")
 
 	m.a, _ = aggregator.New(m.ctx)
 
@@ -76,6 +77,10 @@ func NewModel(c *ctx.Ctx) Model {
 			{
 				ID:      "open",
 				Handler: handleOpen,
+			},
+			{
+				ID:      "older",
+				Handler: handleOlder,
 			},
 		},
 		OnAnyNumberKey:      handleNumberKeys,

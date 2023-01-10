@@ -71,6 +71,10 @@ func (m *Model) renderViewport(p *post.Post) string {
 
 	caps := (*m.ctx.Systems[p.SysIDX]).GetCapabilities()
 	if caps.IsCapableOf("list:replies") {
+		if m.activePost.CurrentRepliesStartIDX > 0 {
+			tmp, _ := m.glam.Render(fmt.Sprintf("\n---\nOlder replies available, press `z` to load\n\n---\n"))
+			out += tmp
+		}
 		out += m.renderReplies(0, p.Author.Name, &p.Replies)
 	}
 

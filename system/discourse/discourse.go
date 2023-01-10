@@ -259,21 +259,24 @@ func (sys *System) LoadPost(p *post.Post) error {
 	// first 20 posts otherwise.
 	p.TotalReplies = len(item.PostStream.Stream)
 	if p.TotalReplies > 20 {
+		var postIDs []int
+
 		if p.CurrentRepliesStartIDX == -1 ||
 			// Explain to me standard GoFmt logic:
 			p.CurrentRepliesStartIDX > (p.TotalReplies-20) {
 			p.CurrentRepliesStartIDX = (p.TotalReplies - 20)
 			// /)_-)
+		} else if p.CurrentRepliesStartIDX < -1 {
+			p.CurrentRepliesStartIDX = 0
 		}
 
-		var postIDs []int
 		if p.CurrentRepliesStartIDX > 0 {
 			postIDs = append(postIDs,
 				item.PostStream.Stream[0])
 			p.CurrentRepliesStartIDX++
 		}
 		postIDs = append(postIDs,
-			item.PostStream.Stream[p.CurrentRepliesStartIDX:]...)
+			item.PostStream.Stream[p.CurrentRepliesStartIDX:(p.CurrentRepliesStartIDX+20)]...)
 
 		replies, err := sys.client.Topics.ShowPosts(
 			context.Background(),

@@ -182,6 +182,10 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 				SysIDX: sys.ID,
 			},
 
+			// TODO: Implement chunks loading
+			TotalReplies:           0,
+			CurrentRepliesStartIDX: -1,
+
 			URL: i.ShortIDURL,
 
 			SysIDX: sys.ID,

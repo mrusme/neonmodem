@@ -109,6 +109,16 @@ func handleOpen(mi interface{}) (bool, []tea.Cmd) {
 	return true, cmds
 }
 
+func handleOlder(mi interface{}) (bool, []tea.Cmd) {
+	var m *Model = mi.(*Model)
+	var cmds []tea.Cmd
+
+	m.activePost.CurrentRepliesStartIDX -= 20
+	m.ctx.Loading = true
+	cmds = append(cmds, m.loadPost(m.activePost))
+	return true, cmds
+}
+
 func handleNumberKeys(mi interface{}, n int8) (bool, []tea.Cmd) {
 	var m *Model = mi.(*Model)
 	var cmds []tea.Cmd

@@ -223,7 +223,10 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 				SysIDX: sys.ID,
 			},
 
-			Replies: replies,
+			// TODO: Implement chunks loading
+			TotalReplies:           0,
+			CurrentRepliesStartIDX: -1,
+			Replies:                replies,
 
 			URL: fmt.Sprintf("https://news.ycombinator.com/item?id=%d", i.ID),
 
