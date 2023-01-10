@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
 )
@@ -70,13 +71,34 @@ type Client struct {
 
 func NewDefaultClientConfig(
 	endpoint string,
+	proxy string,
 	credentials map[string]string,
 	logger Logger,
 ) ClientConfig {
+	var httpClient *http.Client = nil
+	var httpTransport *http.Transport = nil
+
+	if proxy != "" {
+		proxyURL, err := url.Parse(proxy)
+		if err != nil {
+			logger.Error(err)
+		} else {
+			logger.Debugf("setting up http proxy transport: %s\n", proxyURL.String())
+			httpTransport = &http.Transport{
+				Proxy: http.ProxyURL(proxyURL),
+			}
+		}
+	}
+
+	httpClient = &http.Client{
+		Transport: httpTransport,
+		Timeout:   time.Second * 10,
+	}
+
 	return ClientConfig{
 		Endpoint:    endpoint,
 		Credentials: credentials,
-		HTTPClient:  http.DefaultClient,
+		HTTPClient:  httpClient,
 		Logger:      logger,
 	}
 }

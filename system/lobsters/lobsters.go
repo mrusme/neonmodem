@@ -3,7 +3,6 @@ package lobsters
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"net/url"
 	"time"
 
@@ -19,10 +18,11 @@ import (
 )
 
 type System struct {
-	ID     int
-	config map[string]interface{}
-	logger *zap.SugaredLogger
-	client *api.Client
+	ID        int
+	config    map[string]interface{}
+	logger    *zap.SugaredLogger
+	client    *api.Client
+	clientCfg api.ClientConfig
 }
 
 func (sys *System) GetID() int {
@@ -110,12 +110,13 @@ func (sys *System) Load() error {
 
 	credentials := make(map[string]string)
 
-	sys.client = api.NewClient(&api.ClientConfig{
-		Endpoint:    url.(string),
-		Credentials: credentials,
-		HTTPClient:  http.DefaultClient,
-		Logger:      sys.logger,
-	})
+	sys.clientCfg = api.NewDefaultClientConfig(
+		url.(string),
+		sys.config["proxy"].(string),
+		credentials,
+		sys.logger,
+	)
+	sys.client = api.NewClient(&sys.clientCfg)
 
 	return nil
 }

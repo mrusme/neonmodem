@@ -78,6 +78,11 @@ func load() {
 	}
 	defer logger.Sync()
 	LOG = logger.Sugar()
+
+	if CFG.Proxy != "" {
+		LOG.Debugf("set proxy: %s", CFG.Proxy)
+		os.Setenv("HTTP_PROXY", CFG.Proxy)
+	}
 }
 
 func loadSystems(c *ctx.Ctx) []error {
@@ -85,6 +90,7 @@ func loadSystems(c *ctx.Ctx) []error {
 
 	for _, sysCfg := range c.Config.Systems {
 		c.Logger.Debugf("loading system of type %s ...", sysCfg.Type)
+		sysCfg.Config["proxy"] = CFG.Proxy
 		sys, err := system.New(sysCfg.Type, &sysCfg.Config, LOG)
 		if err != nil {
 			c.Logger.Errorf("error loading system: %s", err)
