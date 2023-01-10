@@ -251,6 +251,23 @@ func (sys *System) LoadPost(p *post.Post) error {
 		return err
 	}
 
+	// API seems to return 20 posts by default. If the stream is greater than 20
+	// posts, we need to fetch the latest posts on our own, as we'd only get the
+	// first 20 posts otherwise.
+	if len(item.PostStream.Stream) > 20 {
+		replies, err := sys.client.Topics.ShowPosts(
+			context.Background(),
+			p.ID,
+			item.PostStream.Stream[len(item.PostStream.Stream)-20:],
+		)
+		if err != nil {
+			sys.logger.Error(err)
+			return err
+		}
+
+		item.PostStream.Posts = replies.PostStream.Posts
+	}
+
 	converter := md.NewConverter("", true, nil)
 
 	p.Replies = []reply.Reply{}

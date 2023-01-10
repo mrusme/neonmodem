@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 )
 
 const TopicsBaseURL = "/t"
@@ -29,7 +30,8 @@ type LatestTopicsResponse struct {
 
 type SingleTopicResponse struct {
 	PostStream struct {
-		Posts []PostModel `json:"posts"`
+		Posts  []PostModel `json:"posts"`
+		Stream []int       `json:"stream"`
 	} `json:"post_stream"`
 
 	TopicModel
@@ -81,6 +83,11 @@ type TopicsService interface {
 		ctx context.Context,
 		id string,
 	) (*SingleTopicResponse, error)
+	ShowPosts(
+		ctx context.Context,
+		id string,
+		postIDs []int,
+	) (*SingleTopicResponse, error)
 	ListLatest(
 		ctx context.Context,
 		categorySlug string,
@@ -103,6 +110,33 @@ func (a *TopicServiceHandler) Show(
 	if err != nil {
 		return nil, err
 	}
+
+	response := new(SingleTopicResponse)
+	if err = a.client.Do(ctx, req, response); err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+// ShowPosts
+func (a *TopicServiceHandler) ShowPosts(
+	ctx context.Context,
+	id string,
+	postIDs []int,
+) (*SingleTopicResponse, error) {
+	uri := TopicsBaseURL + "/" + id + "/posts.json"
+
+	req, err := a.client.NewRequest(ctx, http.MethodGet, uri, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	q := req.URL.Query()
+	for _, postID := range postIDs {
+		q.Add("post_ids[]", strconv.Itoa(postID))
+	}
+	req.URL.RawQuery = q.Encode()
 
 	response := new(SingleTopicResponse)
 	if err = a.client.Do(ctx, req, response); err != nil {
