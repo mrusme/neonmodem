@@ -15,6 +15,8 @@ that allows it to use a third dimension, on top of the two dimensional rendering
 that Bubble Tea offers today. With that it is possible to display dialogs on top 
 of one another, in order to offer a smoother UI experience.
 
+[More info here!](https://xn--gckvb8fzb.com/get-the-bbs-scene-vibes-back-with-neonmodem-overdrive/)
+
 [neonmodem]: https://neonmodem.com
 [wiki-bbs]: https://en.wikipedia.org/wiki/Bulletin_board_system
 [discourse]: https://github.com/discourse
