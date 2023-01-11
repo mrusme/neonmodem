@@ -3,8 +3,10 @@ package lemmy
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/mrusme/neonmodem/models/author"
 	"github.com/mrusme/neonmodem/models/forum"
@@ -100,14 +102,38 @@ func (sys *System) Description() string {
 }
 
 func (sys *System) Load() error {
+	var httpClient *http.Client = nil
+	var httpTransport *http.Transport = nil
+
 	var err error
 
-	url := sys.config["url"]
-	if url == nil {
+	u := sys.config["url"]
+	if u == nil {
 		return nil
 	}
 
-	sys.client, err = lemmy.New(url.(string))
+	proxy := sys.config["proxy"].(string)
+	if proxy != "" {
+		proxyURL, err := url.Parse(proxy)
+		if err != nil {
+			sys.logger.Error(err)
+		} else {
+			sys.logger.Debugf("setting up http proxy transport: %s\n", proxyURL.String())
+			httpTransport = &http.Transport{
+				Proxy: http.ProxyURL(proxyURL),
+			}
+		}
+	}
+
+	httpClient = &http.Client{
+		Transport: httpTransport,
+		Timeout:   time.Second * 10,
+	}
+
+	sys.client, err = lemmy.NewWithClient(
+		u.(string),
+		httpClient,
+	)
 	if err != nil {
 		return err
 	}
