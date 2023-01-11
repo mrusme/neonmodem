@@ -80,7 +80,8 @@ func NewDefaultClientConfig(
 	logger Logger,
 ) ClientConfig {
 	var httpClient *http.Client = nil
-	var httpTransport *http.Transport = nil
+	var httpTransport *http.Transport = http.DefaultTransport.(*http.Transport).
+		Clone()
 
 	if proxy != "" {
 		proxyURL, err := url.Parse(proxy)

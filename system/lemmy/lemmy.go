@@ -103,7 +103,8 @@ func (sys *System) Description() string {
 
 func (sys *System) Load() error {
 	var httpClient *http.Client = nil
-	var httpTransport *http.Transport = nil
+	var httpTransport *http.Transport = http.DefaultTransport.(*http.Transport).
+		Clone()
 	var err error
 
 	u := sys.config["url"]
