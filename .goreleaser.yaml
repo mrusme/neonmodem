@@ -1,7 +1,20 @@
 # .goreleaser.yaml
 changelog:
-  skip: false
+  sort: asc
   use: github
+  filters:
+    exclude:
+    - '^test:'
+    - '^chore'
+    - 'merge conflict'
+    - Merge pull request
+    - Merge remote-tracking branch
+    - Merge branch
+    - go mod tidy
+
+release:
+  footer: |
+    **Full Changelog**: https://github.com/mrusme/neonmodem/compare/{{ .PreviousTag }}...{{ .Tag }}
 
 builds:
   -
