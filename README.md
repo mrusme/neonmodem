@@ -17,6 +17,19 @@ of one another, in order to offer a smoother UI experience.
 
 [More info here!](https://xn--gckvb8fzb.com/get-the-bbs-scene-vibes-back-with-neonmodem-overdrive/)
 
+
+## Support
+
+| System         | Available          | List Forums        | List Posts         | List Replies       | Create Post        | Create Reply       |
+| :------------- | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: |
+| Discourse      | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| Lemmy          | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| Lobsters       | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                    |                    |
+| Hacker News    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                    |                    |
+| Superhighway84 |                    |                    |                    |                    |                    |                    |
+| NNTP           |                    |                    |                    |                    |                    |                    |
+
+
 [neonmodem]: https://neonmodem.com
 [wiki-bbs]: https://en.wikipedia.org/wiki/Bulletin_board_system
 [discourse]: https://github.com/discourse
