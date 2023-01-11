@@ -50,9 +50,9 @@ Clone this repository
   $ git clone git@github.com:mrusme/neonmodem.git
   ```
 - from 
-  [Radicle](https://app.radicle.network/seeds/willow.radicle.garden/rad:git:hnrkqhjb9a9nhooegxzkhnp1jdb8p3j9wfzwy)
+  [Radicle](https://app.radicle.xyz/seeds/willow.radicle.garden/neonmodem/tree)
   ```sh
-  $ rad clone rad://maple.radicle.garden/hnrkcf9617a8pxxtw8caaop9ioe8cj5u4c4co
+  $ rad clone rad://willow.radicle.garden/hnrkqhjb9a9nhooegxzkhnp1jdb8p3j9wfzwy
   ```
 
 Then cd into the cloned directory and run:
