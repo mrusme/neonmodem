@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -97,7 +99,29 @@ func (sys *System) Description() string {
 }
 
 func (sys *System) Load() error {
-	sys.client = hn.NewClient()
+	var httpClient *http.Client = nil
+	var httpTransport *http.Transport = nil
+
+	proxy := sys.config["proxy"].(string)
+	if proxy != "" {
+		proxyURL, err := url.Parse(proxy)
+		if err != nil {
+			sys.logger.Error(err)
+		} else {
+			sys.logger.Debugf("setting up http proxy transport: %s\n",
+				proxyURL.String())
+			httpTransport = &http.Transport{
+				Proxy: http.ProxyURL(proxyURL),
+			}
+		}
+	}
+
+	httpClient = &http.Client{
+		Transport: httpTransport,
+		Timeout:   time.Second * 10,
+	}
+
+	sys.client = hn.NewClient(hn.WithHTTPClient(httpClient))
 	return nil
 }
 
