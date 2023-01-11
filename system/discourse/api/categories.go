@@ -79,6 +79,10 @@ func (a *CategoryServiceHandler) List(
 		return nil, err
 	}
 
+	q := req.URL.Query()
+	q.Add("include_subcategories", "true")
+	req.URL.RawQuery = q.Encode()
+
 	response := new(LatestCategoriesResponse)
 	if err = a.client.Do(ctx, req, response); err != nil {
 		return nil, err

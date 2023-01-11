@@ -132,18 +132,36 @@ func (sys *System) ListForums() ([]forum.Forum, error) {
 		return []forum.Forum{}, err
 	}
 
-	for _, cat := range cats.CategoryList.Categories {
-		models = append(models, forum.Forum{
-			ID:   strconv.Itoa(cat.ID),
-			Name: cat.Name,
-
-			Info: cat.Description,
-
-			SysIDX: sys.ID,
-		})
-	}
+	models = sys.recurseForums(&cats.CategoryList.Categories, nil)
 
 	return models, nil
+}
+
+func (sys *System) recurseForums(cats *[]api.CategoryModel, parent *forum.Forum) []forum.Forum {
+	var models []forum.Forum
+
+	sys.logger.Debugf("recursing categories: %d\n", len(*cats))
+	for i := 0; i < len(*cats); i++ {
+		sys.logger.Debugf("adding category: %s\n", (*cats)[i].Name)
+
+		var name = (*cats)[i].Name
+		if parent != nil {
+			name = fmt.Sprintf("%s / %s", parent.Name, name)
+		}
+		f := forum.Forum{
+			ID:   strconv.Itoa((*cats)[i].ID),
+			Name: name,
+
+			Info: (*cats)[i].Description,
+
+			SysIDX: sys.ID,
+		}
+		models = append(models, f)
+
+		models = append(models, sys.recurseForums(&(*cats)[i].SubcategoryList, &f)...)
+	}
+
+	return models
 }
 
 func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
