@@ -104,7 +104,6 @@ func (sys *System) Description() string {
 func (sys *System) Load() error {
 	var httpClient *http.Client = nil
 	var httpTransport *http.Transport = nil
-
 	var err error
 
 	u := sys.config["url"]
@@ -118,7 +117,8 @@ func (sys *System) Load() error {
 		if err != nil {
 			sys.logger.Error(err)
 		} else {
-			sys.logger.Debugf("setting up http proxy transport: %s\n", proxyURL.String())
+			sys.logger.Debugf("setting up http proxy transport: %s\n",
+				proxyURL.String())
 			httpTransport = &http.Transport{
 				Proxy: http.ProxyURL(proxyURL),
 			}
