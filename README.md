@@ -26,15 +26,42 @@ of one another, in order to offer a smoother UI experience.
 [bubbletea]: https://github.com/charmbracelet/bubbletea
 
 
-## Build
+## Installation
 
-To build this software, simply run `make` within the cloned repository:
+### From Release
+
+Download the [latest
+release](https://github.com/mrusme/neonmodem/releases/latest) and unpack
+it:
+
+```sh
+$ tar -xzf ./neonmodem_*.tar.gz
+```
+
+The binary is called `neonmodem`. Feel free to move it to e.g. `/usr/local/bin`.
+
+
+### From Sauce
+
+Clone this repository
+
+- from [GitHub](https://github.com/mrusme/neonmodem)
+  ```sh
+  $ git clone git@github.com:mrusme/neonmodem.git
+  ```
+- from 
+  [Radicle](https://app.radicle.network/seeds/willow.radicle.garden/rad:git:hnrkqhjb9a9nhooegxzkhnp1jdb8p3j9wfzwy)
+  ```sh
+  $ rad clone rad://maple.radicle.garden/hnrkcf9617a8pxxtw8caaop9ioe8cj5u4c4co
+  ```
+
+Then cd into the cloned directory and run:
 
 ```sh
 make
 ```
 
-The binary is called `neonmodem`
+The binary is called `neonmodem`. Feel free to move it to e.g. `/usr/local/bin`.
 
 
 ## Configuration
@@ -47,6 +74,7 @@ Connecting a service will add it to the configuration TOML, usually under
 
 
 ### Systems
+
 
 #### Discourse
 
