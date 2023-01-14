@@ -20,14 +20,15 @@ of one another, in order to offer a smoother UI experience.
 
 ## Support
 
-| System         | Available          | List Forums        | List Posts         | List Replies       | Create Post        | Create Reply       |
-| :------------- | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: |
-| Discourse      | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| Lemmy          | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| Lobsters       | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                    |                    |
-| Hacker News    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                    |                    |
-| Superhighway84 |                    |                    |                    |                    |                    |                    |
-| NNTP           |                    |                    |                    |                    |                    |                    |
+| System             | Available          | List Forums        | List Posts         | List Replies       | Create Post        | Create Reply       |
+| :----------------- | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: |
+| Discourse          | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| Lemmy              | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| Lobsters           | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                    |                    |
+| Hacker News        | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                    |                    |
+| RSS+Disqus/Isso(?) |                    |                    |                    |                    |                    |                    |
+| Superhighway84     |                    |                    |                    |                    |                    |                    |
+| NNTP               |                    |                    |                    |                    |                    |                    |
 
 
 [neonmodem]: https://neonmodem.com
