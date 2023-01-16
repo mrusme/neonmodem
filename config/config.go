@@ -43,7 +43,8 @@ type Config struct {
 	Log   string
 	Proxy string
 
-	RenderImages bool
+	RenderShadows bool
+	RenderImages  bool
 
 	Systems []SystemConfig
 
@@ -188,6 +189,7 @@ func SetDefaults(cacheDir string) {
 	viper.SetDefault("Log", path.Join(cacheDir, "neonmodem.log"))
 	viper.SetDefault("Proxy", "")
 
+	viper.SetDefault("RenderShadows", "true")
 	viper.SetDefault("RenderImages", "true")
 
 	// --- Header ---

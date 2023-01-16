@@ -213,7 +213,7 @@ func (wm *WM) View(view string, onlyFocused bool) string {
 			wm.stack[i].XYWH[1]+(wm.ctx.Screen[1]-wm.ctx.Content[1]),
 			wm.stack[i].Win.View(),
 			v,
-			true,
+			wm.ctx.Config.RenderShadows,
 		)
 	}
 

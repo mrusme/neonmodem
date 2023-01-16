@@ -9,6 +9,7 @@ require (
 	github.com/charmbracelet/bubbletea v0.23.1
 	github.com/charmbracelet/glamour v0.6.0
 	github.com/charmbracelet/lipgloss v0.6.0
+	github.com/eliukblau/pixterm v1.3.1
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-retryablehttp v0.7.2
 	github.com/hermanschaaf/hackernews v1.0.1
@@ -37,7 +38,6 @@ require (
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/dlclark/regexp2 v1.7.0 // indirect
-	github.com/eliukblau/pixterm v1.3.1 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
