@@ -13,8 +13,8 @@ import (
 	"github.com/mrusme/neonmodem/models/post"
 	"github.com/mrusme/neonmodem/models/reply"
 	"github.com/mrusme/neonmodem/system/adapter"
-	"go.arsenm.dev/go-lemmy"
-	"go.arsenm.dev/go-lemmy/types"
+	"go.elara.ws/go-lemmy"
+	"go.elara.ws/go-lemmy/types"
 	"go.uber.org/zap"
 )
 
@@ -155,7 +155,7 @@ func (sys *System) Load() error {
 }
 
 func (sys *System) ListForums() ([]forum.Forum, error) {
-	resp, err := sys.client.ListCommunities(context.Background(), types.ListCommunities{
+	resp, err := sys.client.Communities(context.Background(), types.ListCommunities{
 		Type: types.NewOptional(types.ListingTypeSubscribed),
 	})
 	if err != nil {
@@ -211,7 +211,6 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 
 			Type: t,
 
-			Pinned: i.Post.Stickied,
 			Closed: i.Post.Locked,
 
 			CreatedAt:       createdAt,
@@ -252,8 +251,8 @@ func (sys *System) LoadPost(p *post.Post) error {
 	// 	return err
 	// }
 
-	resp, err := sys.client.Post(context.Background(), types.GetPost{
-		ID: pid,
+	resp, err := sys.client.Comments(context.Background(), types.GetComments{
+		PostID: types.NewOptional[int](pid),
 	})
 	if err != nil {
 		return err
