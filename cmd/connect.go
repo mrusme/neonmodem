@@ -92,7 +92,7 @@ func connectBase() *cobra.Command {
 			&sysType,
 			"type",
 			"",
-			"Type of system to connect to (discourse, lemmy, lobsers, hackernews)",
+			"Type of system to connect to (discourse, lemmy, lobsters, hackernews)",
 		)
 	cmd.MarkFlagRequired("type")
 
