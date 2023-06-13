@@ -83,8 +83,13 @@ The binary is called `neonmodem`. Feel free to move it to e.g. `/usr/local/bin`.
 Before launching *Neon Modem Overdrive* it requires initial setup of the 
 services (a.k.a. *systems*). Run `neonmodem connect --help` to find out more.
 
-Connecting a service will add it to the configuration TOML, usually under 
-`~/.config/neonmodem.toml`.
+Connecting a service will add it to the configuration TOML.
+
+### Linux/Unix
+`~/.config/neonmodem.toml`
+
+### MacOS
+`$HOME/Library/Application\ Support/neonmodem.toml`
 
 
 ### Systems
