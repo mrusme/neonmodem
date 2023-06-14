@@ -39,10 +39,10 @@ type ThemeItemConfig struct {
 }
 
 type Config struct {
-	Debug bool
-	Log   string
-	Proxy string
-
+	Debug         bool
+	Log           string
+	Proxy         string
+	Browser       string
 	RenderShadows bool
 	RenderImages  bool
 
@@ -188,6 +188,7 @@ func SetDefaults(cacheDir string) {
 	viper.SetDefault("Debug", "false")
 	viper.SetDefault("Log", path.Join(cacheDir, "neonmodem.log"))
 	viper.SetDefault("Proxy", "")
+	viper.SetDefault("Browser", "")
 
 	viper.SetDefault("RenderShadows", "true")
 	viper.SetDefault("RenderImages", "true")

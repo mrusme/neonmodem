@@ -2,6 +2,8 @@ package postshow
 
 import (
 	"errors"
+	"os"
+	"os/exec"
 	"strconv"
 	"time"
 
@@ -91,6 +93,28 @@ func handleOpen(mi interface{}) (bool, []tea.Cmd) {
 	var cmds []tea.Cmd
 
 	openURL := m.activePost.URL
+
+	browserPath := m.ctx.Config.Browser
+	if browserPath != "" {
+		if _, err := os.Stat(browserPath); err != nil {
+			m.ctx.Logger.Error(err)
+			cmds = append(cmds, cmd.New(
+				cmd.MsgError,
+				WIN_ID,
+				cmd.Arg{
+					Name:  "error",
+					Value: err,
+				},
+			).Tea())
+			return true, cmds
+		}
+		cmd := exec.Command(browserPath, openURL)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Run()
+		return true, cmds
+	}
+
 	browser.Stderr = nil
 	browser.Stdout = nil
 	if err := browser.OpenURL(openURL); err != nil {
