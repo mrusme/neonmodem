@@ -34,6 +34,7 @@ func connectBase() *cobra.Command {
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			sysConfig = make(map[string]interface{})
+			sysConfig["proxy"] = ""
 			sys, err := system.New(sysType, &sysConfig, LOG)
 			if err != nil {
 				LOG.Panicln(err)
