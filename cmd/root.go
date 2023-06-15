@@ -88,7 +88,8 @@ func load() {
 func loadSystems(c *ctx.Ctx) []error {
 	var errs []error
 
-	for _, sysCfg := range c.Config.Systems {
+	for i := 0; i < len(c.Config.Systems); i++ {
+		sysCfg := c.Config.Systems[i]
 		c.Logger.Debugf("loading system of type %s ...", sysCfg.Type)
 		sysCfg.Config["proxy"] = CFG.Proxy
 		sys, err := system.New(sysCfg.Type, &sysCfg.Config, LOG)
