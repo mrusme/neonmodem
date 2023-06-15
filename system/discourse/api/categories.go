@@ -36,7 +36,7 @@ type CategoryModel struct {
 	TopicTemplate                string          `json:"topic_template"`
 	HasChildren                  bool            `json:"has_children"`
 	SortOrder                    string          `json:"sort_order"`
-	SortAscending                string          `json:"sort_ascending"`
+	SortAscending                bool            `json:"sort_ascending"`
 	ShowSubcategoryList          bool            `json:"show_subcategory_list"`
 	NumFeaturedTopics            int             `json:"num_featured_topics"`
 	DefaultView                  string          `json:"default_view"`
