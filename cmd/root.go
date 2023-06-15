@@ -119,7 +119,13 @@ var rootCmd = &cobra.Command{
 		var err error
 
 		c := ctx.New(EMBEDFS, &CFG, LOG)
-		_ = loadSystems(&c) // TODO: Handle errs
+		errs := loadSystems(&c)
+		if len(errs) > 0 {
+			for _, err = range errs {
+				c.Logger.Error(err)
+			}
+			panic("Error(s) loading system(s)")
+		}
 
 		tui := tea.NewProgram(ui.NewModel(&c), tea.WithAltScreen())
 		err = tui.Start()
