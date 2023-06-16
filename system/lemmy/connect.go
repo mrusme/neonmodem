@@ -7,6 +7,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/99designs/keyring"
+	"github.com/mrusme/neonmodem/common"
 	"golang.org/x/term"
 )
 
@@ -42,7 +44,25 @@ func (sys *System) Connect(sysURL string) error {
 	// Credentials
 	credentials := make(map[string]string)
 	credentials["username"] = username
-	credentials["password"] = password
+
+	ring, _ := keyring.Open(keyring.Config{
+		ServiceName: "NeonModem - Lemmy",
+	})
+	// Attempt to save the password to system keyring
+	err := ring.Set(keyring.Item{
+		Key:  "password",
+		Data: []byte(password),
+	})
+	// On failure, prompt to continue with insecure password storage or abort
+	if err != nil {
+		fmt.Println("Unable to save password to a keyring. Would you like to proceed to save the password in clear text in the neonmodem.toml?")
+		if resp, _ := common.YesNo(); resp != true {
+			fmt.Println("Not adding lemmy account...")
+			os.Exit(0)
+		} else {
+			credentials["password"] = password
+		}
+	}
 
 	if sys.config == nil {
 		sys.config = make(map[string]interface{})
