@@ -3,7 +3,8 @@ module github.com/mrusme/neonmodem
 go 1.19
 
 require (
-	github.com/JohannesKaufmann/html-to-markdown v1.4.0
+	github.com/99designs/keyring v1.2.2
+	github.com/JohannesKaufmann/html-to-markdown v1.3.6
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.24.2
@@ -13,6 +14,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-retryablehttp v0.7.4
 	github.com/hermanschaaf/hackernews v1.0.1
+	github.com/manifoldco/promptui v0.9.0
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/mergestat/timediff v0.0.3
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6
@@ -29,7 +31,6 @@ require (
 
 require (
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
-	github.com/99designs/keyring v1.2.2 // indirect
 	github.com/PuerkitoBio/goquery v1.8.0 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
@@ -55,7 +56,6 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
-	github.com/manifoldco/promptui v0.9.0 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.24 // indirect
@@ -71,7 +71,6 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
-	github.com/tawesoft/golib/v2 v2.10.0 // indirect
 	github.com/yuin/goldmark v1.5.3 // indirect
 	github.com/yuin/goldmark-emoji v1.0.1 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
