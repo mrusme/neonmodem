@@ -62,6 +62,8 @@ func (sys *System) Connect(sysURL string) error {
 		} else {
 			credentials["password"] = password
 		}
+	} else {
+		credentials["password"] = "password_in_keyring"
 	}
 
 	if sys.config == nil {
