@@ -32,13 +32,13 @@ func YesNo() (bool, error) {
 
 }
 
-func SetPassword() (string, error) {
+func SetPassword() (string, *PasswordError) {
 	// Prompt for password input
 	fmt.Println("Please enter your password (will not echo): ")
 	bytepw, err := term.ReadPassword(int(syscall.Stdin))
 	fmt.Println("")
 	if err != nil || len(bytepw) == 0 {
-		fmt.Println("Invalid input")
+		return "", &PasswordError{Reason: "Invalid input"}
 	}
 
 	// Open system keyring object
@@ -56,9 +56,7 @@ func SetPassword() (string, error) {
 		fmt.Println("Unable to save password to a keyring. Would you like to proceed to save the password in clear text in the neonmodem.toml?")
 		if resp, _ := YesNo(); resp != true {
 			fmt.Println("Not adding lemmy account...")
-			return "", &PasswordError{
-				Reason: "Keyring unavailable",
-			}
+			return "", &PasswordError{Reason: "Keyring unavailable"}
 		} else {
 			return string(bytepw), nil
 		}

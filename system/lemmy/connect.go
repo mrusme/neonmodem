@@ -30,13 +30,13 @@ func (sys *System) Connect(sysURL string) error {
 
 	// New password code
 	var password string = ""
-	var err error
+	var err *common.PasswordError
 
 	for password == "" {
 		password, err = common.SetPassword()
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			fmt.Printf("%v\n", err.Reason)
+		}
 	}
 	credentials["password"] = password
 
