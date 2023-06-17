@@ -2,9 +2,11 @@ package common
 
 import (
 	"fmt"
+	"syscall"
 
 	"github.com/99designs/keyring"
 	"github.com/manifoldco/promptui"
+	"golang.org/x/term"
 )
 
 type PasswordError struct {
@@ -30,13 +32,14 @@ func YesNo() (bool, error) {
 
 }
 
-func SetPassword(pwd []byte) (string, error) {
-	if len(pwd) < 0 {
-		return "", &PasswordError{
-			Reason: "Password can not be empty",
-		}
+func SetPassword() (string, error) {
+	// Prompt for password input
+	fmt.Println("Please enter your password (will not echo): ")
+	bytepw, err := term.ReadPassword(int(syscall.Stdin))
+	fmt.Println("")
+	if err != nil || len(bytepw) == 0 {
+		fmt.Println("Invalid input")
 	}
-	fmt.Println(string(pwd))
 
 	// Open system keyring object
 	ring, _ := keyring.Open(keyring.Config{
@@ -45,9 +48,9 @@ func SetPassword(pwd []byte) (string, error) {
 
 	// Attempt to save the password to system keyring
 	// If we can't, ask if should save it in clear text
-	err := ring.Set(keyring.Item{
+	err = ring.Set(keyring.Item{
 		Key:  "password",
-		Data: pwd,
+		Data: bytepw,
 	})
 	if err != nil {
 		fmt.Println("Unable to save password to a keyring. Would you like to proceed to save the password in clear text in the neonmodem.toml?")
@@ -56,6 +59,8 @@ func SetPassword(pwd []byte) (string, error) {
 			return "", &PasswordError{
 				Reason: "Keyring unavailable",
 			}
+		} else {
+			return string(bytepw), nil
 		}
 	}
 

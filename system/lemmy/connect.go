@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"syscall"
 
 	"github.com/mrusme/neonmodem/common"
-	"golang.org/x/term"
 )
 
 func (sys *System) Connect(sysURL string) error {
@@ -31,15 +29,16 @@ func (sys *System) Connect(sysURL string) error {
 	credentials["username"] = username
 
 	// New password code
-	for {
-		fmt.Println("Please enter your password (will not echo): ")
-		bytepw, err := term.ReadPassword(int(syscall.Stdin))
-		password, err := common.SetPassword(bytepw)
-		if err == nil {
-			credentials["password"] = password
-			break
-		}
+	var password string = ""
+	var err error
+
+	for password == "" {
+		password, err = common.SetPassword()
 	}
+	if err != nil {
+		return err
+	}
+	credentials["password"] = password
 
 	if sys.config == nil {
 		sys.config = make(map[string]interface{})
