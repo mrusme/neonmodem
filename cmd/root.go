@@ -98,11 +98,12 @@ func loadSystems(c *ctx.Ctx) []error {
 			errs = append(errs, err)
 		} else {
 			c.Logger.Debugf("loaded %s system", sysCfg.Type)
+
+			c.AddSystem(&sys)
+			c.Logger.Debugf("setting system ID to %d", c.NumSystems()-1)
+			sys.SetID(c.NumSystems() - 1)
 		}
 
-		c.AddSystem(&sys)
-		c.Logger.Debugf("setting system ID to %d", c.NumSystems()-1)
-		sys.SetID(c.NumSystems() - 1)
 	}
 
 	return errs
