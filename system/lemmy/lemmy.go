@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/99designs/keyring"
 	"github.com/mrusme/neonmodem/models/author"
 	"github.com/mrusme/neonmodem/models/forum"
 	"github.com/mrusme/neonmodem/models/post"
@@ -144,9 +145,25 @@ func (sys *System) Load() error {
 		credentials[k] = v.(string)
 	}
 
+	ring, _ := keyring.Open(keyring.Config{
+		ServiceName: "NeonModem - Lemmy",
+	})
+
+	var password string
+
+	if credentials["password"] == "password_in_keyring" {
+		p, err := ring.Get("password")
+		if err != nil {
+			return err
+		}
+		password = string(p.Data)
+	} else {
+		password = credentials["password"]
+	}
+
 	err = sys.client.ClientLogin(context.Background(), types.Login{
 		UsernameOrEmail: credentials["username"],
-		Password:        credentials["password"],
+		Password:        password,
 	})
 	if err != nil {
 		return err
