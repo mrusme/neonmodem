@@ -33,6 +33,9 @@ func NewModel(c *ctx.Ctx) Model {
 		ctx: c,
 		pix: nil,
 	}
+	if !m.ctx.Config.RenderSplash {
+		return m
+	}
 
 	m.splashscreen, err = m.ctx.EmbedFS.ReadFile("splashscreen.png")
 	if err != nil {
@@ -74,7 +77,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) sleep() tea.Cmd {
 	return func() tea.Msg {
-		time.Sleep(time.Second * 5)
+		if m.ctx.Config.RenderSplash {
+			time.Sleep(time.Second * 5)
+		}
 
 		c := cmd.New(
 			cmd.ViewOpen,

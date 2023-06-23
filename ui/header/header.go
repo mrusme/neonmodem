@@ -111,6 +111,10 @@ func (m Model) View() string {
 		spinner = m.spinner.View()
 	}
 
+	if !m.ctx.Config.RenderBanner{
+		banner = ""
+	}
+
 	row = lipgloss.JoinHorizontal(lipgloss.Bottom,
 		banner,
 		"   ",
