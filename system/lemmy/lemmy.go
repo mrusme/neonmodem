@@ -155,34 +155,58 @@ func (sys *System) Load() error {
 }
 
 func (sys *System) ListForums() ([]forum.Forum, error) {
-	resp, err := sys.client.Communities(context.Background(), types.ListCommunities{
-		Type: types.NewOptional(types.ListingTypeSubscribed),
-	})
-	if err != nil {
-		return []forum.Forum{}, err
-	}
-
 	var models []forum.Forum
-	for _, i := range resp.Communities {
-		models = append(models, forum.Forum{
-			ID:   strconv.Itoa(i.Community.ID),
-			Name: i.Community.Name,
-
-			Info: i.Community.Description.ValueOr(i.Community.Title),
-
-			SysIDX: sys.ID,
+	for j := 1; j < 100; j++ {
+		resp, err := sys.client.Communities(context.Background(), types.ListCommunities{
+			Type:  types.NewOptional(types.ListingTypeSubscribed),
+			Page: types.NewOptional(int64(j)),
+			Limit: types.NewOptional(int64(50)),
 		})
-	}
+		if err != nil {
+			break
+		}
+		if len(resp.Communities) == 0 {
+			break
+		}
+		for _, i := range resp.Communities {
+			models = append(models, forum.Forum{
+				ID:   strconv.Itoa(i.Community.ID),
+				Name: i.Community.Name,
 
+				Info: i.Community.Description.ValueOr(i.Community.Title),
+
+				SysIDX: sys.ID,
+			})
+		}
+	}
 	return models, nil
 }
 
 func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
-	resp, err := sys.client.Posts(context.Background(), types.GetPosts{
-		Type:  types.NewOptional(types.ListingTypeSubscribed),
-		Sort:  types.NewOptional(types.SortTypeNew),
-		Limit: types.NewOptional(int64(50)),
-	})
+	var models []post.Post
+	var showAll bool
+	var err error
+
+	communityID, err := strconv.Atoi(forumID)
+	if err != nil {
+		showAll = true
+	}
+
+	resp := &types.GetPostsResponse{}
+	if showAll {
+		resp, err = sys.client.Posts(context.Background(), types.GetPosts{
+			Type:  types.NewOptional(types.ListingTypeSubscribed),
+			Sort:  types.NewOptional(types.SortTypeNew),
+			Limit: types.NewOptional(int64(50)),
+		})
+	} else {
+		resp, err = sys.client.Posts(context.Background(), types.GetPosts{
+			Type:  types.NewOptional(types.ListingTypeSubscribed),
+			Sort:  types.NewOptional(types.SortTypeNew),
+			Limit: types.NewOptional(int64(50)),
+			CommunityID: types.NewOptional(communityID),
+		})
+	}
 
 	if err != nil {
 		return []post.Post{}, err
@@ -191,7 +215,6 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 	cfg := sys.GetConfig()
 	baseURL := cfg["url"].(string)
 
-	var models []post.Post
 	for _, i := range resp.Posts {
 		t := "post"
 		body := i.Post.Body.ValueOr("")
