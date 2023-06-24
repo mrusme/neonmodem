@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mrusme/neonmodem/models/author"
@@ -154,6 +155,27 @@ func (sys *System) Load() error {
 	return nil
 }
 
+func communityFullname(community types.CommunitySafe) (communityName string) {
+	instanceName := ""
+	if community.ActorID != "" {
+	    removeUrlScheme := strings.NewReplacer(
+		"http://", "",
+		"https://", "",
+	    )
+	    instanceName = removeUrlScheme.Replace(
+		    community.ActorID)
+	    splitUrl := strings.Split(instanceName, "/")
+	    if len(splitUrl) > 1 {
+		instanceName = splitUrl[0]
+	    }
+	}
+	communityName = community.Name
+	if instanceName != "" {
+		communityName += "@" + instanceName
+	}
+	return communityName
+}
+
 func (sys *System) ListForums() ([]forum.Forum, error) {
 	var models []forum.Forum
 	for j := 1; j < 100; j++ {
@@ -171,7 +193,7 @@ func (sys *System) ListForums() ([]forum.Forum, error) {
 		for _, i := range resp.Communities {
 			models = append(models, forum.Forum{
 				ID:   strconv.Itoa(i.Community.ID),
-				Name: i.Community.Name,
+				Name: communityFullname(i.Community),
 
 				Info: i.Community.Description.ValueOr(i.Community.Title),
 
@@ -246,7 +268,7 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 
 			Forum: forum.Forum{
 				ID:   strconv.Itoa(i.Post.CommunityID),
-				Name: i.Community.Name,
+				Name: communityFullname(i.Community),
 
 				SysIDX: sys.ID,
 			},
