@@ -45,6 +45,8 @@ type Config struct {
 	Browser       string
 	RenderShadows bool
 	RenderImages  bool
+	RenderSplash  bool
+	RenderBanner  bool
 
 	Systems []SystemConfig
 
@@ -192,6 +194,8 @@ func SetDefaults(cacheDir string) {
 
 	viper.SetDefault("RenderShadows", "true")
 	viper.SetDefault("RenderImages", "true")
+	viper.SetDefault("RenderSplash", "true")
+	viper.SetDefault("RenderBanner", "true")
 
 	// --- Header ---
 	// Header Selector
