@@ -36,7 +36,8 @@ func NewModel(c *ctx.Ctx) Model {
 
 	m.spinner = spinner.New()
 	m.spinner.Spinner = spinner.Dot
-	m.spinner.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	m.spinner.Style = lipgloss.NewStyle().Foreground(
+		m.ctx.Theme.Header.Spinner.GetForeground())
 
 	return m
 }

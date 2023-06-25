@@ -51,6 +51,7 @@ type Config struct {
 	Theme struct {
 		Header struct {
 			Selector ThemeItemConfig
+			Spinner ThemeItemConfig
 		}
 
 		DialogBox struct {
@@ -208,6 +209,10 @@ func SetDefaults(cacheDir string) {
 		lipgloss.AdaptiveColor{Light: "#6ca1d0", Dark: "#6ca1d0"})
 	viper.SetDefault("Theme.Header.Selector.Foreground",
 		lipgloss.AdaptiveColor{Light: "#6ca1d0", Dark: "#6ca1d0"})
+
+	// Header Spinner
+	viper.SetDefault("Theme.Header.Spinner",
+		lipgloss.AdaptiveColor{Light: "#FF5FAF", Dark: "#FF5FAF"})
 
 	// --- DialogBox ---
 	// DialogBox Window:Focused
