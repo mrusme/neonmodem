@@ -211,22 +211,23 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 		showAll = true
 	}
 
-	resp := &types.GetPostsResponse{}
+	var getPosts types.GetPosts
 	if showAll {
-		resp, err = sys.client.Posts(context.Background(), types.GetPosts{
+		getPosts = types.GetPosts{
 			Type:  types.NewOptional(types.ListingTypeSubscribed),
 			Sort:  types.NewOptional(types.SortTypeNew),
 			Limit: types.NewOptional(int64(50)),
-		})
+		}
 	} else {
-		resp, err = sys.client.Posts(context.Background(), types.GetPosts{
+		getPosts = types.GetPosts{
 			Type:  types.NewOptional(types.ListingTypeSubscribed),
 			Sort:  types.NewOptional(types.SortTypeNew),
 			Limit: types.NewOptional(int64(50)),
 			CommunityID: types.NewOptional(communityID),
-		})
+		}
 	}
 
+	resp, err := sys.client.Posts(context.Background(), getPosts)
 	if err != nil {
 		return []post.Post{}, err
 	}
