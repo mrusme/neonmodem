@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/mrusme/neonmodem/models/author"
@@ -157,24 +156,12 @@ func (sys *System) Load() error {
 }
 
 func communityFullname(community types.CommunitySafe) (communityName string) {
-	instanceName := ""
-	if community.ActorID != "" {
-	    removeUrlScheme := strings.NewReplacer(
-		"http://", "",
-		"https://", "",
-	    )
-	    instanceName = removeUrlScheme.Replace(
-		    community.ActorID)
-	    splitUrl := strings.Split(instanceName, "/")
-	    if len(splitUrl) > 1 {
-		instanceName = splitUrl[0]
-	    }
+	url, err := url.Parse(community.ActorID)
+	if err != nil {
+		return community.Name
+	} else {
+		return community.Name + "@" + url.Host
 	}
-	communityName = community.Name
-	if instanceName != "" {
-		communityName += "@" + instanceName
-	}
-	return communityName
 }
 
 func (sys *System) ListForums() ([]forum.Forum, error) {
