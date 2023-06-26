@@ -19,6 +19,7 @@ import (
 	"go.uber.org/zap"
 )
 
+
 type System struct {
 	ID     int
 	config map[string]interface{}
@@ -178,11 +179,19 @@ func communityFullname(community types.CommunitySafe) (communityName string) {
 
 func (sys *System) ListForums() ([]forum.Forum, error) {
 	var models []forum.Forum
-	for j := 1; j < 100; j++ {
+	var maxSubscriptions int
+	if sys.config["MaxSubscriptions"] != nil {
+		maxSubscriptions = sys.config["MaxSubscriptions"].(int)
+	} else {
+		maxSubscriptions = MaxSubscriptions
+	}
+	page := 1
+	queryLimit := 50
+	for page < maxSubscriptions {
 		resp, err := sys.client.Communities(context.Background(), types.ListCommunities{
 			Type:  types.NewOptional(types.ListingTypeSubscribed),
-			Page: types.NewOptional(int64(j)),
-			Limit: types.NewOptional(int64(50)),
+			Page: types.NewOptional(int64(page)),
+			Limit: types.NewOptional(int64(queryLimit)),
 		})
 		if err != nil {
 			break
@@ -200,6 +209,7 @@ func (sys *System) ListForums() ([]forum.Forum, error) {
 				SysIDX: sys.ID,
 			})
 		}
+		page += 1
 	}
 	return models, nil
 }

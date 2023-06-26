@@ -50,5 +50,7 @@ func (sys *System) Connect(sysURL string) error {
 	sys.config["url"] = sysURL
 	sys.config["credentials"] = credentials
 
+	sys.config["MaxSubscriptions"] = MaxSubscriptions
+
 	return nil
 }
