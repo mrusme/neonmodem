@@ -1,6 +1,8 @@
 Neon Modem Overdrive
 --------------------
 
+[Chat on Matrix](https://matrix.to/#/%21PHlbgZTdrhjkCJrfVY%3Amatrix.org)
+
 ![Neon Modem Overdrive](splashscreen.png)
 
 [*Neon Modem Overdrive*][neonmodem] is a [BBS][wiki-bbs]-style command line client that 
