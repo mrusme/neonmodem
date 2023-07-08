@@ -74,6 +74,9 @@ make
 
 The binary is called `neonmodem`. Feel free to move it to e.g. `/usr/local/bin`.
 
+For Arch Linux an AUR package is available here: https://aur.archlinux.org/packages/neonmodem
+
+Install with your favorite AUR helper.
 
 ## Configuration
 
