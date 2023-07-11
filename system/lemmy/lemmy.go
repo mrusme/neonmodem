@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/mrusme/neonmodem/models/author"
@@ -16,6 +17,8 @@ import (
 	"go.elara.ws/go-lemmy"
 	"go.elara.ws/go-lemmy/types"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/term"
 )
 
 type System struct {
@@ -144,13 +147,29 @@ func (sys *System) Load() error {
 		credentials[k] = v.(string)
 	}
 
-	err = sys.client.ClientLogin(context.Background(), types.Login{
-		UsernameOrEmail: credentials["username"],
-		Password:        credentials["password"],
-	})
-	if err != nil {
-		return err
+	fmt.Printf(
+		"Please enter your password (will not echo): ",
+	)
+	bytepw, err := term.ReadPassword(int(syscall.Stdin))
+	fmt.Println("")
+	if err != nil || len(bytepw) == 0 {
+		fmt.Println("Invalid input")
 	}
+
+	if err = bcrypt.CompareHashAndPassword([]byte(credentials["password"]), []byte(bytepw)); err != nil {
+		fmt.Println("password does not match hash")
+	} else {
+		fmt.Println("password matches hash")
+		err = sys.client.ClientLogin(context.Background(), types.Login{
+			UsernameOrEmail: credentials["username"],
+			Password:        string(bytepw),
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -183,7 +202,6 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 		Sort:  types.NewOptional(types.SortTypeNew),
 		Limit: types.NewOptional(int64(50)),
 	})
-
 	if err != nil {
 		return []post.Post{}, err
 	}

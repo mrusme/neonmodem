@@ -7,6 +7,7 @@ import (
 	"strings"
 	"syscall"
 
+	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/term"
 )
 
@@ -36,7 +37,10 @@ func (sys *System) Connect(sysURL string) error {
 		if err != nil || len(bytepw) == 0 {
 			fmt.Println("Invalid input")
 		}
-		password = string(bytepw)
+
+		hashed, _ := bcrypt.GenerateFromPassword([]byte(bytepw), 8)
+
+		password = string(hashed)
 	}
 
 	// Credentials
