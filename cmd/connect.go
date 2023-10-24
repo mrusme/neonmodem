@@ -40,6 +40,7 @@ func connectBase() *cobra.Command {
 				LOG.Panicln(err)
 			}
 
+			sysURL := strings.TrimRight(sysURL, "/")
 			sysURLparsed, err := url.Parse(sysURL)
 			if err != nil {
 				fmt.Print(err)
