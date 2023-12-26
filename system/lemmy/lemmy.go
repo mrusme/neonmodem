@@ -14,7 +14,6 @@ import (
 	"github.com/mrusme/neonmodem/models/reply"
 	"github.com/mrusme/neonmodem/system/adapter"
 	"go.elara.ws/go-lemmy"
-	"go.elara.ws/go-lemmy/types"
 	"go.uber.org/zap"
 )
 
@@ -144,7 +143,7 @@ func (sys *System) Load() error {
 		credentials[k] = v.(string)
 	}
 
-	err = sys.client.ClientLogin(context.Background(), types.Login{
+	err = sys.client.ClientLogin(context.Background(), lemmy.Login{
 		UsernameOrEmail: credentials["username"],
 		Password:        credentials["password"],
 	})
@@ -155,8 +154,8 @@ func (sys *System) Load() error {
 }
 
 func (sys *System) ListForums() ([]forum.Forum, error) {
-	resp, err := sys.client.Communities(context.Background(), types.ListCommunities{
-		Type: types.NewOptional(types.ListingTypeSubscribed),
+	resp, err := sys.client.Communities(context.Background(), lemmy.ListCommunities{
+		Type: lemmy.NewOptional(lemmy.ListingTypeSubscribed),
 	})
 	if err != nil {
 		return []forum.Forum{}, err
@@ -165,7 +164,7 @@ func (sys *System) ListForums() ([]forum.Forum, error) {
 	var models []forum.Forum
 	for _, i := range resp.Communities {
 		models = append(models, forum.Forum{
-			ID:   strconv.Itoa(i.Community.ID),
+			ID:   strconv.FormatInt(i.Community.ID, 10),
 			Name: i.Community.Name,
 
 			Info: i.Community.Description.ValueOr(i.Community.Title),
@@ -178,10 +177,10 @@ func (sys *System) ListForums() ([]forum.Forum, error) {
 }
 
 func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
-	resp, err := sys.client.Posts(context.Background(), types.GetPosts{
-		Type:  types.NewOptional(types.ListingTypeSubscribed),
-		Sort:  types.NewOptional(types.SortTypeNew),
-		Limit: types.NewOptional(int64(50)),
+	resp, err := sys.client.Posts(context.Background(), lemmy.GetPosts{
+		Type:  lemmy.NewOptional(lemmy.ListingTypeSubscribed),
+		Sort:  lemmy.NewOptional(lemmy.SortTypeNew),
+		Limit: lemmy.NewOptional(int64(50)),
 	})
 
 	if err != nil {
@@ -200,11 +199,12 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 			body = i.Post.URL.ValueOr("")
 		}
 
-		createdAt := i.Post.Published.Time
-		lastCommentedAt := i.Counts.NewestCommentTime.Time
+		createdAt := i.Post.Published
+		//lastCommentedAt := i.Counts.NewestCommentTime.Time
+		lastCommentedAt := i.Counts.Published
 
 		models = append(models, post.Post{
-			ID: strconv.Itoa(i.Post.ID),
+			ID: strconv.FormatInt(i.Post.ID, 10),
 
 			Subject: i.Post.Name,
 			Body:    body,
@@ -217,12 +217,12 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 			LastCommentedAt: lastCommentedAt,
 
 			Author: author.Author{
-				ID:   strconv.Itoa(i.Post.CreatorID),
+				ID:   strconv.FormatInt(i.Post.CreatorID, 10),
 				Name: i.Creator.Name,
 			},
 
 			Forum: forum.Forum{
-				ID:   strconv.Itoa(i.Post.CommunityID),
+				ID:   strconv.FormatInt(i.Post.CommunityID, 10),
 				Name: i.Community.Name,
 
 				SysIDX: sys.ID,
@@ -242,7 +242,7 @@ func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
 }
 
 func (sys *System) LoadPost(p *post.Post) error {
-	pid, err := strconv.Atoi(p.ID)
+	pid, err := strconv.ParseInt(p.ID, 10, 64)
 	if err != nil {
 		return err
 	}
@@ -251,8 +251,8 @@ func (sys *System) LoadPost(p *post.Post) error {
 	// 	return err
 	// }
 
-	resp, err := sys.client.Comments(context.Background(), types.GetComments{
-		PostID: types.NewOptional[int](pid),
+	resp, err := sys.client.Comments(context.Background(), lemmy.GetComments{
+		PostID: lemmy.NewOptional[int64](pid),
 	})
 	if err != nil {
 		return err
@@ -260,10 +260,10 @@ func (sys *System) LoadPost(p *post.Post) error {
 
 	p.Replies = []reply.Reply{}
 	for _, i := range resp.Comments {
-		createdAt := i.Comment.Published.Time
+		createdAt := i.Comment.Published
 
 		p.Replies = append(p.Replies, reply.Reply{
-			ID: strconv.Itoa(i.Comment.ID),
+			ID: strconv.FormatInt(i.Comment.ID, 10),
 
 			InReplyTo: p.ID,
 
@@ -272,7 +272,7 @@ func (sys *System) LoadPost(p *post.Post) error {
 			CreatedAt: createdAt,
 
 			Author: author.Author{
-				ID:   strconv.Itoa(i.Comment.CreatorID),
+				ID:   strconv.FormatInt(i.Comment.CreatorID, 10),
 				Name: i.Creator.Name,
 			},
 
@@ -283,46 +283,46 @@ func (sys *System) LoadPost(p *post.Post) error {
 }
 
 func (sys *System) CreatePost(p *post.Post) error {
-	communityID, err := strconv.Atoi(p.Forum.ID)
+	communityID, err := strconv.ParseInt(p.Forum.ID, 10, 64)
 	if err != nil {
 		return err
 	}
 
-	resp, err := sys.client.CreatePost(context.Background(), types.CreatePost{
+	resp, err := sys.client.CreatePost(context.Background(), lemmy.CreatePost{
 		Name:        p.Subject,
 		CommunityID: communityID,
-		Body:        types.NewOptional(p.Body),
-		NSFW:        types.NewOptional(false),
+		Body:        lemmy.NewOptional(p.Body),
+		NSFW:        lemmy.NewOptional(false),
 	})
 	if err != nil {
 		return err
 	}
 
-	p.ID = strconv.Itoa(resp.PostView.Post.ID)
+	p.ID = strconv.FormatInt(resp.PostView.Post.ID, 10)
 	return nil
 }
 
 func (sys *System) CreateReply(r *reply.Reply) error {
-	ID, err := strconv.Atoi(r.ID)
+	ID, err := strconv.ParseInt(r.ID, 10, 64)
 	if err != nil {
 		return err
 	}
 
-	var create types.CreateComment
+	var create lemmy.CreateComment
 	if r.InReplyTo != "" {
 		// Reply to a reply of a post
-		InReplyTo, err := strconv.Atoi(r.InReplyTo)
+		InReplyTo, err := strconv.ParseInt(r.InReplyTo, 10, 64)
 		if err != nil {
 			return err
 		}
-		create = types.CreateComment{
+		create = lemmy.CreateComment{
 			PostID:   InReplyTo,
-			ParentID: types.NewOptional(ID),
+			ParentID: lemmy.NewOptional(ID),
 			Content:  r.Body,
 		}
 	} else {
 		// Reply to a post
-		create = types.CreateComment{
+		create = lemmy.CreateComment{
 			PostID:  ID,
 			Content: r.Body,
 		}
@@ -333,6 +333,6 @@ func (sys *System) CreateReply(r *reply.Reply) error {
 		return err
 	}
 
-	r.ID = strconv.Itoa(resp.CommentView.Comment.ID)
+	r.ID = strconv.FormatInt(resp.CommentView.Comment.ID, 10)
 	return nil
 }

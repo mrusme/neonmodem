@@ -1,12 +1,12 @@
 module github.com/mrusme/neonmodem
 
-go 1.19
+go 1.21
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.4.0
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 	github.com/charmbracelet/bubbles v0.16.1
-	github.com/charmbracelet/bubbletea v0.24.2
+	github.com/charmbracelet/bubbletea v0.25.0
 	github.com/charmbracelet/glamour v0.6.0
 	github.com/charmbracelet/lipgloss v0.7.1
 	github.com/eliukblau/pixterm v1.3.1
@@ -22,7 +22,7 @@ require (
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.16.0
-	go.elara.ws/go-lemmy v0.18.0
+	go.elara.ws/go-lemmy v0.19.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/term v0.13.0
 )
@@ -47,7 +47,7 @@ require (
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
-	github.com/microcosm-cc/bluemonday v1.0.25 // indirect
+	github.com/microcosm-cc/bluemonday v1.0.26 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
