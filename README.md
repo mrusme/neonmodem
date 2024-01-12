@@ -78,6 +78,9 @@ For Arch Linux an AUR package is available here: https://aur.archlinux.org/packa
 
 Install with your favorite AUR helper.
 
+On NetBSD, a package is available from the official repositories.
+To install it, simply run `pkgin install neonmodem`.
+
 ## Configuration
 
 Before launching *Neon Modem Overdrive* it requires initial setup of the 
