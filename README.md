@@ -65,6 +65,11 @@ Clone this repository
   ```sh
   $ git clone git@github.com:mrusme/neonmodem.git
   ```
+- from 
+  [Radicle](https://app.radicle.xyz/nodes/seed.xn--gckvb8fzb.com/rad:z4GExf1wpsyn6WDc2dNAxVc6LPS9G)
+  ```sh
+  $ rad clone rad:z4GExf1wpsyn6WDc2dNAxVc6LPS9G
+  ```
 
 Then cd into the cloned directory and run:
 
