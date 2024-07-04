@@ -11,7 +11,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.11.0
 	github.com/eliukblau/pixterm v1.3.1
 	github.com/google/uuid v1.6.0
-	github.com/hashicorp/go-retryablehttp v0.7.6
+	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hermanschaaf/hackernews v1.0.1
 	github.com/mattn/go-runewidth v0.0.15
 	github.com/mergestat/timediff v0.0.3
@@ -38,7 +38,6 @@ require (
 	github.com/charmbracelet/x/input v0.1.1 // indirect
 	github.com/charmbracelet/x/term v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.1.2 // indirect
-	github.com/containerd/console v1.0.4 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/dlclark/regexp2 v1.11.0 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
