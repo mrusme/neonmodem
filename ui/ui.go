@@ -43,8 +43,8 @@ var DefaultKeyMap = KeyMap{
 		key.WithHelp("C-t", "Forum selector"),
 	),
 	Close: key.NewBinding(
-		key.WithKeys("q", "esc"),
-		key.WithHelp("q/esc", "close"),
+		key.WithKeys("esc"),
+		key.WithHelp("esc", "close"),
 	),
 }
 
