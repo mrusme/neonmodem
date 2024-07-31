@@ -109,6 +109,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case key.Matches(msg, m.keymap.NewPost):
+			if m.list.FilterState() == list.Filtering {
+				break
+			}
+
 			i, ok := m.list.SelectedItem().(post.Post)
 			if ok {
 				caps := (*m.ctx.Systems[i.SysIDX]).GetCapabilities()
