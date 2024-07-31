@@ -177,11 +177,31 @@ func (sys *System) ListForums() ([]forum.Forum, error) {
 }
 
 func (sys *System) ListPosts(forumID string) ([]post.Post, error) {
-	resp, err := sys.client.Posts(context.Background(), lemmy.GetPosts{
+	var err error
+	var catID int = -1
+
+	if forumID != "" {
+		catID, err = strconv.Atoi(forumID)
+		if err != nil {
+			return []post.Post{}, err
+		}
+	}
+
+	lgp := lemmy.GetPosts{
 		Type:  lemmy.NewOptional(lemmy.ListingTypeSubscribed),
 		Sort:  lemmy.NewOptional(lemmy.SortTypeNew),
 		Limit: lemmy.NewOptional(int64(50)),
-	})
+	}
+	if catID > -1 {
+		lgp = lemmy.GetPosts{
+			CommunityID: lemmy.NewOptional(int64(catID)),
+			Type:        lemmy.NewOptional(lemmy.ListingTypeSubscribed),
+			Sort:        lemmy.NewOptional(lemmy.SortTypeNew),
+			Limit:       lemmy.NewOptional(int64(50)),
+		}
+	}
+
+	resp, err := sys.client.Posts(context.Background(), lgp)
 
 	if err != nil {
 		return []post.Post{}, err
