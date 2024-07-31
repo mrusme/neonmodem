@@ -24,6 +24,7 @@ type KeyMap struct {
 	Refresh key.Binding
 	NewPost key.Binding
 	Select  key.Binding
+	Quit    key.Binding
 }
 
 var DefaultKeyMap = KeyMap{
@@ -38,6 +39,10 @@ var DefaultKeyMap = KeyMap{
 	Select: key.NewBinding(
 		key.WithKeys("r", "enter"),
 		key.WithHelp("r/enter", "read"),
+	),
+	Quit: key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("esc", "quit"),
 	),
 }
 
@@ -80,6 +85,7 @@ func NewModel(c *ctx.Ctx) Model {
 	m.list = list.New(m.items, listDelegate, 0, 0)
 	m.list.SetShowTitle(false)
 	m.list.SetShowStatusBar(false)
+	m.list.DisableQuitKeybindings()
 
 	m.a, _ = aggregator.New(m.ctx)
 
@@ -92,6 +98,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
+		case key.Matches(msg, m.keymap.Quit):
+			if m.list.FilterState() == list.Filtering {
+				break
+			}
+			return m, tea.Quit
 
 		case key.Matches(msg, m.keymap.Refresh):
 			m.ctx.Loading = true

@@ -101,7 +101,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keymap.Close):
 			closed, ccmds := m.wm.CloseFocused()
 			if !closed {
-				return m, tea.Quit
+				break
+				// return m, tea.Quit
 			}
 			return m, tea.Batch(ccmds...)
 		case key.Matches(msg, m.keymap.SystemSelect):
@@ -242,6 +243,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case cmd.WinClose:
+			m.ctx.Logger.Debugf("got cmd.WinClose, target: %s", msg.Target)
+
 			switch msg.Target {
 
 			case postcreate.WIN_ID:
