@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"net/http"
+
+	"github.com/guregu/null"
 )
 
 const CategoriesBaseURL = "/categories"
@@ -25,21 +27,21 @@ type CategoryModel struct {
 	TopicCount                   int             `json:"topic_count"`
 	PostCount                    int             `json:"post_count"`
 	Position                     int             `json:"position"`
-	Description                  string          `json:"description",omitempty`
-	DescriptionText              string          `json:"description_text",omitempty`
-	DescriptionExcerpt           string          `json:"description_excerpt",omitempty`
-	TopicUrl                     string          `json:"topic_url",omitempty`
+	Description                  null.String     `json:"description",omitempty`
+	DescriptionText              null.String     `json:"description_text",omitempty`
+	DescriptionExcerpt           null.String     `json:"description_excerpt",omitempty`
+	TopicUrl                     null.String     `json:"topic_url",omitempty`
 	ReadRestricted               bool            `json:"read_restricted"`
-	Permission                   int             `json:"permission",omitempty`
+	Permission                   null.Int        `json:"permission",omitempty`
 	NotificationLevel            int             `json:"notification_level"`
 	CanEdit                      bool            `json:"can_edit"`
-	TopicTemplate                string          `json:"topic_template",omitempty`
-	HasChildren                  bool            `json:"has_children",omitempty`
-	SortOrder                    string          `json:"sort_order",omitempty`
-	SortAscending                bool            `json:"sort_ascending",omitempty`
+	TopicTemplate                null.String     `json:"topic_template",omitempty`
+	HasChildren                  null.Bool       `json:"has_children",omitempty`
+	SortOrder                    null.String     `json:"sort_order",omitempty`
+	SortAscending                null.Bool       `json:"sort_ascending",omitempty`
 	ShowSubcategoryList          bool            `json:"show_subcategory_list"`
 	NumFeaturedTopics            int             `json:"num_featured_topics"`
-	DefaultView                  string          `json:"default_view",omitempty`
+	DefaultView                  null.String     `json:"default_view",omitempty`
 	SubcategoryListStyle         string          `json:"subcategory_list_style"`
 	DefaultTopPeriod             string          `json:"default_top_period"`
 	DefaultListFilter            string          `json:"default_list_filter"`
@@ -53,9 +55,9 @@ type CategoryModel struct {
 	IsUncategorized              bool            `json:"is_uncategorized"`
 	SubcategoryIDs               []int           `json:"subcategory_ids"`
 	SubcategoryList              []CategoryModel `json:"subcategory_list"`
-	UploadedLogo                 string          `json:"uploaded_logo",omitempty`
-	UploadedLogoDark             string          `json:"uploaded_logo_dark",omitempty`
-	UploadedBackground           string          `json:"uploaded_background",omitempty`
+	UploadedLogo                 null.String     `json:"uploaded_logo",omitempty`
+	UploadedLogoDark             null.String     `json:"uploaded_logo_dark",omitempty`
+	UploadedBackground           null.String     `json:"uploaded_background",omitempty`
 }
 
 type CategoriesService interface {

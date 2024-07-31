@@ -152,7 +152,7 @@ func (sys *System) recurseForums(cats *[]api.CategoryModel, parent *forum.Forum)
 			ID:   strconv.Itoa((*cats)[i].ID),
 			Name: name,
 
-			Info: (*cats)[i].Description,
+			Info: (*cats)[i].Description.String,
 
 			SysIDX: sys.ID,
 		}
