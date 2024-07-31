@@ -272,7 +272,10 @@ func (sys *System) LoadPost(p *post.Post) error {
 	// }
 
 	resp, err := sys.client.Comments(context.Background(), lemmy.GetComments{
-		PostID: lemmy.NewOptional[int64](pid),
+		PostID:   lemmy.NewOptional[int64](pid),
+		MaxDepth: lemmy.NewOptional[int64](8),
+		Sort:     lemmy.NewOptional[lemmy.CommentSortType](lemmy.CommentSortTypeHot),
+		Type:     lemmy.NewOptional[lemmy.ListingType](lemmy.ListingTypeAll),
 	})
 	if err != nil {
 		return err
