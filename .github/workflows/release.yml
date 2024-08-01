@@ -15,13 +15,13 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version: 1.19
+        go-version: 1.21
 
     - name: Run GoReleaser
-      uses: goreleaser/goreleaser-action@v3
+      uses: goreleaser/goreleaser-action@v6
       with:
         distribution: goreleaser
-        version: latest
-        args: release --rm-dist --timeout 80m
+        version: '~> v2'
+        args: release --clean --timeout 80m
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
