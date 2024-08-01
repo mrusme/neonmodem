@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mrusme/neonmodem/models/author"
@@ -281,11 +282,11 @@ func (sys *System) LoadPost(p *post.Post) error {
 		return err
 	}
 
-	p.Replies = []reply.Reply{}
+	replies := []reply.Reply{}
 	for _, i := range resp.Comments {
 		createdAt := i.Comment.Published
 
-		p.Replies = append(p.Replies, reply.Reply{
+		replies = append(replies, reply.Reply{
 			ID: strconv.FormatInt(i.Comment.ID, 10),
 
 			InReplyTo: p.ID,
@@ -299,10 +300,38 @@ func (sys *System) LoadPost(p *post.Post) error {
 				Name: i.Creator.Name,
 			},
 
+			Replies: []reply.Reply{},
+
 			SysIDX: sys.ID,
+
+			MetaPath: strings.Split(i.Comment.Path, "."),
 		})
 	}
+
+	findRepliesFor(&replies, &p.Replies, 0)
+
 	return nil
+}
+
+func findRepliesFor(prv *[]reply.Reply, nxt *[]reply.Reply, lvl int) {
+	if lvl >= 8 {
+		return
+	}
+
+	for i := 0; i < len(*prv); i++ {
+		if len((*prv)[i].MetaPath) == (lvl + 2) {
+			*nxt = append(*nxt, (*prv)[i])
+		}
+	}
+	nextLayer := []reply.Reply{}
+	findRepliesFor(prv, &nextLayer, lvl+1)
+	for j := 0; j < len(nextLayer); j++ {
+		for k := 0; k < len(*nxt); k++ {
+			if (*nxt)[k].ID == nextLayer[j].MetaPath[(lvl+1)] {
+				(*nxt)[k].Replies = append((*nxt)[k].Replies, nextLayer[j])
+			}
+		}
+	}
 }
 
 func (sys *System) CreatePost(p *post.Post) error {

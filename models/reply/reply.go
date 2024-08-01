@@ -22,4 +22,6 @@ type Reply struct {
 	Replies []Reply
 
 	SysIDX int
+
+	MetaPath []string
 }
