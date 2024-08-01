@@ -91,13 +91,12 @@ To install it, simply run `pkgin install neonmodem`.
 Before launching *Neon Modem Overdrive* it requires initial setup of the 
 services (a.k.a. *systems*). Run `neonmodem connect --help` to find out more.
 
-Connecting a service will add it to the configuration TOML.
-
-### Linux/Unix
-`~/.config/neonmodem.toml`
-
-### MacOS
-`$HOME/Library/Application\ Support/neonmodem.toml`
+Connecting a service will add it to the configuration TOML. The configuration 
+file location depends on the operating system. On Unix systems, it is in 
+`$XDG_CONFIG_HOME/neonmodem.toml` if `$XDG_CONFIG_HOME` is non-empty, otherwise 
+`$HOME/.config/neonmodem.toml` is used. On Darwin, the configuration is in 
+`$HOME/Library/Application Support/neonmodem.toml`. On Windows, it is in 
+`%AppData%\neonmodem.toml`.
 
 
 ### Systems
@@ -174,7 +173,7 @@ In the posts list:
 - `n`: Write new post in on the system/forum of the current selected post
 - `C-e`: Open system selector
 - `C-t`: Open forum selector
-- `q`/`esc`: Quit
+- `esc`: Quit
 
 In the post view dialog:
 
