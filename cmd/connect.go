@@ -94,7 +94,7 @@ func connectBase() *cobra.Command {
 			&sysType,
 			"type",
 			"",
-			"Type of system to connect to (discourse, lemmy, lobsters, hackernews)",
+			"Type of system to connect to (discourse, lemmy, lobsters, hackernews, nostr)",
 		)
 	cmd.MarkFlagRequired("type")
 
@@ -104,7 +104,7 @@ func connectBase() *cobra.Command {
 			&sysURL,
 			"url",
 			"",
-			"URL of system (e.g. https://www.keebtalk.com)",
+			"URL of system (e.g. https://www.keebtalk.com or wss://nostr.wine)",
 		)
 
 	return cmd

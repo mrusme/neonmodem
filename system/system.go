@@ -12,6 +12,7 @@ import (
 	"github.com/mrusme/neonmodem/system/hackernews"
 	"github.com/mrusme/neonmodem/system/lemmy"
 	"github.com/mrusme/neonmodem/system/lobsters"
+	"github.com/mrusme/neonmodem/system/nostr"
 	"go.uber.org/zap"
 )
 
@@ -53,6 +54,8 @@ func New(
 		sys = new(lobsters.System)
 	case "hackernews":
 		sys = new(hackernews.System)
+	case "nostr":
+		sys = new(nostr.System)
 	case "all":
 		sys = new(all.System)
 	default:

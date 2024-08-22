@@ -29,6 +29,7 @@ of one another, in order to offer a smoother UI experience.
 | Lemmy              | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | Lobsters           | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                    |                    |
 | Hacker News        | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                    |                    |
+| Nostr              | :heavy_check_mark: | :heavy_check_mark: |                    |                    |                    |                    |
 | RSS+Disqus/Isso(?) |                    |                    |                    |                    |                    |                    |
 | Superhighway84     |                    |                    |                    |                    |                    |                    |
 | NNTP               |                    |                    |                    |                    |                    |                    |
@@ -141,6 +142,16 @@ read-only.
 
 ```sh
 neonmodem connect --type hackernews
+```
+
+
+#### Nostr
+
+For connecting to a Nostr relay you'll need to have a private key. *Neon Modem* 
+will store the relay URL and private key.
+
+```sh
+neonmodem connect --type nostr --url wss://nostr.wine
 ```
 
 
