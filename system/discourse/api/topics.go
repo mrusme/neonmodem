@@ -74,7 +74,7 @@ type TopicModel struct {
 		Extras         string `json:"extras"`
 		Description    string `json:"description"`
 		UserID         int    `json:"user_id"`
-		PrimaryGroupID string `json:"primary_group_id"`
+		PrimaryGroupID int    `json:"primary_group_id"`
 	} `json:"posters"`
 }
 

@@ -69,7 +69,7 @@ type PostModel struct {
 	EditReason                  string `json:"edit_reason"`
 	CanViewEditHistory          bool   `json:"can_view_edit_history"`
 	Wiki                        bool   `json:"wiki"`
-	ReviewableID                string `json:"reviewable_id"`
+	ReviewableID                int    `json:"reviewable_id"`
 	ReviewableScoreCount        int    `json:"reviewable_score_count"`
 	ReviewableScorePendingCount int    `json:"reviewable_score_pending_count"`
 }
