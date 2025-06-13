@@ -321,14 +321,14 @@ func (m Model) buildView(cached bool) string {
 	s := strings.Builder{}
 	var tmp string = ""
 
-	m.ctx.Logger.Debugf("viewcacheID: %s\n", m.viewcacheID)
+	// m.ctx.Logger.Debugf("viewcacheID: %s\n", m.viewcacheID)
 	if cached && m.viewcache != "" && m.viewcacheID == m.wm.Focused() &&
 		m.viewcacheID == postcreate.WIN_ID {
 		m.ctx.Logger.Debug("hitting UI viewcache")
 		tmp = m.viewcache
 		m.renderOnlyFocused = true
 	} else {
-		m.ctx.Logger.Debug("generating UI viewcache")
+		// m.ctx.Logger.Debug("generating UI viewcache")
 		m.renderOnlyFocused = false
 		if m.currentView > 0 {
 			s.WriteString(m.header.View() + "\n")
