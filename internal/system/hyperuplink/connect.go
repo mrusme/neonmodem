@@ -18,22 +18,30 @@ func (sys *System) Connect(
 ) (system.Settings, error) {
 	settings := system.Settings{URL: sysURL}
 
-	username, err := p.Line("Please enter your username", "username")
+	username, err := p.Credential(ctx, prompt.Field{
+		Name:     "username",
+		Question: "Please enter your username",
+	})
 	if err != nil {
 		return settings, err
 	}
 
-	secret, err := p.Secret("Please enter your API token", "API token")
+	token, err := p.Credential(ctx, prompt.Field{
+		Name:     "API token",
+		Question: "Please enter your API token",
+		Secret:   true,
+	})
 	if err != nil {
 		return settings, err
 	}
-
-	token := strings.TrimSpace(secret)
-	if token == "" {
+	if token.Command == "" {
+		token.Value = strings.TrimSpace(token.Value)
+	}
+	if token.Value == "" {
 		return settings, errors.New("no API token was entered")
 	}
 
-	client, err := newClient(sysURL, token, sys.proxy, sys.logger)
+	client, err := newClient(sysURL, token.Value, sys.proxy, sys.logger)
 	if err != nil {
 		return settings, err
 	}
@@ -51,18 +59,22 @@ func (sys *System) Connect(
 		return settings, fmt.Errorf("could not authenticate against %s: %w", sysURL, err)
 	}
 
-	if session.User.Username != username {
+	if session.User.Username != username.Value {
+		if username.Command != "" {
+			return settings, fmt.Errorf(
+				"the API token belongs to '%s', but the username command printed '%s'",
+				session.User.Username, username.Value,
+			)
+		}
 		p.Notice(fmt.Sprintf(
 			"Note: this token belongs to '%s', not '%s'; using '%s'.",
-			session.User.Username, username, session.User.Username,
+			session.User.Username, username.Value, session.User.Username,
 		))
-		username = session.User.Username
+		username.Value = session.User.Username
 	}
 
-	settings.Credentials = map[string]string{
-		"username": username,
-		"token":    token,
-	}
+	settings.SetCredential(system.CredentialUsername, username)
+	settings.SetCredential(system.CredentialToken, token)
 
 	return settings, nil
 }

@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"runtime/debug"
 	"strings"
 
@@ -12,9 +14,10 @@ import (
 	"github.com/mrusme/neonmodem/internal/config"
 	"github.com/mrusme/neonmodem/internal/logging"
 	"github.com/mrusme/neonmodem/internal/system"
+	"github.com/mrusme/neonmodem/internal/system/credential"
 	"github.com/mrusme/neonmodem/internal/system/registry"
 	"github.com/mrusme/neonmodem/internal/ui"
-	"github.com/mrusme/neonmodem/internal/ui/ctx"
+	uictx "github.com/mrusme/neonmodem/internal/ui/ctx"
 	"github.com/spf13/cobra"
 )
 
@@ -77,7 +80,7 @@ func newRootCmd(a *app) *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.runTUI()
+			return a.runTUI(cmd.Context())
 		},
 	}
 	cmd.SetVersionTemplate("neonmodem {{.Version}}\n")
@@ -88,19 +91,26 @@ func newRootCmd(a *app) *cobra.Command {
 	return cmd
 }
 
-func (a *app) loadSystems() ([]system.System, []error) {
+func commandRunner() credential.Shell {
+	return credential.Shell{
+		Stdin:   os.Stdin,
+		Stderr:  os.Stderr,
+		Timeout: credential.Timeout,
+	}
+}
+
+func (a *app) loadSystems(
+	ctx context.Context,
+	resolver credential.Resolver,
+) ([]system.System, []error) {
 	var systems []system.System
 	var errs []error
 
 	for i, sysCfg := range a.cfg.Systems {
-		sys, err := registry.New(sysCfg.Type, system.Env{
-			Index:    len(systems),
-			Settings: sysCfg.Settings,
-			Proxy:    a.cfg.Proxy,
-			Logger:   a.logger.With("system", sysCfg.Type),
-		})
+		sys, err := a.loadSystem(ctx, resolver, len(systems), sysCfg)
 		if err != nil {
-			a.logger.Error("system unavailable", "index", i, "type", sysCfg.Type, "error", err)
+			a.logger.Error("system unavailable", "index", i, "type", sysCfg.Type,
+				"url", sysCfg.Settings.URL, "error", err)
 			errs = append(errs, fmt.Errorf("%s (%s): %w", sysCfg.Type, sysCfg.Settings.URL, err))
 			continue
 		}
@@ -112,10 +122,41 @@ func (a *app) loadSystems() ([]system.System, []error) {
 	return systems, errs
 }
 
-func (a *app) runTUI() error {
-	systems, errs := a.loadSystems()
+func (a *app) loadSystem(
+	ctx context.Context,
+	resolver credential.Resolver,
+	index int,
+	sysCfg config.SystemConfig,
+) (system.System, error) {
+	desc, err := registry.Get(sysCfg.Type)
+	if err != nil {
+		return nil, err
+	}
 
-	c := ctx.New(a.embedFS, a.cfg, a.logger, systems)
+	logger := a.logger.With("system", sysCfg.Type)
+	credentials, err := resolver.Resolve(ctx, logger, sysCfg.Settings.Credentials, desc.Credentials)
+	if err != nil {
+		return nil, err
+	}
+
+	settings := sysCfg.Settings
+	settings.Credentials = credentials
+
+	return desc.New(system.Env{
+		Index:    index,
+		Settings: settings,
+		Proxy:    a.cfg.Proxy,
+		Logger:   logger,
+	})
+}
+
+func (a *app) runTUI(ctx context.Context) error {
+	systems, errs := a.loadSystems(ctx, credential.Resolver{
+		Runner: commandRunner(),
+		Trust:  a.cfg.CommandsAllowed,
+	})
+
+	c := uictx.New(a.embedFS, a.cfg, a.logger, systems)
 	c.StartupErrors = errs
 
 	program := tea.NewProgram(ui.NewModel(&c))

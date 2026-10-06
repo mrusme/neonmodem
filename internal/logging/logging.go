@@ -12,7 +12,7 @@ func Open(path string, debug bool) (*slog.Logger, io.Closer, error) {
 		return nil, nil, err
 	}
 
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o644)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -26,8 +26,24 @@ func Open(path string, debug bool) (*slog.Logger, io.Closer, error) {
 		Level:     level,
 		AddSource: debug,
 	})
+	logger := slog.New(handler)
 
-	return slog.New(handler), f, nil
+	if err := restrict(f); err != nil {
+		logger.Warn("could not make the log file private", "path", path, "error", err)
+	}
+
+	return logger, f, nil
+}
+
+func restrict(f *os.File) error {
+	info, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	if info.Mode().Perm()&0o077 == 0 {
+		return nil
+	}
+	return f.Chmod(0o600)
 }
 
 func Discard() *slog.Logger {

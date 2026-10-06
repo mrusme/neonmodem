@@ -18,6 +18,7 @@ type Descriptor struct {
 	Name          string
 	NeedsURL      bool
 	AllowMultiple bool
+	Credentials   []string
 	New           func(env system.Env) (system.System, error)
 }
 
@@ -27,13 +28,19 @@ var descriptors = map[string]Descriptor{
 		Name:          "Discourse",
 		NeedsURL:      true,
 		AllowMultiple: true,
-		New:           discourse.New,
+		Credentials: []string{
+			system.CredentialUsername,
+			system.CredentialClientID,
+			system.CredentialKey,
+		},
+		New: discourse.New,
 	},
 	lemmy.Kind: {
 		Kind:          lemmy.Kind,
 		Name:          "Lemmy",
 		NeedsURL:      true,
 		AllowMultiple: true,
+		Credentials:   []string{system.CredentialUsername, system.CredentialPassword},
 		New:           lemmy.New,
 	},
 	lobsters.Kind: {
@@ -41,6 +48,7 @@ var descriptors = map[string]Descriptor{
 		Name:          "Lobsters",
 		NeedsURL:      true,
 		AllowMultiple: true,
+		Credentials:   []string{system.CredentialUsername, system.CredentialPassword},
 		New:           lobsters.New,
 	},
 	hackernews.Kind: {
@@ -48,6 +56,7 @@ var descriptors = map[string]Descriptor{
 		Name:          "Hacker News",
 		NeedsURL:      false,
 		AllowMultiple: false,
+		Credentials:   []string{system.CredentialUsername, system.CredentialPassword},
 		New:           hackernews.New,
 	},
 	hyperuplink.Kind: {
@@ -55,6 +64,7 @@ var descriptors = map[string]Descriptor{
 		Name:          "Hyperuplink",
 		NeedsURL:      true,
 		AllowMultiple: true,
+		Credentials:   []string{system.CredentialUsername, system.CredentialToken},
 		New:           hyperuplink.New,
 	},
 }
@@ -68,16 +78,11 @@ func Kinds() []string {
 	return kinds
 }
 
-func Lookup(kind string) (Descriptor, bool) {
+func Get(kind string) (Descriptor, error) {
 	d, ok := descriptors[strings.ToLower(strings.TrimSpace(kind))]
-	return d, ok
-}
-
-func New(kind string, env system.Env) (system.System, error) {
-	d, ok := Lookup(kind)
 	if !ok {
-		return nil, fmt.Errorf("unknown system type %q; known types: %s",
+		return Descriptor{}, fmt.Errorf("unknown system type %q; known types: %s",
 			kind, strings.Join(Kinds(), ", "))
 	}
-	return d.New(env)
+	return d, nil
 }

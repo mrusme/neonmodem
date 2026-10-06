@@ -3,6 +3,8 @@ package config
 import (
 	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -128,6 +130,7 @@ type Config struct {
 	Theme Theme
 
 	path     string
+	file     fs.FileInfo
 	defaults *Config
 }
 
@@ -171,7 +174,7 @@ func LoadFrom(candidates []string, cacheDir string) (*Config, error) {
 	cfg.defaults = &defaults
 
 	for _, candidate := range candidates {
-		data, err := os.ReadFile(candidate)
+		data, info, err := readFile(candidate)
 		if errors.Is(err, os.ErrNotExist) {
 			continue
 		}
@@ -183,10 +186,31 @@ func LoadFrom(candidates []string, cacheDir string) (*Config, error) {
 			return nil, fmt.Errorf("%s: %w", candidate, err)
 		}
 		cfg.path = candidate
+		cfg.file = info
 		break
 	}
 
 	return &cfg, nil
+}
+
+func readFile(path string) ([]byte, fs.FileInfo, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return data, info, nil
 }
 
 func (c *Config) applyEnv() {

@@ -36,6 +36,7 @@ const (
 type System struct {
 	idx      int
 	settings system.Settings
+	proxy    string
 	logger   *slog.Logger
 	client   *lemmy.Client
 
@@ -47,32 +48,27 @@ func New(env system.Env) (system.System, error) {
 	sys := &System{
 		idx:      env.Index,
 		settings: env.Settings,
+		proxy:    env.Proxy,
 		logger:   env.Log(),
 	}
 
 	if env.Settings.URL != "" {
-		if err := sys.connectClient(env.Proxy); err != nil {
+		client, err := newClient(env.Settings.URL, env.Proxy, sys.logger)
+		if err != nil {
 			return nil, err
 		}
+		sys.client = client
 	}
 
 	return sys, nil
 }
 
-func (sys *System) connectClient(proxy string) error {
-	httpClient := httpx.NewHTTPClient(httpx.Options{
+func newClient(sysURL string, proxy string, logger *slog.Logger) (*lemmy.Client, error) {
+	return lemmy.NewWithClient(sysURL, httpx.NewHTTPClient(httpx.Options{
 		Proxy:   proxy,
 		Retries: 3,
-		Logger:  sys.logger,
-	})
-
-	client, err := lemmy.NewWithClient(sys.settings.URL, httpClient)
-	if err != nil {
-		return err
-	}
-	sys.client = client
-
-	return nil
+		Logger:  logger,
+	}))
 }
 
 func (sys *System) Kind() string {
@@ -95,8 +91,8 @@ func (sys *System) Description() string {
 }
 
 func (sys *System) hasAccount() bool {
-	return sys.settings.Credential("username") != "" &&
-		sys.settings.Credential("password") != ""
+	return sys.settings.Credential(system.CredentialUsername) != "" &&
+		sys.settings.Credential(system.CredentialPassword) != ""
 }
 
 func (sys *System) Capabilities() system.Capabilities {
@@ -135,8 +131,8 @@ func (sys *System) ensureLogin(ctx context.Context) error {
 	}
 
 	err := sys.client.ClientLogin(ctx, lemmy.Login{
-		UsernameOrEmail: sys.settings.Credential("username"),
-		Password:        sys.settings.Credential("password"),
+		UsernameOrEmail: sys.settings.Credential(system.CredentialUsername),
+		Password:        sys.settings.Credential(system.CredentialPassword),
 	})
 	if err != nil {
 		return fmt.Errorf("logging in to %s: %w", sys.Title(), err)

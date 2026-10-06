@@ -44,10 +44,9 @@ func newConnectCmd(a *app) *cobra.Command {
 		Long:  "Add a new connection to a BBS.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			kind := strings.ToLower(strings.TrimSpace(sysType))
-			desc, ok := registry.Lookup(kind)
-			if !ok {
-				return fmt.Errorf("unknown system type %q; known types: %s",
-					sysType, strings.Join(registry.Kinds(), ", "))
+			desc, err := registry.Get(kind)
+			if err != nil {
+				return err
 			}
 
 			sysURL = strings.TrimRight(strings.TrimSpace(sysURL), "/")
@@ -80,7 +79,7 @@ func newConnectCmd(a *app) *cobra.Command {
 				return err
 			}
 
-			settings, err := sys.Connect(cmd.Context(), prompt.Stdio(), sysURL)
+			settings, err := sys.Connect(cmd.Context(), prompt.Stdio(commandRunner()), sysURL)
 			if err != nil {
 				a.logger.Error("connect failed", "type", kind, "error", err)
 				return err

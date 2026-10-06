@@ -8,6 +8,7 @@ import (
 	"github.com/mrusme/neonmodem/internal/models/forum"
 	"github.com/mrusme/neonmodem/internal/models/post"
 	"github.com/mrusme/neonmodem/internal/models/reply"
+	"github.com/mrusme/neonmodem/internal/system/credential"
 	"github.com/mrusme/neonmodem/internal/system/prompt"
 )
 
@@ -26,6 +27,14 @@ const (
 	CapWrite = CapCreatePost | CapCreateReply
 )
 
+const (
+	CredentialUsername = "username"
+	CredentialPassword = "password"
+	CredentialToken    = "token"
+	CredentialKey      = "key"
+	CredentialClientID = "client_id"
+)
+
 func (c Capabilities) Has(want Capabilities) bool {
 	return c&want == want
 }
@@ -40,20 +49,26 @@ func (s Settings) Credential(key string) string {
 	return s.Credentials[key]
 }
 
+func (s *Settings) SetCredential(key string, a prompt.Answer) {
+	if s.Credentials == nil {
+		s.Credentials = map[string]string{}
+	}
+
+	if a.Command != "" {
+		delete(s.Credentials, key)
+		s.Credentials[key+credential.Suffix] = a.Command
+		return
+	}
+
+	delete(s.Credentials, key+credential.Suffix)
+	s.Credentials[key] = a.Value
+}
+
 func (s Settings) Option(key string, fallback string) string {
 	if v, ok := s.Options[key]; ok && v != "" {
 		return v
 	}
 	return fallback
-}
-
-func (s Settings) HasCredentials() bool {
-	for _, v := range s.Credentials {
-		if v != "" {
-			return true
-		}
-	}
-	return false
 }
 
 type Env struct {

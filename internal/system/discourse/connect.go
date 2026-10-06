@@ -32,13 +32,15 @@ func (sys *System) Connect(
 ) (system.Settings, error) {
 	settings := system.Settings{URL: sysURL}
 
-	username, err := p.Optional(
-		"Please enter your username (press Enter for read-only access without an account)",
-	)
+	username, err := p.Credential(ctx, prompt.Field{
+		Name:      "username",
+		Question:  "Please enter your username",
+		NoAccount: true,
+	})
 	if err != nil {
 		return settings, err
 	}
-	if username == "" {
+	if username.NoAccount {
 		p.Notice("Connecting without an account; posting and replying will not be available.")
 		return settings, nil
 	}
@@ -93,11 +95,14 @@ func (sys *System) Connect(
 		return settings, err
 	}
 
-	settings.Credentials = map[string]string{
-		"username":  username,
-		"key":       userAPIKey.Key,
-		"client_id": clientID,
+	key, err := p.Generated(ctx, prompt.Field{Name: "user API key", Secret: true}, userAPIKey.Key)
+	if err != nil {
+		return settings, err
 	}
+
+	settings.SetCredential(system.CredentialUsername, username)
+	settings.SetCredential(system.CredentialKey, key)
+	settings.SetCredential(system.CredentialClientID, prompt.Answer{Value: clientID})
 
 	return settings, nil
 }

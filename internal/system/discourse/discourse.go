@@ -62,8 +62,8 @@ func (sys *System) connectClient(proxy string) error {
 	})
 
 	client, err := api.NewClient(httpClient, sys.settings.URL, api.Credentials{
-		ClientID: sys.settings.Credential("client_id"),
-		Key:      sys.settings.Credential("key"),
+		ClientID: sys.settings.Credential(system.CredentialClientID),
+		Key:      sys.settings.Credential(system.CredentialKey),
 	})
 	if err != nil {
 		return err
@@ -86,7 +86,7 @@ func (sys *System) Title() string {
 }
 
 func (sys *System) Description() string {
-	if sys.settings.Credential("key") == "" {
+	if sys.settings.Credential(system.CredentialKey) == "" {
 		return "Discourse (read-only)"
 	}
 	return "Discourse"
@@ -94,7 +94,7 @@ func (sys *System) Description() string {
 
 func (sys *System) Capabilities() system.Capabilities {
 	caps := system.CapRead
-	if sys.settings.Credential("key") != "" {
+	if sys.settings.Credential(system.CredentialKey) != "" {
 		caps |= system.CapWrite
 	}
 	return caps

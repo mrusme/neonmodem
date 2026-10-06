@@ -59,8 +59,8 @@ func (sys *System) connectClient() error {
 	if sys.hasAccount() {
 		web, err := newWebSession(
 			sys.settings.URL,
-			sys.settings.Credential("username"),
-			sys.settings.Credential("password"),
+			sys.settings.Credential(system.CredentialUsername),
+			sys.settings.Credential(system.CredentialPassword),
 			sys.proxy,
 			sys.logger,
 		)
@@ -74,8 +74,8 @@ func (sys *System) connectClient() error {
 }
 
 func (sys *System) hasAccount() bool {
-	return sys.settings.Credential("username") != "" &&
-		sys.settings.Credential("password") != ""
+	return sys.settings.Credential(system.CredentialUsername) != "" &&
+		sys.settings.Credential(system.CredentialPassword) != ""
 }
 
 func (sys *System) Kind() string {

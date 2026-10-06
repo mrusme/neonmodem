@@ -35,7 +35,7 @@ func New(env system.Env) (system.System, error) {
 	}
 
 	if env.Settings.URL != "" {
-		client, err := newClient(env.Settings.URL, env.Settings.Credential("token"), env.Proxy, sys.logger)
+		client, err := newClient(env.Settings.URL, env.Settings.Credential(system.CredentialToken), env.Proxy, sys.logger)
 		if err != nil {
 			return nil, err
 		}
