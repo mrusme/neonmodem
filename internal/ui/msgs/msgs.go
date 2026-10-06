@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/mrusme/neonmodem/internal/models/post"
 	"github.com/mrusme/neonmodem/internal/models/reply"
+	"github.com/mrusme/neonmodem/internal/system"
 )
 
 type ShowPosts struct{}
@@ -17,11 +18,18 @@ type BlurView struct{}
 
 type RefreshFeed struct{}
 
+type OrderChanged struct{}
+
 type FeedResult struct {
 	Gen    int64
 	System int
+	Order  system.Order
 	Posts  []post.Post
 	Err    error
+}
+
+type FeedStatus struct {
+	Text string
 }
 
 type OpenPost struct {
@@ -51,12 +59,14 @@ type PickerKind int
 const (
 	PickSystem PickerKind = iota
 	PickForum
+	PickOrder
 )
 
 type OpenPicker struct {
-	Kind  PickerKind
-	Title string
-	Items []list.Item
+	Kind     PickerKind
+	Title    string
+	Items    []list.Item
+	Selected int
 }
 
 type PickerItems struct {

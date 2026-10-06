@@ -150,6 +150,20 @@ func (a *app) loadSystem(
 	})
 }
 
+func (a *app) startOrder() (system.Order, string) {
+	if strings.TrimSpace(a.cfg.Sort) == "" {
+		return system.OrderNew, ""
+	}
+
+	order, err := system.ParseOrder(a.cfg.Sort)
+	if err != nil {
+		a.logger.Warn("ignoring the Sort setting", "error", err)
+		return system.OrderNew, fmt.Sprintf(
+			"The Sort setting %q isn't a known order; using New", a.cfg.Sort)
+	}
+	return order, ""
+}
+
 func (a *app) runTUI(ctx context.Context) error {
 	systems, errs := a.loadSystems(ctx, credential.Resolver{
 		Runner: commandRunner(),
@@ -158,6 +172,12 @@ func (a *app) runTUI(ctx context.Context) error {
 
 	c := uictx.New(a.embedFS, a.cfg, a.logger, systems)
 	c.StartupErrors = errs
+
+	order, notice := a.startOrder()
+	c.SetOrder(order)
+	if notice != "" {
+		c.StartupNotices = append(c.StartupNotices, notice)
+	}
 
 	program := tea.NewProgram(ui.NewModel(&c))
 	if _, err := program.Run(); err != nil {

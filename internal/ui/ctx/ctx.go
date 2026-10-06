@@ -18,7 +18,8 @@ type Ctx struct {
 	EmbedFS *embed.FS
 	Systems []system.System
 
-	StartupErrors []error
+	StartupErrors  []error
+	StartupNotices []string
 
 	Loading  bool
 	Progress string
@@ -29,6 +30,7 @@ type Ctx struct {
 
 	currentSystem int
 	currentForum  forum.Forum
+	currentOrder  system.Order
 
 	loadGen *atomic.Int64
 }
@@ -55,6 +57,7 @@ func New(
 		DarkBackground: true,
 
 		currentSystem: -1,
+		currentOrder:  system.OrderNew,
 
 		loadGen: new(atomic.Int64),
 	}
@@ -103,4 +106,12 @@ func (c *Ctx) SetCurrentForum(f forum.Forum) {
 
 func (c *Ctx) GetCurrentForum() forum.Forum {
 	return c.currentForum
+}
+
+func (c *Ctx) SetOrder(order system.Order) {
+	c.currentOrder = order
+}
+
+func (c *Ctx) GetOrder() system.Order {
+	return c.currentOrder
 }

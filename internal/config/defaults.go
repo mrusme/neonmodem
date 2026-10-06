@@ -1,6 +1,10 @@
 package config
 
-import "path/filepath"
+import (
+	"path/filepath"
+
+	"github.com/mrusme/neonmodem/internal/system"
+)
 
 var (
 	NormalBorder = Border{
@@ -35,6 +39,7 @@ func Defaults(cacheDir string) Config {
 		Log:           filepath.Join(cacheDir, "neonmodem.log"),
 		Proxy:         "",
 		Browser:       "",
+		Sort:          string(system.OrderNew),
 		RenderShadows: true,
 		RenderImages:  true,
 		RenderSplash:  true,

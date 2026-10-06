@@ -11,8 +11,10 @@ import (
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/mrusme/neonmodem/internal/feed"
 	"github.com/mrusme/neonmodem/internal/models/forum"
+	"github.com/mrusme/neonmodem/internal/system"
 	"github.com/mrusme/neonmodem/internal/ui/ctx"
 	"github.com/mrusme/neonmodem/internal/ui/header"
 	"github.com/mrusme/neonmodem/internal/ui/msgs"
@@ -30,14 +32,16 @@ const (
 	minWidth  = 60
 	minHeight = 20
 
-	noticeDuration = 6 * time.Second
-	headerHeight   = header.Height
-	noticeHeight   = 1
+	noticeDuration  = 6 * time.Second
+	headerHeight    = header.Height
+	pickerTextInset = 8
+	noticeHeight    = 1
 )
 
 type KeyMap struct {
 	SystemSelect key.Binding
 	ForumSelect  key.Binding
+	OrderSelect  key.Binding
 	Close        key.Binding
 }
 
@@ -49,6 +53,10 @@ var DefaultKeyMap = KeyMap{
 	ForumSelect: key.NewBinding(
 		key.WithKeys("ctrl+t"),
 		key.WithHelp("C-t", "Forum selector"),
+	),
+	OrderSelect: key.NewBinding(
+		key.WithKeys("ctrl+o"),
+		key.WithHelp("C-o", "Sort order selector"),
 	),
 	Close: key.NewBinding(
 		key.WithKeys("esc"),
@@ -66,6 +74,21 @@ func (s SystemItem) FilterValue() string { return s.Name + " " + s.Info }
 func (s SystemItem) Title() string       { return s.Name }
 func (s SystemItem) Description() string { return s.Info }
 
+type OrderItem struct {
+	Order system.Order
+	Note  string
+}
+
+func (o OrderItem) FilterValue() string { return o.Order.Label() }
+func (o OrderItem) Title() string       { return o.Order.Label() }
+
+func (o OrderItem) Description() string {
+	if o.Note == "" {
+		return o.Order.Info()
+	}
+	return o.Order.Info() + "\n" + o.Note
+}
+
 type noticeExpiredMsg struct {
 	id int
 }
@@ -81,6 +104,7 @@ type Model struct {
 	notice   string
 	noticeID int
 	alert    bool
+	status   string
 }
 
 func NewModel(c *ctx.Ctx) Model {
@@ -116,6 +140,11 @@ func (m Model) systemItems() []list.Item {
 }
 
 func (m Model) pickerGeometry() windowmanager.Geometry {
+	width, height := m.pickerSize()
+	return windowmanager.Centered(m.ctx.Content[0], m.ctx.Content[1], width, height)
+}
+
+func (m Model) pickerSize() (int, int) {
 	w, h := m.ctx.Content[0], m.ctx.Content[1]
 	width := w * 2 / 3
 	if width < 44 {
@@ -131,7 +160,7 @@ func (m Model) pickerGeometry() windowmanager.Geometry {
 	if height > h-2 {
 		height = h - 2
 	}
-	return windowmanager.Centered(w, h, width, height)
+	return width, height
 }
 
 func (m Model) composeGeometry() windowmanager.Geometry {
@@ -170,6 +199,57 @@ func (m Model) openForumPicker() tea.Cmd {
 		msgs.OpenPicker{Kind: msgs.PickForum, Title: "Select a forum", Items: []list.Item{all}},
 	)...)
 
+	return tea.Batch(cmds...)
+}
+
+func (m Model) orderItems(noteWidth int) ([]list.Item, int) {
+	forumID := m.ctx.GetCurrentForum().ID
+	indexes := feed.Selected(m.ctx.Systems, m.ctx.GetCurrentSystem())
+	current := m.ctx.GetOrder()
+
+	var items []list.Item
+	selected := 0
+	for _, order := range system.AllOrders() {
+		supported := false
+		uses := make([]feed.Use, 0, len(indexes))
+		for _, idx := range indexes {
+			sys := m.ctx.Systems[idx]
+			ordering := sys.Orders(forumID)
+			if ordering.Supports(order) {
+				supported = true
+			}
+			uses = append(uses, feed.Use{Name: sys.Title(), Order: feed.Choose(ordering, order)})
+		}
+		if !supported {
+			continue
+		}
+
+		note := ""
+		if len(indexes) > 1 {
+			note = ansi.Wordwrap(feed.Status(order, uses), noteWidth, "")
+		}
+		if order == current {
+			selected = len(items)
+		}
+		items = append(items, OrderItem{Order: order, Note: note})
+	}
+
+	return items, selected
+}
+
+func (m Model) openOrderPicker() tea.Cmd {
+	width, _ := m.pickerSize()
+	items, selected := m.orderItems(width - pickerTextInset)
+	if len(items) == 0 {
+		return nil
+	}
+
+	cmds := m.wm.Open(
+		popuplist.WIN_ID,
+		popuplist.NewModel(m.ctx),
+		m.pickerGeometry(),
+		msgs.OpenPicker{Kind: msgs.PickOrder, Title: "Select a sort order", Items: items, Selected: selected},
+	)
 	return tea.Batch(cmds...)
 }
 
@@ -234,6 +314,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, m.openForumPicker()
 
+		case key.Matches(msg, m.keymap.OrderSelect):
+			if m.currentView == 0 {
+				return m, nil
+			}
+			return m, m.openOrderPicker()
+
 		default:
 			if m.wm.GetNumberOpen() > 0 {
 				return m, tea.Batch(m.wm.UpdateFocused(msg)...)
@@ -258,6 +344,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, msgs.Send(msgs.FocusView{}), msgs.Send(msgs.RefreshFeed{}))
 		for _, err := range m.ctx.StartupErrors {
 			cmds = append(cmds, msgs.Send(msgs.Notice{Text: "System unavailable: " + err.Error(), IsError: true}))
+		}
+		for _, notice := range m.ctx.StartupNotices {
+			cmds = append(cmds, msgs.Send(msgs.Notice{Text: notice, IsError: true}))
 		}
 		return m, tea.Batch(cmds...)
 
@@ -292,16 +381,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if _, ccmds := m.wm.Close(popuplist.WIN_ID); ccmds != nil {
 			cmds = append(cmds, ccmds...)
 		}
+		m.ctx.Loading = false
 		switch item := msg.Item.(type) {
 		case SystemItem:
 			m.ctx.SetCurrentSystem(item.Index)
 			m.ctx.SetCurrentForum(forum.Forum{})
+			cmds = append(cmds, msgs.Send(msgs.RefreshFeed{}))
 		case forum.Forum:
 			m.ctx.SetCurrentSystem(item.SysIDX)
 			m.ctx.SetCurrentForum(item)
+			cmds = append(cmds, msgs.Send(msgs.RefreshFeed{}))
+		case OrderItem:
+			m.ctx.SetOrder(item.Order)
+			cmds = append(cmds, msgs.Send(msgs.OrderChanged{}))
 		}
-		m.ctx.Loading = false
-		cmds = append(cmds, msgs.Send(msgs.RefreshFeed{}))
 		return m, tea.Batch(cmds...)
 
 	case msgs.PickerItems:
@@ -339,7 +432,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case msgs.FocusView, msgs.BlurView, msgs.RefreshFeed, msgs.FeedResult:
+	case msgs.FeedStatus:
+		m.status = msg.Text
+		return m, nil
+
+	case msgs.FocusView, msgs.BlurView, msgs.RefreshFeed, msgs.OrderChanged, msgs.FeedResult:
 		v, cmd := m.views[m.currentView].Update(msg)
 		m.views[m.currentView] = v
 		hdr, hcmd := m.header.Update(msg)
@@ -412,6 +509,9 @@ func (m Model) render() string {
 func (m Model) noticeLine() string {
 	width := m.ctx.Screen[0]
 	if m.notice == "" {
+		if m.status != "" {
+			return m.ctx.Theme.Muted.Width(width).MaxHeight(1).Render(" " + m.status)
+		}
 		return strings.Repeat(" ", width)
 	}
 

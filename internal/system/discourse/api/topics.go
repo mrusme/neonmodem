@@ -16,7 +16,7 @@ type UserModel struct {
 	AvatarTemplate string `json:"avatar_template"`
 }
 
-type LatestTopicsResponse struct {
+type TopicListResponse struct {
 	Users []UserModel `json:"users"`
 
 	TopicList struct {
@@ -77,7 +77,7 @@ type TopicModel struct {
 type TopicsService interface {
 	Show(ctx context.Context, id string) (*SingleTopicResponse, error)
 	ShowPosts(ctx context.Context, id string, postIDs []int) (*SingleTopicResponse, error)
-	ListLatest(ctx context.Context, categorySlugPath string, categoryID int) (*LatestTopicsResponse, error)
+	List(ctx context.Context, list string, categorySlugPath string, categoryID int, query url.Values) (*TopicListResponse, error)
 }
 
 type TopicServiceHandler struct {
@@ -114,18 +114,20 @@ func (a *TopicServiceHandler) ShowPosts(
 	return response, nil
 }
 
-func (a *TopicServiceHandler) ListLatest(
+func (a *TopicServiceHandler) List(
 	ctx context.Context,
+	list string,
 	categorySlugPath string,
 	categoryID int,
-) (*LatestTopicsResponse, error) {
-	path := "/latest.json"
+	query url.Values,
+) (*TopicListResponse, error) {
+	path := "/" + list + ".json"
 	if categoryID > 0 {
-		path = fmt.Sprintf("/c/%s/%d.json", categorySlugPath, categoryID)
+		path = fmt.Sprintf("/c/%s/%d/l/%s.json", categorySlugPath, categoryID, list)
 	}
 
-	response := new(LatestTopicsResponse)
-	if err := a.client.http.Get(ctx, path, nil, response); err != nil {
+	response := new(TopicListResponse)
+	if err := a.client.http.Get(ctx, path, query, response); err != nil {
 		return nil, err
 	}
 

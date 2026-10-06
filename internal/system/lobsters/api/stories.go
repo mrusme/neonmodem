@@ -45,7 +45,8 @@ type StoryModel struct {
 
 type StoriesService interface {
 	Show(ctx context.Context, id string) (*StoryModel, error)
-	List(ctx context.Context, tag string) ([]StoryModel, error)
+	List(ctx context.Context, list string) ([]StoryModel, error)
+	Tagged(ctx context.Context, tag string) ([]StoryModel, error)
 }
 
 type StoryServiceHandler struct {
@@ -66,13 +67,19 @@ func (a *StoryServiceHandler) Show(
 
 func (a *StoryServiceHandler) List(
 	ctx context.Context,
+	list string,
+) ([]StoryModel, error) {
+	return a.get(ctx, "/"+url.PathEscape(list)+".json")
+}
+
+func (a *StoryServiceHandler) Tagged(
+	ctx context.Context,
 	tag string,
 ) ([]StoryModel, error) {
-	path := "/newest.json"
-	if tag != "" {
-		path = "/t/" + url.PathEscape(tag) + ".json"
-	}
+	return a.get(ctx, "/t/"+url.PathEscape(tag)+".json")
+}
 
+func (a *StoryServiceHandler) get(ctx context.Context, path string) ([]StoryModel, error) {
 	var response []StoryModel
 	if err := a.client.http.Get(ctx, path, nil, &response); err != nil {
 		return nil, err

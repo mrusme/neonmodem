@@ -51,8 +51,8 @@ type Item struct {
 
 func (i Item) Description() string {
 	desc := i.Post.Description()
-	if i.SystemTitle != "" {
-		desc += " · " + i.SystemTitle
+	if score := i.Score.String(); score != "" {
+		desc += " · " + score
 	}
 	switch i.ReplyCount {
 	case 0:
@@ -61,7 +61,16 @@ func (i Item) Description() string {
 	default:
 		desc += fmt.Sprintf(" · %d replies", i.ReplyCount)
 	}
+	if i.SystemTitle != "" {
+		desc += " · " + i.SystemTitle
+	}
 	return desc
+}
+
+type systemFeed struct {
+	order system.Order
+	posts []post.Post
+	err   error
 }
 
 type Model struct {
@@ -71,12 +80,12 @@ type Model struct {
 
 	list list.Model
 
-	gen      int64
-	pending  int
-	total    int
-	results  map[int][]post.Post
-	failures map[int]error
-	loaded   bool
+	gen     int64
+	pending int
+	total   int
+	feeds   map[int]systemFeed
+	order   system.Order
+	status  string
 
 	width  int
 	height int
@@ -84,10 +93,10 @@ type Model struct {
 
 func NewModel(c *ctx.Ctx) Model {
 	m := Model{
-		ctx:      c,
-		keymap:   DefaultKeyMap,
-		results:  map[int][]post.Post{},
-		failures: map[int]error{},
+		ctx:    c,
+		keymap: DefaultKeyMap,
+		feeds:  map[int]systemFeed{},
+		order:  c.GetOrder(),
 	}
 
 	m.list = list.New(nil, m.delegate(), 0, 0)
@@ -163,6 +172,9 @@ func (m Model) Update(msg tea.Msg) (views.View, tea.Cmd) {
 	case msgs.RefreshFeed:
 		return m, m.refresh()
 
+	case msgs.OrderChanged:
+		return m, m.reorder()
+
 	case msgs.FeedResult:
 		return m, m.absorb(msg)
 	}
@@ -196,36 +208,60 @@ func (m *Model) compose() tea.Cmd {
 	return msgs.Send(msgs.Compose{Action: msgs.ComposePost, Post: item.Post})
 }
 
-func (m *Model) refresh() tea.Cmd {
-	systems := m.ctx.Systems
-	only := m.ctx.GetCurrentSystem()
-	forumID := m.ctx.GetCurrentForum().ID
+func (m *Model) selected() []int {
+	return feed.Selected(m.ctx.Systems, m.ctx.GetCurrentSystem())
+}
 
-	indexes := feed.Selected(systems, only)
-	m.gen = m.ctx.NextLoadGen()
-	m.pending = len(indexes)
-	m.total = len(indexes)
-	m.results = map[int][]post.Post{}
-	m.failures = map[int]error{}
-	m.loaded = false
+func (m *Model) refresh() tea.Cmd {
+	m.feeds = map[int]systemFeed{}
 	m.list.SetItems(nil)
 	m.list.ResetSelected()
+	return tea.Batch(m.load(m.selected()), m.sendStatus())
+}
+
+func (m *Model) reorder() tea.Cmd {
+	want := m.ctx.GetOrder()
+	forumID := m.ctx.GetCurrentForum().ID
+
+	var reload []int
+	for _, idx := range m.selected() {
+		state, ok := m.feeds[idx]
+		listed := feed.Choose(m.ctx.Systems[idx].Orders(forumID), want)
+		if ok && state.err == nil && state.order == listed {
+			continue
+		}
+		delete(m.feeds, idx)
+		reload = append(reload, idx)
+	}
+
+	m.list.ResetSelected()
+	cmd := m.load(reload)
+	m.rebuild()
+	return tea.Batch(cmd, m.sendStatus())
+}
+
+func (m *Model) load(indexes []int) tea.Cmd {
+	m.gen = m.ctx.NextLoadGen()
+	m.order = m.ctx.GetOrder()
+	m.pending = len(indexes)
+	m.total = len(m.selected())
 	m.updateProgress()
 
 	if len(indexes) == 0 {
-		m.loaded = true
-		m.ctx.Loading = false
 		return nil
 	}
 
+	systems := m.ctx.Systems
+	forumID := m.ctx.GetCurrentForum().ID
+	want := m.order
 	gen := m.gen
+
 	cmds := make([]tea.Cmd, 0, len(indexes))
 	for _, idx := range indexes {
-		idx := idx
 		sys := systems[idx]
 		cmds = append(cmds, func() tea.Msg {
-			posts, err := sys.ListPosts(context.Background(), forumID)
-			return msgs.FeedResult{Gen: gen, System: idx, Posts: posts, Err: err}
+			res, err := feed.List(context.Background(), idx, sys, forumID, want)
+			return msgs.FeedResult{Gen: gen, System: idx, Order: res.Order, Posts: res.Posts, Err: err}
 		})
 	}
 
@@ -239,18 +275,34 @@ func (m *Model) absorb(res msgs.FeedResult) tea.Cmd {
 
 	m.pending--
 	if res.Err != nil {
-		m.failures[res.System] = res.Err
+		m.feeds[res.System] = systemFeed{err: res.Err}
 		m.ctx.Logger.Error("listing posts failed", "system", res.System, "error", res.Err)
 	} else {
-		m.results[res.System] = res.Posts
+		m.feeds[res.System] = systemFeed{order: res.Order, posts: res.Posts}
+	}
+	m.rebuild()
+
+	var cmds []tea.Cmd
+	if res.Err != nil && res.System >= 0 && res.System < len(m.ctx.Systems) {
+		cmds = append(cmds, msgs.Send(msgs.Notice{
+			Text:    fmt.Sprintf("%s: %v", m.ctx.Systems[res.System].Title(), res.Err),
+			IsError: true,
+		}))
+	}
+	cmds = append(cmds, m.sendStatus())
+
+	return tea.Batch(cmds...)
+}
+
+func (m *Model) rebuild() {
+	results := make([]feed.Result, 0, len(m.feeds))
+	for idx, f := range m.feeds {
+		if f.err == nil {
+			results = append(results, feed.Result{System: idx, Order: f.order, Posts: f.posts})
+		}
 	}
 
-	var merged []post.Post
-	for _, posts := range m.results {
-		merged = append(merged, posts...)
-	}
-	feed.SortPosts(merged)
-
+	merged := feed.Merge(results, m.order)
 	items := make([]list.Item, 0, len(merged))
 	for _, p := range merged {
 		title := ""
@@ -261,19 +313,27 @@ func (m *Model) absorb(res msgs.FeedResult) tea.Cmd {
 	}
 	m.list.SetItems(items)
 	m.updateProgress()
+}
 
-	var cmds []tea.Cmd
-	if res.Err != nil && res.System >= 0 && res.System < len(m.ctx.Systems) {
-		cmds = append(cmds, msgs.Send(msgs.Notice{
-			Text:    fmt.Sprintf("%s: %v", m.ctx.Systems[res.System].Title(), res.Err),
-			IsError: true,
-		}))
+func (m *Model) statusText() string {
+	var uses []feed.Use
+	for _, idx := range m.selected() {
+		f, ok := m.feeds[idx]
+		if !ok || f.err != nil {
+			continue
+		}
+		uses = append(uses, feed.Use{Name: m.ctx.Systems[idx].Title(), Order: f.order})
 	}
-	if m.pending <= 0 {
-		m.loaded = true
-	}
+	return feed.Status(m.order, uses)
+}
 
-	return tea.Batch(cmds...)
+func (m *Model) sendStatus() tea.Cmd {
+	text := m.statusText()
+	if text == m.status {
+		return nil
+	}
+	m.status = text
+	return msgs.Send(msgs.FeedStatus{Text: text})
 }
 
 func (m *Model) updateProgress() {
@@ -319,10 +379,12 @@ func (m Model) placeholder() string {
 				"Loading posts from %d systems (%d done)", m.total, m.total-m.pending))
 		}
 		return t.Muted.Render("Loading posts")
-	case len(m.failures) > 0:
-		keys := make([]int, 0, len(m.failures))
-		for idx := range m.failures {
-			keys = append(keys, idx)
+	case m.failed() > 0:
+		keys := make([]int, 0, len(m.feeds))
+		for idx, f := range m.feeds {
+			if f.err != nil {
+				keys = append(keys, idx)
+			}
 		}
 		sort.Ints(keys)
 		out := t.Alert.Render("No posts could be loaded.") + "\n"
@@ -331,10 +393,20 @@ func (m Model) placeholder() string {
 			if idx >= 0 && idx < len(m.ctx.Systems) {
 				name = m.ctx.Systems[idx].Title()
 			}
-			out += "\n" + t.Muted.Render(name+": "+m.failures[idx].Error())
+			out += "\n" + t.Muted.Render(name+": "+m.feeds[idx].err.Error())
 		}
 		return out
 	default:
 		return t.Muted.Render("No posts here yet. Press ctrl+r to refresh.")
 	}
+}
+
+func (m Model) failed() int {
+	n := 0
+	for _, f := range m.feeds {
+		if f.err != nil {
+			n++
+		}
+	}
+	return n
 }

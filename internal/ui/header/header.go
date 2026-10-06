@@ -2,6 +2,7 @@ package header
 
 import (
 	"fmt"
+	"strings"
 
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
@@ -11,8 +12,16 @@ import (
 )
 
 const (
-	Height        = 8
-	selectorWidth = 40
+	Height = 8
+
+	bannerWidth   = 33
+	bannerGap     = 3
+	labelWidth    = 8
+	orderLabel    = 7
+	orderWidth    = 22
+	minSelector   = 20
+	maxSelector   = 40
+	selectorInset = 7
 )
 
 var (
@@ -64,9 +73,18 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+func layout(width int, banner bool) (selector int, showBanner bool) {
+	fixed := bannerGap + labelWidth + orderLabel + orderWidth
+	if banner && width-bannerWidth-fixed >= minSelector {
+		return min(maxSelector, width-bannerWidth-fixed), true
+	}
+	return max(minSelector, min(maxSelector, width-fixed)), false
+}
+
 func (m Model) View() string {
 	t := m.ctx.Theme
-	selectorTextLen := selectorWidth - 7
+	selectorWidth, showBanner := layout(m.ctx.Screen[0], m.ctx.Config.RenderBanner)
+	selectorTextLen := selectorWidth - selectorInset
 
 	currentSystem := "All"
 	if idx := m.ctx.GetCurrentSystem(); idx >= 0 && idx < len(m.ctx.Systems) {
@@ -78,17 +96,13 @@ func (m Model) View() string {
 		currentForum = text.Truncate(f.Title(), selectorTextLen)
 	}
 
+	currentOrder := text.Truncate(m.ctx.GetOrder().Label(), orderWidth-selectorInset)
+
 	systemSelector := t.Header.Selector.Width(selectorWidth).Render(fmt.Sprintf("⏷  %s", currentSystem))
 	forumSelector := t.Header.Selector.Width(selectorWidth).Render(fmt.Sprintf("⏷  %s", currentForum))
+	orderSelector := t.Header.Selector.Width(orderWidth).Render(fmt.Sprintf("⏷  %s", currentOrder))
 
 	keyStyle := lipgloss.NewStyle().Foreground(t.DialogBox.Bottombar.GetForeground())
-
-	selectorColumn := lipgloss.JoinVertical(lipgloss.Center,
-		lipgloss.JoinHorizontal(lipgloss.Bottom,
-			"System: \n   "+keyStyle.Render("C-e"), systemSelector),
-		lipgloss.JoinHorizontal(lipgloss.Bottom,
-			"Forum: \n  "+keyStyle.Render("C-t"), forumSelector),
-	)
 
 	status := ""
 	if m.ctx.Loading {
@@ -98,16 +112,20 @@ func (m Model) View() string {
 		}
 	}
 
-	logo := banner
-	if !m.ctx.Config.RenderBanner {
-		logo = ""
+	systemRow := lipgloss.JoinHorizontal(lipgloss.Bottom,
+		"System: \n   "+keyStyle.Render("C-e")+"  ", systemSelector,
+		" Sort: \n  "+keyStyle.Render("C-o")+"  ", orderSelector)
+	forumRow := lipgloss.JoinHorizontal(lipgloss.Center,
+		lipgloss.JoinHorizontal(lipgloss.Bottom,
+			" Forum: \n   "+keyStyle.Render("C-t")+"  ", forumSelector),
+		"  "+status)
+	selectorColumn := lipgloss.JoinVertical(lipgloss.Left, systemRow, forumRow)
+
+	logo := ""
+	if showBanner {
+		logo = banner
 	}
 
-	return lipgloss.JoinHorizontal(lipgloss.Bottom,
-		logo,
-		"   ",
-		selectorColumn,
-		" ",
-		status,
-	)
+	return lipgloss.PlaceVertical(Height-1, lipgloss.Bottom,
+		lipgloss.JoinHorizontal(lipgloss.Bottom, logo, strings.Repeat(" ", bannerGap), selectorColumn))
 }

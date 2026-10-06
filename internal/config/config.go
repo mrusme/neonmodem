@@ -120,6 +120,7 @@ type Config struct {
 	Log           string
 	Proxy         string
 	Browser       string
+	Sort          string
 	RenderShadows bool
 	RenderImages  bool
 	RenderSplash  bool
@@ -227,6 +228,9 @@ func (c *Config) applyEnv() {
 	}
 	if v, ok := lookupEnv("BROWSER"); ok {
 		c.Browser = v
+	}
+	if v, ok := lookupEnv("SORT"); ok {
+		c.Sort = v
 	}
 	for name, target := range map[string]*bool{
 		"RENDERSHADOWS": &c.RenderShadows,

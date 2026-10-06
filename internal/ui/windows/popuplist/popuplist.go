@@ -1,6 +1,8 @@
 package popuplist
 
 import (
+	"strings"
+
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 	"github.com/mrusme/neonmodem/internal/ui/ctx"
@@ -15,17 +17,19 @@ type Model struct {
 	ctx *ctx.Ctx
 	tk  *toolkit.ToolKit
 
-	kind    msgs.PickerKind
-	title   string
-	list    list.Model
-	loading bool
+	kind       msgs.PickerKind
+	title      string
+	list       list.Model
+	loading    bool
+	itemHeight int
 }
 
 func NewModel(c *ctx.Ctx) *Model {
 	m := &Model{
-		ctx:   c,
-		tk:    toolkit.New(WIN_ID, c),
-		title: "Select",
+		ctx:        c,
+		tk:         toolkit.New(WIN_ID, c),
+		title:      "Select",
+		itemHeight: 2,
 	}
 
 	m.list = list.New(nil, m.delegate(), 0, 0)
@@ -55,7 +59,24 @@ func (m *Model) delegate() list.DefaultDelegate {
 	d.Styles.NormalDesc = t.PopupList.ItemDetail.Focused
 	d.Styles.DimmedDesc = t.PopupList.ItemDetail.Blurred
 	d.Styles.SelectedDesc = t.PopupList.ItemDetail.Selected
+	d.SetHeight(m.itemHeight)
 	return d
+}
+
+func itemHeight(items []list.Item) int {
+	height := 2
+	for _, item := range items {
+		if d, ok := item.(list.DefaultItem); ok {
+			height = max(height, 2+strings.Count(d.Description(), "\n"))
+		}
+	}
+	return height
+}
+
+func (m *Model) setItems(items []list.Item) tea.Cmd {
+	m.itemHeight = itemHeight(items)
+	m.list.SetDelegate(m.delegate())
+	return m.list.SetItems(items)
 }
 
 func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
@@ -68,7 +89,9 @@ func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
 		m.loading = m.kind == msgs.PickForum
 		m.list.ResetFilter()
 		m.list.ResetSelected()
-		return m, m.list.SetItems(msg.Items)
+		cmd := m.setItems(msg.Items)
+		m.list.Select(msg.Selected)
+		return m, cmd
 
 	case msgs.PickerItems:
 		if msg.Kind != m.kind {
@@ -77,7 +100,7 @@ func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
 		m.loading = false
 		m.ctx.Loading = false
 		var cmds []tea.Cmd
-		cmds = append(cmds, m.list.SetItems(msg.Items))
+		cmds = append(cmds, m.setItems(msg.Items))
 		for _, err := range msg.Errors {
 			m.ctx.Logger.Error("listing forums failed", "error", err)
 			cmds = append(cmds, msgs.Send(msgs.Notice{Text: err.Error(), IsError: true}))

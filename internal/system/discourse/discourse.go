@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -36,6 +37,9 @@ type System struct {
 	catMu      sync.Mutex
 	categories []api.CategoryModel
 	catLoaded  time.Time
+
+	ordersMu   sync.Mutex
+	hotMissing bool
 }
 
 func New(env system.Env) (system.System, error) {
@@ -158,7 +162,52 @@ func (sys *System) ListForums(ctx context.Context) ([]forum.Forum, error) {
 	return models, nil
 }
 
-func (sys *System) ListPosts(ctx context.Context, forumID string) ([]post.Post, error) {
+func (sys *System) Orders(string) system.Ordering {
+	ordering := system.Ordering{Default: system.OrderNew, Supported: system.AllOrders()}
+
+	sys.ordersMu.Lock()
+	defer sys.ordersMu.Unlock()
+	if sys.hotMissing {
+		return ordering.Without(system.OrderHot)
+	}
+	return ordering
+}
+
+func topicList(order system.Order) (string, url.Values) {
+	query := url.Values{}
+	switch order {
+	case system.OrderActive:
+		return "latest", query
+	case system.OrderHot:
+		return "hot", query
+	case system.OrderTopDay:
+		query.Set("period", "daily")
+		return "top", query
+	case system.OrderTopWeek:
+		query.Set("period", "weekly")
+		return "top", query
+	case system.OrderTopMonth:
+		query.Set("period", "monthly")
+		return "top", query
+	case system.OrderTopYear:
+		query.Set("period", "yearly")
+		return "top", query
+	case system.OrderTopAll:
+		query.Set("period", "all")
+		return "top", query
+	case system.OrderComments:
+		query.Set("order", "posts")
+		return "latest", query
+	}
+	query.Set("order", "created")
+	return "latest", query
+}
+
+func (sys *System) ListPosts(
+	ctx context.Context,
+	forumID string,
+	order system.Order,
+) ([]post.Post, error) {
 	cats, err := sys.loadCategories(ctx)
 	if err != nil {
 		return nil, err
@@ -184,8 +233,15 @@ func (sys *System) ListPosts(ctx context.Context, forumID string) ([]post.Post, 
 		slugPath = c.SlugPath
 	}
 
-	items, err := sys.client.Topics.ListLatest(ctx, slugPath, catID)
+	list, query := topicList(order)
+	items, err := sys.client.Topics.List(ctx, list, slugPath, catID, query)
 	if err != nil {
+		if order == system.OrderHot && httpx.StatusOf(err) == http.StatusNotFound {
+			sys.ordersMu.Lock()
+			sys.hotMissing = true
+			sys.ordersMu.Unlock()
+			return nil, fmt.Errorf("%w: %w", system.ErrOrderUnavailable, err)
+		}
 		return nil, err
 	}
 
@@ -235,6 +291,7 @@ func (sys *System) ListPosts(ctx context.Context, forumID string) ([]post.Post, 
 			},
 
 			ReplyCount: replies,
+			Score:      post.Score{Value: t.LikeCount, Unit: post.ScoreLikes},
 
 			URL: fmt.Sprintf("%s/t/%d", sys.settings.URL, t.ID),
 

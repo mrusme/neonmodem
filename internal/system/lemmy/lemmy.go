@@ -210,10 +210,40 @@ func (sys *System) ListForums(ctx context.Context) ([]forum.Forum, error) {
 	return models, nil
 }
 
-func (sys *System) ListPosts(ctx context.Context, forumID string) ([]post.Post, error) {
+func (sys *System) Orders(string) system.Ordering {
+	return system.Ordering{Default: system.OrderNew, Supported: system.AllOrders()}
+}
+
+func sortType(order system.Order) lemmy.SortType {
+	switch order {
+	case system.OrderActive:
+		return lemmy.SortTypeNewComments
+	case system.OrderHot:
+		return lemmy.SortTypeHot
+	case system.OrderTopDay:
+		return lemmy.SortTypeTopDay
+	case system.OrderTopWeek:
+		return lemmy.SortTypeTopWeek
+	case system.OrderTopMonth:
+		return lemmy.SortTypeTopMonth
+	case system.OrderTopYear:
+		return lemmy.SortTypeTopYear
+	case system.OrderTopAll:
+		return lemmy.SortTypeTopAll
+	case system.OrderComments:
+		return lemmy.SortTypeMostComments
+	}
+	return lemmy.SortTypeNew
+}
+
+func (sys *System) ListPosts(
+	ctx context.Context,
+	forumID string,
+	order system.Order,
+) ([]post.Post, error) {
 	params := lemmy.GetPosts{
 		Type:  lemmy.NewOptional(sys.listingType()),
-		Sort:  lemmy.NewOptional(lemmy.SortTypeNew),
+		Sort:  lemmy.NewOptional(sortType(order)),
 		Limit: lemmy.NewOptional(int64(pageSize)),
 	}
 	if forumID != "" {
@@ -277,6 +307,7 @@ func (sys *System) toPost(pv lemmy.PostView) post.Post {
 		},
 
 		ReplyCount: int(pv.Counts.Comments),
+		Score:      post.Score{Value: int(pv.Counts.Score), Unit: post.ScorePoints},
 
 		URL: fmt.Sprintf("%s/post/%d", sys.settings.URL, pv.Post.ID),
 

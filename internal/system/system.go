@@ -94,15 +94,17 @@ type System interface {
 	Connect(ctx context.Context, p prompt.Prompter, sysURL string) (Settings, error)
 
 	ListForums(ctx context.Context) ([]forum.Forum, error)
-	ListPosts(ctx context.Context, forumID string) ([]post.Post, error)
+	Orders(forumID string) Ordering
+	ListPosts(ctx context.Context, forumID string, order Order) ([]post.Post, error)
 	LoadPost(ctx context.Context, p *post.Post) error
 	CreatePost(ctx context.Context, p *post.Post) error
 	CreateReply(ctx context.Context, r *reply.Reply) error
 }
 
 var (
-	ErrUnsupported   = errors.New("this system doesn't support that")
-	ErrNoCredentials = errors.New(
+	ErrUnsupported      = errors.New("this system doesn't support that")
+	ErrOrderUnavailable = errors.New("this order isn't available on this site")
+	ErrNoCredentials    = errors.New(
 		"this system is connected without an account; run neonmodem connect " +
 			"again with credentials to post")
 )

@@ -127,8 +127,38 @@ func (sys *System) ListForums(ctx context.Context) ([]forum.Forum, error) {
 	return models, nil
 }
 
-func (sys *System) ListPosts(ctx context.Context, forumID string) ([]post.Post, error) {
-	items, err := sys.client.Stories.List(ctx, forumID)
+func (sys *System) Orders(forumID string) system.Ordering {
+	if forumID != "" {
+		return system.Only(system.OrderNew)
+	}
+	return system.Ordering{
+		Default:   system.OrderNew,
+		Supported: []system.Order{system.OrderNew, system.OrderActive, system.OrderHot},
+	}
+}
+
+func storyList(order system.Order) string {
+	switch order {
+	case system.OrderActive:
+		return "active"
+	case system.OrderHot:
+		return "hottest"
+	}
+	return "newest"
+}
+
+func (sys *System) ListPosts(
+	ctx context.Context,
+	forumID string,
+	order system.Order,
+) ([]post.Post, error) {
+	var items []api.StoryModel
+	var err error
+	if forumID != "" {
+		items, err = sys.client.Stories.Tagged(ctx, forumID)
+	} else {
+		items, err = sys.client.Stories.List(ctx, storyList(order))
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -183,6 +213,7 @@ func (sys *System) toPost(s *api.StoryModel) post.Post {
 		},
 
 		ReplyCount: s.CommentCount,
+		Score:      post.Score{Value: s.Score, Unit: post.ScorePoints},
 
 		URL: postURL,
 

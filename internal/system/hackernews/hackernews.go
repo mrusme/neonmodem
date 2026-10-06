@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,34 +23,66 @@ import (
 const (
 	Kind = "hackernews"
 
-	listLimit   = 30
-	defaultList = "new"
+	listLimit = 30
 
 	recentWriteWindow = 10 * time.Minute
 )
 
-type list struct {
-	ID   string
-	Name string
-	Info string
+type hnForum struct {
+	ID      string
+	Name    string
+	Info    string
+	HotList string
+	NewList string
+	Tag     string
+	Votes   bool
 }
 
-var lists = []list{
-	{ID: "top", Name: "Top HN Stories", Info: "Top stories on Hacker News"},
-	{ID: "best", Name: "Best HN Stories", Info: "Best stories on Hacker News"},
-	{ID: "new", Name: "New HN Stories", Info: "New stories on Hacker News"},
-	{ID: "ask", Name: "Ask HN", Info: "Ask Hacker News about the world"},
-	{ID: "show", Name: "Show HN", Info: "Show Hacker News something awesome"},
-	{ID: "jobs", Name: "Jobs HN", Info: "... because we can't *all* become Astronauts"},
-}
+var (
+	feedForum = hnForum{HotList: "top", NewList: "new", Tag: "story", Votes: true}
 
-func listByID(id string) list {
-	for _, l := range lists {
-		if l.ID == id {
-			return l
+	forums = []hnForum{
+		{ID: "ask", Name: "Ask HN", Info: "Ask Hacker News about the world",
+			HotList: "ask", Tag: "ask_hn", Votes: true},
+		{ID: "jobs", Name: "Jobs HN", Info: "... because we can't *all* become Astronauts",
+			HotList: "jobs", Tag: "job"},
+		{ID: "show", Name: "Show HN", Info: "Show Hacker News something awesome",
+			HotList: "show", Tag: "show_hn", Votes: true},
+	}
+)
+
+func forumByID(id string) (hnForum, bool) {
+	if id == "" {
+		return feedForum, true
+	}
+	for _, f := range forums {
+		if f.ID == id {
+			return f, true
 		}
 	}
-	return list{ID: id, Name: id}
+	return hnForum{}, false
+}
+
+func (f hnForum) ordering() system.Ordering {
+	supported := []system.Order{system.OrderNew, system.OrderHot}
+	if f.Votes {
+		supported = append(supported, system.TopOrders()...)
+	}
+	return system.Ordering{Default: system.OrderNew, Supported: supported}
+}
+
+func topSince(order system.Order, now time.Time) time.Time {
+	switch order {
+	case system.OrderTopDay:
+		return now.Add(-24 * time.Hour)
+	case system.OrderTopWeek:
+		return now.Add(-7 * 24 * time.Hour)
+	case system.OrderTopMonth:
+		return now.Add(-30 * 24 * time.Hour)
+	case system.OrderTopYear:
+		return now.Add(-365 * 24 * time.Hour)
+	}
+	return time.Time{}
 }
 
 type recentWrite struct {
@@ -154,26 +187,49 @@ func (sys *System) Capabilities() system.Capabilities {
 }
 
 func (sys *System) ListForums(ctx context.Context) ([]forum.Forum, error) {
-	forums := make([]forum.Forum, 0, len(lists))
-	for _, l := range lists {
-		forums = append(forums, forum.Forum{
-			ID:     l.ID,
-			Name:   l.Name,
-			Info:   l.Info,
+	out := make([]forum.Forum, 0, len(forums))
+	for _, f := range forums {
+		out = append(out, forum.Forum{
+			ID:     f.ID,
+			Name:   f.Name,
+			Info:   f.Info,
 			SysIDX: sys.idx,
 		})
 	}
-	return forums, nil
+	return out, nil
 }
 
-func (sys *System) ListPosts(ctx context.Context, forumID string) ([]post.Post, error) {
-	listID := forumID
-	if listID == "" {
-		listID = defaultList
+func (sys *System) Orders(forumID string) system.Ordering {
+	f, ok := forumByID(forumID)
+	if !ok {
+		return system.Only(system.OrderNew)
 	}
-	l := listByID(listID)
+	return f.ordering()
+}
 
-	ids, err := sys.client.Stories(ctx, l.ID)
+func (sys *System) ListPosts(
+	ctx context.Context,
+	forumID string,
+	order system.Order,
+) ([]post.Post, error) {
+	f, ok := forumByID(forumID)
+	if !ok {
+		return nil, fmt.Errorf("unknown Hacker News forum %q", forumID)
+	}
+
+	switch {
+	case order == system.OrderHot:
+		return sys.listStories(ctx, f.HotList, f)
+	case slices.Contains(system.TopOrders(), order):
+		return sys.searchStories(ctx, f.Tag, topSince(order, time.Now()))
+	case f.NewList != "":
+		return sys.listStories(ctx, f.NewList, f)
+	}
+	return sys.searchNewest(ctx, f.Tag)
+}
+
+func (sys *System) listStories(ctx context.Context, list string, scope hnForum) ([]post.Post, error) {
+	ids, err := sys.client.Stories(ctx, list)
 	if err != nil {
 		return nil, err
 	}
@@ -191,25 +247,88 @@ func (sys *System) ListPosts(ctx context.Context, forumID string) ([]post.Post, 
 		if item.Deleted || item.Dead {
 			continue
 		}
-		models = append(models, sys.toPost(item, l))
+		p := sys.toPost(item)
+		if scope.ID != "" {
+			p.Forum = forum.Forum{ID: scope.ID, Name: scope.Name, SysIDX: sys.idx}
+		}
+		models = append(models, p)
 	}
 
 	return models, nil
 }
 
-func (sys *System) toPost(item *api.Item, l list) post.Post {
-	kind := post.KindText
-	body := text.Markdown(item.Text)
-	if item.URL != "" {
-		kind = post.KindLink
-		if body == "" {
-			body = item.URL
-		} else {
-			body = item.URL + "\n\n" + body
-		}
+func (sys *System) searchStories(ctx context.Context, tag string, since time.Time) ([]post.Post, error) {
+	hits, err := sys.client.Search(ctx, tag, since, listLimit)
+	if err != nil {
+		return nil, err
+	}
+	return sys.hitsToPosts(hits), nil
+}
+
+func (sys *System) searchNewest(ctx context.Context, tag string) ([]post.Post, error) {
+	hits, err := sys.client.SearchByDate(ctx, tag, listLimit)
+	if err != nil {
+		return nil, err
+	}
+	return sys.hitsToPosts(hits), nil
+}
+
+func (sys *System) hitsToPosts(hits []api.SearchHit) []post.Post {
+	models := make([]post.Post, 0, len(hits))
+	for _, h := range hits {
+		models = append(models, sys.hitToPost(h))
+	}
+	return models
+}
+
+func (sys *System) forumFor(title string, job bool) forum.Forum {
+	lower := strings.ToLower(strings.TrimSpace(title))
+
+	id := ""
+	switch {
+	case job:
+		id = "jobs"
+	case strings.HasPrefix(lower, "ask hn"):
+		id = "ask"
+	case strings.HasPrefix(lower, "show hn"):
+		id = "show"
+	default:
+		return forum.Forum{SysIDX: sys.idx}
 	}
 
-	createdAt := time.Unix(item.Time, 0)
+	f, _ := forumByID(id)
+	return forum.Forum{ID: f.ID, Name: f.Name, SysIDX: sys.idx}
+}
+
+func (sys *System) forumForHit(h api.SearchHit) forum.Forum {
+	for _, f := range forums {
+		if slices.Contains(h.Tags, f.Tag) {
+			return forum.Forum{ID: f.ID, Name: f.Name, SysIDX: sys.idx}
+		}
+	}
+	return sys.forumFor(h.Title, false)
+}
+
+func linkOrText(link string, body string) (post.Kind, string) {
+	if link == "" {
+		return post.KindText, body
+	}
+	if body == "" {
+		return post.KindLink, link
+	}
+	return post.KindLink, link + "\n\n" + body
+}
+
+func points(value int, job bool) post.Score {
+	if job {
+		return post.Score{}
+	}
+	return post.Score{Value: value, Unit: post.ScorePoints}
+}
+
+func (sys *System) toPost(item *api.Item) post.Post {
+	kind, body := linkOrText(item.URL, text.Markdown(item.Text))
+	job := item.Type == "job"
 
 	return post.Post{
 		ID:      strconv.Itoa(item.ID),
@@ -219,22 +338,47 @@ func (sys *System) toPost(item *api.Item, l list) post.Post {
 
 		Closed: item.Deleted || item.Dead,
 
-		CreatedAt: createdAt,
+		CreatedAt: time.Unix(item.Time, 0),
 
 		Author: author.Author{
 			ID:   item.By,
 			Name: item.By,
 		},
 
-		Forum: forum.Forum{
-			ID:     l.ID,
-			Name:   l.Name,
-			SysIDX: sys.idx,
-		},
+		Forum: sys.forumFor(item.Title, job),
 
 		ReplyCount: item.Descendants,
+		Score:      points(item.Score, job),
 
 		URL: fmt.Sprintf("%s/item?id=%d", api.SiteURL, item.ID),
+
+		SysIDX: sys.idx,
+	}
+}
+
+func (sys *System) hitToPost(h api.SearchHit) post.Post {
+	kind, body := linkOrText(h.URL, text.Markdown(h.Text()))
+	job := slices.Contains(h.Tags, "job")
+
+	return post.Post{
+		ID:      h.ObjectID,
+		Subject: h.Title,
+		Body:    body,
+		Kind:    kind,
+
+		CreatedAt: time.Unix(h.CreatedAtI, 0),
+
+		Author: author.Author{
+			ID:   h.Author,
+			Name: h.Author,
+		},
+
+		Forum: sys.forumForHit(h),
+
+		ReplyCount: h.Comments(),
+		Score:      points(h.PointsOrZero(), job),
+
+		URL: fmt.Sprintf("%s/item?id=%s", api.SiteURL, h.ObjectID),
 
 		SysIDX: sys.idx,
 	}
@@ -365,7 +509,7 @@ func (sys *System) loadFromFirebase(ctx context.Context, p *post.Post, id int) e
 		return err
 	}
 
-	fresh := sys.toPost(root, listByID(p.Forum.ID))
+	fresh := sys.toPost(root)
 	p.Subject = fresh.Subject
 	p.Body = fresh.Body
 	p.Kind = fresh.Kind

@@ -95,7 +95,15 @@ func (sys *System) ListForums(ctx context.Context) ([]forum.Forum, error) {
 	return models, nil
 }
 
-func (sys *System) ListPosts(ctx context.Context, forumID string) ([]post.Post, error) {
+func (sys *System) Orders(forumID string) system.Ordering {
+	return system.Only(system.OrderActive)
+}
+
+func (sys *System) ListPosts(
+	ctx context.Context,
+	forumID string,
+	order system.Order,
+) ([]post.Post, error) {
 	resp, err := sys.client.Topics.List(ctx, forumID, 1)
 	if err != nil {
 		return nil, err
