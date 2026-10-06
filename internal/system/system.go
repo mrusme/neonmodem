@@ -1,0 +1,93 @@
+package system
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+
+	"github.com/mrusme/neonmodem/internal/models/forum"
+	"github.com/mrusme/neonmodem/internal/models/post"
+	"github.com/mrusme/neonmodem/internal/models/reply"
+	"github.com/mrusme/neonmodem/internal/system/prompt"
+)
+
+type Capabilities uint8
+
+const (
+	CapListForums Capabilities = 1 << iota
+	CapListPosts
+	CapListReplies
+	CapCreatePost
+	CapCreateReply
+)
+
+const (
+	CapRead  = CapListForums | CapListPosts | CapListReplies
+	CapWrite = CapCreatePost | CapCreateReply
+)
+
+func (c Capabilities) Has(want Capabilities) bool {
+	return c&want == want
+}
+
+type Settings struct {
+	URL         string            `toml:"url,omitempty"`
+	Credentials map[string]string `toml:"credentials,omitempty"`
+	Options     map[string]string `toml:"options,omitempty"`
+}
+
+func (s Settings) Credential(key string) string {
+	return s.Credentials[key]
+}
+
+func (s Settings) Option(key string, fallback string) string {
+	if v, ok := s.Options[key]; ok && v != "" {
+		return v
+	}
+	return fallback
+}
+
+func (s Settings) HasCredentials() bool {
+	for _, v := range s.Credentials {
+		if v != "" {
+			return true
+		}
+	}
+	return false
+}
+
+type Env struct {
+	Index    int
+	Settings Settings
+	Proxy    string
+	Logger   *slog.Logger
+}
+
+func (e Env) Log() *slog.Logger {
+	if e.Logger == nil {
+		return slog.New(slog.DiscardHandler)
+	}
+	return e.Logger
+}
+
+type System interface {
+	Kind() string
+	Title() string
+	Description() string
+	Capabilities() Capabilities
+
+	Connect(ctx context.Context, p prompt.Prompter, sysURL string) (Settings, error)
+
+	ListForums(ctx context.Context) ([]forum.Forum, error)
+	ListPosts(ctx context.Context, forumID string) ([]post.Post, error)
+	LoadPost(ctx context.Context, p *post.Post) error
+	CreatePost(ctx context.Context, p *post.Post) error
+	CreateReply(ctx context.Context, r *reply.Reply) error
+}
+
+var (
+	ErrUnsupported   = errors.New("this system doesn't support that")
+	ErrNoCredentials = errors.New(
+		"this system is connected without an account; run neonmodem connect " +
+			"again with credentials to post")
+)

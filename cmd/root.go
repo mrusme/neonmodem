@@ -2,24 +2,28 @@ package cmd
 
 import (
 	"embed"
-	"net/url"
-	"os"
-	"runtime"
+	"fmt"
+	"io"
+	"log/slog"
 	"runtime/debug"
+	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mrusme/neonmodem/config"
-	"github.com/mrusme/neonmodem/system"
-	"github.com/mrusme/neonmodem/ui"
-	"github.com/mrusme/neonmodem/ui/ctx"
+	tea "charm.land/bubbletea/v2"
+	"github.com/mrusme/neonmodem/internal/config"
+	"github.com/mrusme/neonmodem/internal/logging"
+	"github.com/mrusme/neonmodem/internal/system"
+	"github.com/mrusme/neonmodem/internal/system/registry"
+	"github.com/mrusme/neonmodem/internal/ui"
+	"github.com/mrusme/neonmodem/internal/ui/ctx"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
-var EMBEDFS *embed.FS
-var LOG *zap.SugaredLogger
-var CFG config.Config
+type app struct {
+	embedFS  *embed.FS
+	cfg      *config.Config
+	logger   *slog.Logger
+	closeLog io.Closer
+}
 
 func version() string {
 	if config.VERSION != "" {
@@ -33,119 +37,96 @@ func version() string {
 	return "unknown"
 }
 
-func init() {
-	cobra.OnInitialize(load)
-	rootCmd.Version = version()
-	rootCmd.SetVersionTemplate("neonmodem {{.Version}}\n")
-	rootCmd.
-		PersistentFlags().
-		Bool(
-			"debug",
-			false,
-			"Debug output",
-		)
-	viper.BindPFlag(
-		"debug",
-		rootCmd.PersistentFlags().Lookup("debug"),
-	)
+func newRootCmd(a *app) *cobra.Command {
+	var debugFlag bool
+
+	cmd := &cobra.Command{
+		Use:        "neonmodem",
+		SuggestFor: []string{"bbs", "discourse", "lemmy", "lobsters", "hackernews"},
+		Short:      "neonmodem, the bulletin board system TUI",
+		Long: "neonmodem is a bulletin board system (BBS) text user interface written " +
+			"in Go, supporting " + strings.Join(registry.Kinds(), ", ") + ".\n" +
+			"More info available on https://xn--gckvb8fzb.com/projects/neonmodem",
+		Version:       version(),
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load()
+			if err != nil {
+				return fmt.Errorf("loading the configuration: %w", err)
+			}
+			if debugFlag {
+				cfg.Debug = true
+			}
+
+			logger, closer, err := logging.Open(cfg.Log, cfg.Debug)
+			if err != nil {
+				return fmt.Errorf("opening the log file %s: %w", cfg.Log, err)
+			}
+
+			a.cfg = cfg
+			a.logger = logger
+			a.closeLog = closer
+
+			return nil
+		},
+		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+			if a.closeLog != nil {
+				return a.closeLog.Close()
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return a.runTUI()
+		},
+	}
+	cmd.SetVersionTemplate("neonmodem {{.Version}}\n")
+	cmd.PersistentFlags().BoolVar(&debugFlag, "debug", false, "Debug output")
+
+	cmd.AddCommand(newConnectCmd(a))
+
+	return cmd
 }
 
-func loadLogger(filename string, debug bool) (*zap.Logger, error) {
-	if runtime.GOOS == "windows" {
-		zap.RegisterSink("winfile", func(u *url.URL) (zap.Sink, error) {
-			return os.OpenFile(u.Path[1:], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
-		})
-	}
-
-	var cfg zap.Config
-	if debug {
-		cfg = zap.NewDevelopmentConfig()
-	} else {
-		cfg = zap.NewProductionConfig()
-	}
-
-	if runtime.GOOS == "windows" {
-		cfg.OutputPaths = []string{
-			"stdout",
-			"winfile:///" + filename,
-		}
-	} else {
-		cfg.OutputPaths = []string{
-			filename,
-		}
-	}
-
-	return cfg.Build()
-}
-
-func load() {
-	var err error
-	var logger *zap.Logger
-
-	CFG, err = config.Load()
-	if err != nil {
-		panic(err)
-	}
-
-	logger, err = loadLogger(CFG.Log, CFG.Debug)
-	if err != nil {
-		panic(err)
-	}
-	defer logger.Sync()
-	LOG = logger.Sugar()
-
-	if CFG.Proxy != "" {
-		LOG.Debugf("set proxy: %s", CFG.Proxy)
-		os.Setenv("HTTP_PROXY", CFG.Proxy)
-	}
-}
-
-func loadSystems(c *ctx.Ctx) []error {
+func (a *app) loadSystems() ([]system.System, []error) {
+	var systems []system.System
 	var errs []error
 
-	for i := 0; i < len(c.Config.Systems); i++ {
-		sysCfg := c.Config.Systems[i]
-		c.Logger.Debugf("loading system of type %s ...", sysCfg.Type)
-		sysCfg.Config["proxy"] = CFG.Proxy
-		sys, err := system.New(sysCfg.Type, &sysCfg.Config, LOG)
+	for i, sysCfg := range a.cfg.Systems {
+		sys, err := registry.New(sysCfg.Type, system.Env{
+			Index:    len(systems),
+			Settings: sysCfg.Settings,
+			Proxy:    a.cfg.Proxy,
+			Logger:   a.logger.With("system", sysCfg.Type),
+		})
 		if err != nil {
-			c.Logger.Errorf("error loading system %s: %s", sysCfg.Type, err)
-			c.Logger.Infof("system %s won't be available due to errors", sysCfg.Type)
-			errs = append(errs, err)
-		} else {
-			c.Logger.Debugf("loaded %s system", sysCfg.Type)
-
-			c.AddSystem(&sys)
-			c.Logger.Debugf("setting system ID to %d", c.NumSystems()-1)
-			sys.SetID(c.NumSystems() - 1)
+			a.logger.Error("system unavailable", "index", i, "type", sysCfg.Type, "error", err)
+			errs = append(errs, fmt.Errorf("%s (%s): %w", sysCfg.Type, sysCfg.Settings.URL, err))
+			continue
 		}
 
+		a.logger.Debug("loaded system", "index", len(systems), "type", sysCfg.Type)
+		systems = append(systems, sys)
 	}
 
-	return errs
+	return systems, errs
 }
 
-var rootCmd = &cobra.Command{
-	Use:        "neonmodem",
-	SuggestFor: []string{"bbs", "discourse", "lemmy"},
-	Short:      "neonmodem, the bulletin board system TUI",
-	Long: "neonmodem is a bulletin board system (BBS) text user interface written " +
-		"in Go, supporting Discourse and Lemmy.\n" +
-		"More info available on https://xn--gckvb8fzb.com/projects/neonmodem",
-	Run: func(cmd *cobra.Command, args []string) {
-		c := ctx.New(EMBEDFS, &CFG, LOG)
-		_ = loadSystems(&c)
+func (a *app) runTUI() error {
+	systems, errs := a.loadSystems()
 
-		tui := tea.NewProgram(ui.NewModel(&c), tea.WithAltScreen())
-		if _, err := tui.Run(); err != nil {
-			panic(err)
-		}
-	},
-}
+	c := ctx.New(a.embedFS, a.cfg, a.logger, systems)
+	c.StartupErrors = errs
 
-func Execute(efs *embed.FS) {
-	EMBEDFS = efs
-	if err := rootCmd.Execute(); err != nil {
-		// LOG.Errorln(err)
+	program := tea.NewProgram(ui.NewModel(&c))
+	if _, err := program.Run(); err != nil {
+		return err
 	}
+
+	return nil
+}
+
+func Execute(efs *embed.FS) error {
+	a := &app{embedFS: efs}
+	return newRootCmd(a).Execute()
 }

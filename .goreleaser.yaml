@@ -13,7 +13,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w -X github.com/mrusme/neonmodem/config.VERSION={{ .Version }}
+      - -s -w -X github.com/mrusme/neonmodem/internal/config.VERSION={{ .Version }}
     mod_timestamp: '{{ .CommitTimestamp }}'
     targets:
       - android_arm64

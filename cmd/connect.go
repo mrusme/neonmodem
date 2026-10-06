@@ -3,18 +3,14 @@ package cmd
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 
-	"github.com/mrusme/neonmodem/config"
-	"github.com/mrusme/neonmodem/system"
+	"github.com/mrusme/neonmodem/internal/config"
+	"github.com/mrusme/neonmodem/internal/system"
+	"github.com/mrusme/neonmodem/internal/system/prompt"
+	"github.com/mrusme/neonmodem/internal/system/registry"
 	"github.com/spf13/cobra"
 )
-
-func init() {
-	cmd := connectBase()
-	rootCmd.AddCommand(cmd)
-}
 
 func validateSysURL(sysURL string) error {
 	if sysURL == "" {
@@ -38,103 +34,77 @@ func validateSysURL(sysURL string) error {
 	return nil
 }
 
-func fail(err error) {
-	if LOG != nil {
-		LOG.Error(err)
-	}
-	fmt.Fprintf(os.Stderr, "Error: %s\n", err)
-	os.Exit(1)
-}
-
-func connectBase() *cobra.Command {
-	var sysType string = ""
-	var sysURL string = ""
-	var sysConfig map[string]interface{}
+func newConnectCmd(a *app) *cobra.Command {
+	var sysType string
+	var sysURL string
 
 	cmd := &cobra.Command{
 		Use:   "connect",
 		Short: "Connect to BBS",
 		Long:  "Add a new connection to a BBS.",
-		PreRun: func(cmd *cobra.Command, args []string) {
-			sysType, _ := cmd.Flags().GetString("type")
-			sysType = strings.ToLower(sysType)
-			if sysType != "hackernews" {
-				cmd.MarkFlagRequired("url")
-			}
-		},
-		Run: func(cmd *cobra.Command, args []string) {
-			sysConfig = make(map[string]interface{})
-			sysConfig["proxy"] = ""
-			sys, err := system.New(sysType, &sysConfig, LOG)
-			if err != nil {
-				fail(err)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			kind := strings.ToLower(strings.TrimSpace(sysType))
+			desc, ok := registry.Lookup(kind)
+			if !ok {
+				return fmt.Errorf("unknown system type %q; known types: %s",
+					sysType, strings.Join(registry.Kinds(), ", "))
 			}
 
-			sysURL := strings.TrimRight(sysURL, "/")
+			sysURL = strings.TrimRight(strings.TrimSpace(sysURL), "/")
+			if desc.NeedsURL && sysURL == "" {
+				return fmt.Errorf("--url is required for %s", desc.Name)
+			}
 			if err := validateSysURL(sysURL); err != nil {
-				fail(err)
+				return err
 			}
-			sysURLparsed, _ := url.Parse(sysURL)
 
-			if caps := sys.GetCapabilities(); !caps.IsCapableOf("connect:multiple") {
-				for _, existingSys := range CFG.Systems {
-					if existingSys.Type == sysType {
-						existingSysURL, ok := existingSys.Config["url"]
-						if !ok {
-							fmt.Println("Cannot add multiple instances of this system!")
-							os.Exit(1)
-						}
-
-						existingSysURLparsed, err := url.Parse(existingSysURL.(string))
-						if err != nil {
-							fmt.Print(err)
-							os.Exit(1)
-						}
-
-						//&& existingSysURLparsed.RequestURI() == sysURLparsed.RequestURI()
-						if existingSysURLparsed.Host == sysURLparsed.Host {
-							fmt.Println("Cannot add multiple instances of this system!")
-							os.Exit(1)
-						}
-					}
+			for _, existing := range a.cfg.Systems {
+				if existing.Type != kind {
+					continue
+				}
+				if !desc.AllowMultiple {
+					return fmt.Errorf("%s is already connected", desc.Name)
+				}
+				if sysURL != "" && strings.EqualFold(
+					strings.TrimRight(existing.Settings.URL, "/"), sysURL) {
+					return fmt.Errorf("%s is already connected", sysURL)
 				}
 			}
 
-			if err := sys.Connect(sysURL); err != nil {
-				fail(err)
-			}
-
-			CFG.Systems = append(CFG.Systems, config.SystemConfig{
-				Type:   sysType,
-				Config: sys.GetConfig(),
+			sys, err := desc.New(system.Env{
+				Index:  len(a.cfg.Systems),
+				Proxy:  a.cfg.Proxy,
+				Logger: a.logger.With("system", kind),
 			})
-			if err := CFG.Save(); err != nil {
-				fail(err)
+			if err != nil {
+				return err
 			}
 
-			fmt.Println("Successfully added new connection!")
-			os.Exit(0)
+			settings, err := sys.Connect(cmd.Context(), prompt.Stdio(), sysURL)
+			if err != nil {
+				a.logger.Error("connect failed", "type", kind, "error", err)
+				return err
+			}
+
+			a.cfg.Systems = append(a.cfg.Systems, config.SystemConfig{
+				Type:     kind,
+				Settings: settings,
+			})
+			if err := a.cfg.Save(); err != nil {
+				return fmt.Errorf("saving the configuration: %w", err)
+			}
+
+			fmt.Printf("Successfully added new connection! Configuration saved to %s\n",
+				a.cfg.Path())
+			return nil
 		},
 	}
 
-	cmd.
-		Flags().
-		StringVar(
-			&sysType,
-			"type",
-			"",
-			"Type of system to connect to (discourse, lemmy, lobsters, hackernews, hyperuplink)",
-		)
+	cmd.Flags().StringVar(&sysType, "type", "",
+		"Type of system to connect to ("+strings.Join(registry.Kinds(), ", ")+")")
+	cmd.Flags().StringVar(&sysURL, "url", "",
+		"URL of system (e.g. https://www.keebtalk.com)")
 	cmd.MarkFlagRequired("type")
-
-	cmd.
-		Flags().
-		StringVar(
-			&sysURL,
-			"url",
-			"",
-			"URL of system (e.g. https://www.keebtalk.com)",
-		)
 
 	return cmd
 }

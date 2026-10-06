@@ -4,3 +4,4 @@
 /posts.db
 /neonmodem.toml
 .gitsigners
+/_internal/**

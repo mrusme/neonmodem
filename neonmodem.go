@@ -2,6 +2,8 @@ package main
 
 import (
 	"embed"
+	"fmt"
+	"os"
 
 	"github.com/mrusme/neonmodem/cmd"
 )
@@ -10,5 +12,8 @@ import (
 var EMBEDFS embed.FS
 
 func main() {
-	cmd.Execute(&EMBEDFS)
+	if err := cmd.Execute(&EMBEDFS); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		os.Exit(1)
+	}
 }

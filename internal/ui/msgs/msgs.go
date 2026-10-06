@@ -1,0 +1,106 @@
+package msgs
+
+import (
+	"time"
+
+	"charm.land/bubbles/v2/list"
+	tea "charm.land/bubbletea/v2"
+	"github.com/mrusme/neonmodem/internal/models/post"
+	"github.com/mrusme/neonmodem/internal/models/reply"
+)
+
+type ShowPosts struct{}
+
+type FocusView struct{}
+
+type BlurView struct{}
+
+type RefreshFeed struct{}
+
+type FeedResult struct {
+	Gen    int64
+	System int
+	Posts  []post.Post
+	Err    error
+}
+
+type OpenPost struct {
+	Post post.Post
+}
+
+type ReloadPost struct {
+	Delay time.Duration
+}
+
+type ComposeAction int
+
+const (
+	ComposePost ComposeAction = iota
+	ComposeReply
+)
+
+type Compose struct {
+	Action ComposeAction
+	Post   post.Post
+	Parent *reply.Reply
+	Index  int
+}
+
+type PickerKind int
+
+const (
+	PickSystem PickerKind = iota
+	PickForum
+)
+
+type OpenPicker struct {
+	Kind  PickerKind
+	Title string
+	Items []list.Item
+}
+
+type PickerItems struct {
+	Kind   PickerKind
+	Items  []list.Item
+	Errors []error
+}
+
+type Picked struct {
+	Kind PickerKind
+	Item list.Item
+}
+
+type CloseWindow struct {
+	ID string
+}
+
+type WindowClosed struct {
+	ID string
+}
+
+type FocusWindow struct {
+	ID string
+}
+
+type BlurWindow struct {
+	ID string
+}
+
+type ShowError struct {
+	Errors []error
+}
+
+type Notice struct {
+	Text    string
+	IsError bool
+}
+
+type ThemeChanged struct{}
+
+func Error(err error) ShowError {
+	return ShowError{Errors: []error{err}}
+}
+
+func Send(msg tea.Msg) tea.Cmd {
+	return func() tea.Msg { return msg }
+}
