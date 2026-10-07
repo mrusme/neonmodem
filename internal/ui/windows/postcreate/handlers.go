@@ -109,13 +109,7 @@ func handleSubmit(mi interface{}) (bool, []tea.Cmd) {
 func handleViewResize(mi interface{}) (bool, []tea.Cmd) {
 	m := mi.(*Model)
 
-	width := m.tk.ViewWidth() - 4
-	if width < 10 {
-		width = 10
-	}
-	m.textinput.SetWidth(width)
-	m.textarea.SetWidth(width)
-	m.textarea.SetHeight(6)
+	m.resize()
 
 	return false, nil
 }

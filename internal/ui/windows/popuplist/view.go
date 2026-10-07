@@ -17,14 +17,12 @@ func buildView(mi interface{}, cached bool) string {
 		frame = t.PopupList.List.Focused
 	}
 
-	width := m.tk.ViewWidth() - 2
-	height := m.tk.ViewHeight() - 4
-	body := frame.Width(width).Height(height).Render(m.list.View())
+	body := frame.Width(m.tk.InnerWidth()).Height(m.tk.InnerHeight()).Render(m.list.View())
 
 	if m.loading {
 		return m.tk.DialogWithStatus(m.title, body,
 			t.Muted.Render("Loading forums, the list fills in as systems answer"))
 	}
 
-	return m.tk.Dialog(m.title, body, true)
+	return m.tk.Dialog(m.title, body)
 }

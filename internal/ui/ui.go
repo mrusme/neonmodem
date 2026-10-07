@@ -14,6 +14,8 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/mrusme/neonmodem/internal/feed"
 	"github.com/mrusme/neonmodem/internal/models/forum"
+	"github.com/mrusme/neonmodem/internal/models/post"
+	"github.com/mrusme/neonmodem/internal/openwith"
 	"github.com/mrusme/neonmodem/internal/system"
 	"github.com/mrusme/neonmodem/internal/ui/ctx"
 	"github.com/mrusme/neonmodem/internal/ui/header"
@@ -73,6 +75,16 @@ type SystemItem struct {
 func (s SystemItem) FilterValue() string { return s.Name + " " + s.Info }
 func (s SystemItem) Title() string       { return s.Name }
 func (s SystemItem) Description() string { return s.Info }
+
+type OpenWithItem struct {
+	Name string
+	Line string
+	Env  []string
+}
+
+func (o OpenWithItem) FilterValue() string { return o.Name }
+func (o OpenWithItem) Title() string       { return o.Name }
+func (o OpenWithItem) Description() string { return o.Line }
 
 type OrderItem struct {
 	Order system.Order
@@ -253,6 +265,42 @@ func (m Model) openOrderPicker() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
+func (m Model) openOpenWithPicker(p post.Post) tea.Cmd {
+	if len(m.ctx.OpenWith) == 0 || p.SysIDX < 0 || p.SysIDX >= len(m.ctx.Systems) {
+		return nil
+	}
+
+	env := openwith.Env(m.ctx.Systems[p.SysIDX], p)
+	items := make([]list.Item, 0, len(m.ctx.OpenWith))
+	for _, command := range m.ctx.OpenWith {
+		items = append(items, OpenWithItem{Name: command.Name, Line: command.Cmd, Env: env})
+	}
+
+	cmds := m.wm.Open(
+		popuplist.WIN_ID,
+		popuplist.NewModel(m.ctx),
+		m.pickerGeometry(),
+		msgs.OpenPicker{Kind: msgs.PickOpenWith, Title: "Open with", Items: items},
+	)
+	return tea.Batch(cmds...)
+}
+
+func (m Model) runOpenWith(item OpenWithItem) tea.Cmd {
+	launcher := m.ctx.Launcher
+	logger := m.ctx.Logger
+
+	return func() tea.Msg {
+		if launcher == nil {
+			return msgs.Notice{Text: item.Name + ": open with commands aren't available", IsError: true}
+		}
+		if err := launcher.Start(item.Name, item.Line, item.Env); err != nil {
+			logger.Error("open with failed", "name", item.Name, "error", err)
+			return msgs.Notice{Text: fmt.Sprintf("%s: %v", item.Name, err), IsError: true}
+		}
+		return msgs.Notice{Text: "Running " + item.Name}
+	}
+}
+
 func (m Model) listForums(all forum.Forum) tea.Cmd {
 	systems := m.ctx.Systems
 	only := m.ctx.GetCurrentSystem()
@@ -350,6 +398,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(cmds...)
 
+	case msgs.OpenWithMenu:
+		return m, m.openOpenWithPicker(msg.Post)
+
 	case msgs.OpenPost:
 		cmds = m.wm.Open(
 			postshow.WIN_ID,
@@ -381,7 +432,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if _, ccmds := m.wm.Close(popuplist.WIN_ID); ccmds != nil {
 			cmds = append(cmds, ccmds...)
 		}
-		m.ctx.Loading = false
+		if msg.Kind == msgs.PickForum {
+			m.ctx.Loading = false
+		}
 		switch item := msg.Item.(type) {
 		case SystemItem:
 			m.ctx.SetCurrentSystem(item.Index)
@@ -394,6 +447,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case OrderItem:
 			m.ctx.SetOrder(item.Order)
 			cmds = append(cmds, msgs.Send(msgs.OrderChanged{}))
+		case OpenWithItem:
+			cmds = append(cmds, m.runOpenWith(item))
 		}
 		return m, tea.Batch(cmds...)
 

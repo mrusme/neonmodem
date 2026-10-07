@@ -20,6 +20,9 @@ const (
 	WIN_ID = "postcreate"
 
 	refreshDelay = 3 * time.Second
+
+	composePadding = 1
+	subjectRows    = 2
 )
 
 type submittedMsg struct {
@@ -108,6 +111,17 @@ func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
 	return m, cmd
 }
 
+func (m *Model) resize() {
+	width := max(m.tk.InnerWidth()-composePadding*2, 1)
+	height := m.tk.InnerHeight()
+	if m.action == msgs.ComposePost {
+		height -= subjectRows
+	}
+	m.textinput.SetWidth(width)
+	m.textarea.SetWidth(width)
+	m.textarea.SetHeight(max(height, 1))
+}
+
 func (m *Model) open(c msgs.Compose) tea.Cmd {
 	m.action = c.Action
 	m.post = c.Post
@@ -116,6 +130,7 @@ func (m *Model) open(c msgs.Compose) tea.Cmd {
 	m.submitting = false
 	m.textinput.Reset()
 	m.textarea.Reset()
+	m.resize()
 
 	if m.action == msgs.ComposePost {
 		m.inputFocused = 0

@@ -12,7 +12,11 @@ import (
 	"github.com/mrusme/neonmodem/internal/ui/windows"
 )
 
-const WIN_ID = "msgerror"
+const (
+	WIN_ID = "msgerror"
+
+	errorPadding = 1
+)
 
 type Model struct {
 	ctx *ctx.Ctx
@@ -29,6 +33,7 @@ func NewModel(c *ctx.Ctx) *Model {
 		viewport: viewport.New(),
 	}
 
+	m.tk.SetErrorDialog(true)
 	m.tk.SetViewFunc(buildView)
 	m.tk.SetMsgHandling(toolkit.MsgHandling{
 		OnViewResize: handleViewResize,
@@ -66,26 +71,16 @@ func (m *Model) setContent() {
 	for _, err := range m.errs {
 		lines = append(lines, err.Error())
 	}
-	width := m.viewport.Width()
-	if width < 10 {
-		width = 10
-	}
-	m.viewport.SetContent(lipgloss.NewStyle().Width(width).Render(strings.Join(lines, "\n\n")))
+	m.viewport.SetContent(lipgloss.NewStyle().Width(m.viewport.Width()).Render(strings.Join(lines, "\n\n")))
 }
 
 func handleViewResize(mi interface{}) (bool, []tea.Cmd) {
 	m := mi.(*Model)
 
-	width := m.tk.ViewWidth() - 6
-	height := m.tk.ViewHeight() - 4
-	if width < 10 {
-		width = 10
-	}
-	if height < 3 {
-		height = 3
-	}
-
-	m.viewport = viewport.New(viewport.WithWidth(width), viewport.WithHeight(height))
+	m.viewport = viewport.New(
+		viewport.WithWidth(max(m.tk.InnerWidth()-errorPadding*2, 1)),
+		viewport.WithHeight(m.tk.InnerHeight()),
+	)
 	m.setContent()
 
 	return false, nil
@@ -102,6 +97,6 @@ func buildView(mi interface{}, cached bool) string {
 		return vcache
 	}
 
-	content := lipgloss.NewStyle().Padding(0, 1).Render(m.viewport.View())
-	return m.tk.ErrorDialog("Error", content)
+	content := lipgloss.NewStyle().Padding(0, errorPadding).Render(m.viewport.View())
+	return m.tk.Dialog("Error", content)
 }

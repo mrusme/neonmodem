@@ -43,11 +43,11 @@ func buildView(mi interface{}, cached bool) string {
 	} else {
 		body = m.textarea.View()
 	}
-	body = lipgloss.NewStyle().Padding(0, 1).Render(body)
+	body = lipgloss.NewStyle().Padding(0, composePadding).Render(body)
 
 	if m.submitting {
 		return m.tk.DialogWithStatus(title, body, m.ctx.Theme.Muted.Render("Posting, please wait"))
 	}
 
-	return m.tk.Dialog(title, body, true)
+	return m.tk.Dialog(title, body)
 }

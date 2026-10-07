@@ -22,6 +22,8 @@ type ToolKit struct {
 
 	viewfunc  ViewFunc
 	viewcache string
+
+	errorDialog bool
 }
 
 func New(winID string, c *ctx.Ctx) *ToolKit {

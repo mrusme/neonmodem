@@ -36,6 +36,10 @@ type OpenPost struct {
 	Post post.Post
 }
 
+type OpenWithMenu struct {
+	Post post.Post
+}
+
 type ReloadPost struct {
 	Delay time.Duration
 }
@@ -60,6 +64,7 @@ const (
 	PickSystem PickerKind = iota
 	PickForum
 	PickOrder
+	PickOpenWith
 )
 
 type OpenPicker struct {

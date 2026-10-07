@@ -35,9 +35,11 @@ func NewModel(c *ctx.Ctx) *Model {
 	m.list = list.New(nil, m.delegate(), 0, 0)
 	m.list.SetShowTitle(false)
 	m.list.SetShowStatusBar(false)
+	m.list.SetShowHelp(false)
 	m.list.DisableQuitKeybindings()
 
 	m.tk.KeymapAdd("enter", "choose", "enter")
+	m.tk.KeymapAdd("filter", "filter", "/")
 
 	m.tk.SetViewFunc(buildView)
 	m.tk.SetMsgHandling(toolkit.MsgHandling{

@@ -88,6 +88,7 @@ func (e Env) Log() *slog.Logger {
 type System interface {
 	Kind() string
 	Title() string
+	URL() string
 	Description() string
 	Capabilities() Capabilities
 

@@ -7,6 +7,8 @@ import (
 	"io"
 	"os/exec"
 	"time"
+
+	"github.com/mrusme/neonmodem/internal/shell"
 )
 
 const waitDelay = 2 * time.Second
@@ -55,7 +57,7 @@ func (s Shell) Run(ctx context.Context, command string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	cmd, err := shellCommand(ctx, command)
+	cmd, err := shell.Command(ctx, command)
 	if err != nil {
 		return "", err
 	}

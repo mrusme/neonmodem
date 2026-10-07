@@ -76,6 +76,10 @@ func (sys *System) Kind() string {
 	return Kind
 }
 
+func (sys *System) URL() string {
+	return sys.settings.URL
+}
+
 func (sys *System) Title() string {
 	u, err := url.Parse(sys.settings.URL)
 	if err != nil || u.Hostname() == "" {
@@ -355,7 +359,8 @@ func (sys *System) toPost(pv lemmy.PostView) post.Post {
 		ReplyCount: int(pv.Counts.Comments),
 		Score:      post.Score{Value: int(pv.Counts.Score), Unit: post.ScorePoints},
 
-		URL: fmt.Sprintf("%s/post/%d", sys.settings.URL, pv.Post.ID),
+		URL:  fmt.Sprintf("%s/post/%d", sys.settings.URL, pv.Post.ID),
+		Link: pv.Post.URL.ValueOr(""),
 
 		SysIDX: sys.idx,
 	}
@@ -389,6 +394,7 @@ func (sys *System) LoadPost(ctx context.Context, p *post.Post) error {
 	p.Subject = fresh.Subject
 	p.Body = fresh.Body
 	p.Kind = fresh.Kind
+	p.Link = fresh.Link
 	p.Pinned = fresh.Pinned
 	p.Closed = fresh.Closed
 	p.Author = fresh.Author

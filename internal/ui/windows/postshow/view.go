@@ -6,6 +6,7 @@ import (
 
 	"charm.land/glamour/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/mrusme/neonmodem/internal/models/post"
 	"github.com/mrusme/neonmodem/internal/models/reply"
 	"github.com/mrusme/neonmodem/internal/system"
@@ -29,14 +30,12 @@ func buildView(mi interface{}, cached bool) string {
 		title = "Post on " + m.ctx.Systems[m.activePost.SysIDX].Title()
 	}
 
-	content := lipgloss.NewStyle().Width(m.viewport.Width()).Render(m.viewport.View())
-
 	if m.loading {
 		status := m.ctx.Theme.Muted.Render("Loading post, press esc to go back")
-		return m.tk.DialogWithStatus(title, content, status)
+		return m.tk.DialogWithStatus(title, m.viewport.View(), status)
 	}
 
-	return m.tk.Dialog(title, content, true)
+	return m.tk.Dialog(title, m.viewport.View())
 }
 
 type renderedPost struct {
@@ -52,15 +51,15 @@ func writesOrAsks(subject string) string {
 	return "writes"
 }
 
-func renderLoadingPlaceholder(c *ctx.Ctx, p *post.Post) string {
-	return fmt.Sprintf(
+func renderLoadingPlaceholder(c *ctx.Ctx, p *post.Post, width int) string {
+	return ansi.Wrap(fmt.Sprintf(
 		" %s\n\n %s\n\n %s\n",
 		c.Theme.Post.Author.Render(
 			fmt.Sprintf("%s %s:", p.Author.Name, writesOrAsks(p.Subject)),
 		),
 		c.Theme.Post.Subject.Render(p.Subject),
 		c.Theme.Muted.Render("Loading post, please wait (press esc to go back) ..."),
-	)
+	), width, "")
 }
 
 func renderPost(
@@ -123,7 +122,7 @@ func renderPost(
 
 	if p.SysIDX >= 0 && p.SysIDX < len(c.Systems) {
 		if !c.Systems[p.SysIDX].Capabilities().Has(system.CapListReplies) {
-			rendered.content = out.String()
+			rendered.content = ansi.Wrap(out.String(), viewportWidth, "")
 			return rendered, true
 		}
 	}
@@ -185,6 +184,6 @@ func renderPost(
 		return renderedPost{}, false
 	}
 
-	rendered.content = out.String()
+	rendered.content = ansi.Wrap(out.String(), viewportWidth, "")
 	return rendered, true
 }

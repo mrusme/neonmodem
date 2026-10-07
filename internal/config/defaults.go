@@ -66,7 +66,7 @@ func Defaults(cacheDir string) Config {
 	t.ErrorDialogBox = dialogTheme(same("#dc143c"))
 
 	t.PostsList = listTheme(DoubleBorder)
-	t.PopupList = listTheme(HiddenBorder)
+	t.PopupList = withoutVerticalFrame(listTheme(HiddenBorder))
 
 	t.Post.Author = ThemeItem{
 		Padding:    []int{0, 1, 0, 1},
@@ -124,6 +124,14 @@ func dialogTheme(accent Adaptive) DialogTheme {
 			Foreground: Adaptive{Light: "#aaaaaa", Dark: "#999999"},
 		},
 	}
+}
+
+func withoutVerticalFrame(lt ListTheme) ListTheme {
+	for _, frame := range []*ThemeItem{&lt.List.Focused, &lt.List.Blurred} {
+		frame.Padding = []int{0, 1, 0, 1}
+		frame.Border.Sides = []bool{false, true, false, true}
+	}
+	return lt
 }
 
 func listTheme(border Border) ListTheme {

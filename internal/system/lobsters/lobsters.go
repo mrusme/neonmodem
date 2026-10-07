@@ -82,6 +82,10 @@ func (sys *System) Kind() string {
 	return Kind
 }
 
+func (sys *System) URL() string {
+	return sys.settings.URL
+}
+
 func (sys *System) Title() string {
 	u, err := url.Parse(sys.settings.URL)
 	if err != nil || u.Hostname() == "" {
@@ -215,7 +219,8 @@ func (sys *System) toPost(s *api.StoryModel) post.Post {
 		ReplyCount: s.CommentCount,
 		Score:      post.Score{Value: s.Score, Unit: post.ScorePoints},
 
-		URL: postURL,
+		URL:  postURL,
+		Link: s.URL,
 
 		SysIDX: sys.idx,
 	}
@@ -231,6 +236,7 @@ func (sys *System) LoadPost(ctx context.Context, p *post.Post) error {
 	p.Subject = fresh.Subject
 	p.Body = fresh.Body
 	p.Kind = fresh.Kind
+	p.Link = fresh.Link
 	p.Author = fresh.Author
 	p.ReplyCount = fresh.ReplyCount
 	p.URL = fresh.URL

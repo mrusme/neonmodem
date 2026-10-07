@@ -58,6 +58,10 @@ func (sys *System) Kind() string {
 	return Kind
 }
 
+func (sys *System) URL() string {
+	return sys.settings.URL
+}
+
 func (sys *System) Title() string {
 	u, err := url.Parse(sys.settings.URL)
 	if err != nil || u.Hostname() == "" {

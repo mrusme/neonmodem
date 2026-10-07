@@ -24,15 +24,11 @@ func handleSelect(mi interface{}) (bool, []tea.Cmd) {
 func handleViewResize(mi interface{}) (bool, []tea.Cmd) {
 	m := mi.(*Model)
 
-	width := m.tk.ViewWidth() - 4
-	height := m.tk.ViewHeight() - 4
-	if width < 10 {
-		width = 10
-	}
-	if height < 3 {
-		height = 3
-	}
-	m.list.SetSize(width, height)
+	frame := m.ctx.Theme.PopupList.List.Focused
+	m.list.SetSize(
+		max(m.tk.InnerWidth()-frame.GetHorizontalFrameSize(), 1),
+		max(m.tk.InnerHeight()-frame.GetVerticalFrameSize(), 1),
+	)
 
 	return false, nil
 }

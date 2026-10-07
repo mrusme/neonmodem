@@ -32,7 +32,13 @@ func (tk *ToolKit) KeymapHelpStrings() []string {
 	for _, binding := range tk.keybindings {
 		bindings = append(bindings, binding.Help().Key+" "+binding.Help().Desc)
 	}
-	sort.Strings(bindings)
+	sort.Slice(bindings, func(i, j int) bool {
+		a, b := strings.ToLower(bindings[i]), strings.ToLower(bindings[j])
+		if a != b {
+			return a < b
+		}
+		return bindings[i] > bindings[j]
+	})
 
 	bindings = append(bindings, "esc close")
 

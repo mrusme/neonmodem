@@ -13,6 +13,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/mrusme/neonmodem/internal/config"
 	"github.com/mrusme/neonmodem/internal/logging"
+	"github.com/mrusme/neonmodem/internal/openwith"
 	"github.com/mrusme/neonmodem/internal/system"
 	"github.com/mrusme/neonmodem/internal/system/credential"
 	"github.com/mrusme/neonmodem/internal/system/registry"
@@ -164,6 +165,22 @@ func (a *app) startOrder() (system.Order, string) {
 	return order, ""
 }
 
+func (a *app) openWithCommands() ([]config.OpenWith, []string) {
+	commands, notices := a.cfg.ValidOpenWith()
+	for _, notice := range notices {
+		a.logger.Warn(notice)
+	}
+	if len(commands) == 0 {
+		return nil, notices
+	}
+
+	if err := a.cfg.CommandsAllowed(); err != nil {
+		a.logger.Warn("open with commands are turned off", "error", err)
+		return nil, append(notices, fmt.Sprintf("Open with commands are turned off: %v", err))
+	}
+	return commands, notices
+}
+
 func (a *app) runTUI(ctx context.Context) error {
 	systems, errs := a.loadSystems(ctx, credential.Resolver{
 		Runner: commandRunner(),
@@ -178,6 +195,14 @@ func (a *app) runTUI(ctx context.Context) error {
 	if notice != "" {
 		c.StartupNotices = append(c.StartupNotices, notice)
 	}
+
+	commands, notices := a.openWithCommands()
+	c.OpenWith = commands
+	c.StartupNotices = append(c.StartupNotices, notices...)
+
+	runner := openwith.NewRunner(a.logger)
+	defer runner.Stop()
+	c.Launcher = runner
 
 	program := tea.NewProgram(ui.NewModel(&c))
 	if _, err := program.Run(); err != nil {

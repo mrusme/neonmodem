@@ -72,7 +72,8 @@ type Post struct {
 	Replies    []reply.Reply
 	ReplyPage  ReplyPage
 
-	URL string
+	URL  string
+	Link string
 
 	SysIDX int
 }

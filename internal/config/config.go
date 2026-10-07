@@ -128,6 +128,8 @@ type Config struct {
 
 	Systems []SystemConfig `toml:"Systems,omitempty"`
 
+	OpenWith []OpenWith `toml:"OpenWith,omitempty"`
+
 	Theme Theme
 
 	path     string

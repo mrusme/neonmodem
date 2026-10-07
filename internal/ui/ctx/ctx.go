@@ -11,6 +11,10 @@ import (
 	"github.com/mrusme/neonmodem/internal/ui/theme"
 )
 
+type Launcher interface {
+	Start(name string, line string, env []string) error
+}
+
 type Ctx struct {
 	Screen  [2]int
 	Content [2]int
@@ -20,6 +24,9 @@ type Ctx struct {
 
 	StartupErrors  []error
 	StartupNotices []string
+
+	OpenWith []config.OpenWith
+	Launcher Launcher
 
 	Loading  bool
 	Progress string

@@ -167,6 +167,10 @@ func (sys *System) Kind() string {
 	return Kind
 }
 
+func (sys *System) URL() string {
+	return api.SiteURL
+}
+
 func (sys *System) Title() string {
 	return "news.ycombinator.com"
 }
@@ -350,7 +354,8 @@ func (sys *System) toPost(item *api.Item) post.Post {
 		ReplyCount: item.Descendants,
 		Score:      points(item.Score, job),
 
-		URL: fmt.Sprintf("%s/item?id=%d", api.SiteURL, item.ID),
+		URL:  fmt.Sprintf("%s/item?id=%d", api.SiteURL, item.ID),
+		Link: item.URL,
 
 		SysIDX: sys.idx,
 	}
@@ -378,7 +383,8 @@ func (sys *System) hitToPost(h api.SearchHit) post.Post {
 		ReplyCount: h.Comments(),
 		Score:      points(h.PointsOrZero(), job),
 
-		URL: fmt.Sprintf("%s/item?id=%s", api.SiteURL, h.ObjectID),
+		URL:  fmt.Sprintf("%s/item?id=%s", api.SiteURL, h.ObjectID),
+		Link: h.URL,
 
 		SysIDX: sys.idx,
 	}
@@ -513,6 +519,7 @@ func (sys *System) loadFromFirebase(ctx context.Context, p *post.Post, id int) e
 	p.Subject = fresh.Subject
 	p.Body = fresh.Body
 	p.Kind = fresh.Kind
+	p.Link = fresh.Link
 	p.ReplyCount = fresh.ReplyCount
 
 	items, err := sys.client.Descendants(ctx, root)

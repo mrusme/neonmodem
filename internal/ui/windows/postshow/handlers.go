@@ -122,6 +122,16 @@ func handleOlder(mi interface{}) (bool, []tea.Cmd) {
 	return true, []tea.Cmd{m.loadPost(m.activePost, m.ctx.NextLoadGen(), 0)}
 }
 
+func handleOpenWith(mi interface{}) (bool, []tea.Cmd) {
+	m := mi.(*Model)
+	m.buffer = ""
+
+	if m.activePost == nil {
+		return true, nil
+	}
+	return true, []tea.Cmd{msgs.Send(msgs.OpenWithMenu{Post: *m.activePost})}
+}
+
 func handleNumberKeys(mi interface{}, n int8) (bool, []tea.Cmd) {
 	m := mi.(*Model)
 	m.buffer += strconv.Itoa(int(n))
@@ -137,18 +147,12 @@ func handleUncaughtKeys(mi interface{}, k tea.KeyPressMsg) (bool, []tea.Cmd) {
 func handleViewResize(mi interface{}) (bool, []tea.Cmd) {
 	m := mi.(*Model)
 
-	width := m.tk.ViewWidth() - 6
-	height := m.tk.ViewHeight() - 4
-	if width < 10 {
-		width = 10
-	}
-	if height < 3 {
-		height = 3
-	}
-
 	offset := m.viewport.YOffset()
 	content := m.viewport.GetContent()
-	m.viewport = viewport.New(viewport.WithWidth(width), viewport.WithHeight(height))
+	m.viewport = viewport.New(
+		viewport.WithWidth(m.tk.InnerWidth()),
+		viewport.WithHeight(m.tk.InnerHeight()),
+	)
 	m.viewport.SetContent(content)
 	m.viewport.SetYOffset(offset)
 

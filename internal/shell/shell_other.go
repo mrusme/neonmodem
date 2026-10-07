@@ -1,6 +1,6 @@
 //go:build !unix && !windows
 
-package credential
+package shell
 
 import (
 	"context"
@@ -9,6 +9,6 @@ import (
 	"runtime"
 )
 
-func shellCommand(context.Context, string) (*exec.Cmd, error) {
+func Command(context.Context, string) (*exec.Cmd, error) {
 	return nil, fmt.Errorf("can't run on %s", runtime.GOOS)
 }

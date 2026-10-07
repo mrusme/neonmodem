@@ -53,14 +53,19 @@ func NewModel(c *ctx.Ctx) *Model {
 	m.tk.KeymapAdd("reply", "reply (prefix with #, e.g. '2r')", "r")
 	m.tk.KeymapAdd("open", "open in browser", "o")
 	m.tk.KeymapAdd("older", "older replies", "z")
+	keys := []toolkit.MsgHandlingKeymapKey{
+		{ID: "reply", Handler: handleReply},
+		{ID: "open", Handler: handleOpen},
+		{ID: "older", Handler: handleOlder},
+	}
+	if len(c.OpenWith) > 0 {
+		m.tk.KeymapAdd("openwith", "open with", "O")
+		keys = append(keys, toolkit.MsgHandlingKeymapKey{ID: "openwith", Handler: handleOpenWith})
+	}
 
 	m.tk.SetViewFunc(buildView)
 	m.tk.SetMsgHandling(toolkit.MsgHandling{
-		OnKeymapKey: []toolkit.MsgHandlingKeymapKey{
-			{ID: "reply", Handler: handleReply},
-			{ID: "open", Handler: handleOpen},
-			{ID: "older", Handler: handleOlder},
-		},
+		OnKeymapKey:      keys,
 		OnAnyNumberKey:   handleNumberKeys,
 		OnAnyUncaughtKey: handleUncaughtKeys,
 		OnViewResize:     handleViewResize,
@@ -115,7 +120,7 @@ func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
 
 func (m *Model) open(p post.Post) tea.Cmd {
 	m.activePost = &p
-	m.viewport.SetContent(renderLoadingPlaceholder(m.ctx, m.activePost))
+	m.viewport.SetContent(renderLoadingPlaceholder(m.ctx, m.activePost, m.viewport.Width()))
 	m.viewport.GotoTop()
 	m.replyIDs = []string{m.activePost.ID}
 	m.allReplies = nil
@@ -128,7 +133,7 @@ func (m *Model) open(p post.Post) tea.Cmd {
 func (m *Model) loadPost(p *post.Post, gen int64, delay time.Duration) tea.Cmd {
 	c := m.ctx
 	viewportWidth := m.viewport.Width()
-	imageWidth := m.tk.ViewWidth() - 8
+	imageWidth := viewportWidth - 2
 	systems := c.Systems
 
 	return func() tea.Msg {
