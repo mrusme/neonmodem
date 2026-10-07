@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
@@ -317,14 +318,28 @@ func (m *Model) rebuild() {
 
 func (m *Model) statusText() string {
 	var uses []feed.Use
+	var reconnect []string
 	for _, idx := range m.selected() {
 		f, ok := m.feeds[idx]
-		if !ok || f.err != nil {
+		if !ok {
+			continue
+		}
+		if f.err != nil {
+			if errors.Is(f.err, system.ErrNeedsConnect) {
+				reconnect = append(reconnect, m.ctx.Systems[idx].Title())
+			}
 			continue
 		}
 		uses = append(uses, feed.Use{Name: m.ctx.Systems[idx].Title(), Order: f.order})
 	}
-	return feed.Status(m.order, uses)
+
+	var parts []string
+	for _, part := range []string{feed.NeedsConnect(reconnect), feed.Status(m.order, uses)} {
+		if part != "" {
+			parts = append(parts, part)
+		}
+	}
+	return strings.Join(parts, "; ")
 }
 
 func (m *Model) sendStatus() tea.Cmd {

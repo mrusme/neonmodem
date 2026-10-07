@@ -34,6 +34,7 @@ type Prompter interface {
 	Secret(question string, field string) (string, error)
 	Credential(ctx context.Context, f Field) (Answer, error)
 	Generated(ctx context.Context, f Field, value string) (Answer, error)
+	Choose(question string, options []string) (int, error)
 	Notice(text string)
 }
 
@@ -243,6 +244,10 @@ func (t *Terminal) run(ctx context.Context, command string) (string, bool, error
 
 	fmt.Fprintf(t.out, "The command failed: %v\n", err)
 	return "", false, nil
+}
+
+func (t *Terminal) Choose(question string, options []string) (int, error) {
+	return t.choose(question, options, "choice")
 }
 
 func (t *Terminal) choose(question string, options []string, field string) (int, error) {

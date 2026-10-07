@@ -215,6 +215,16 @@ func Status(want system.Order, uses []Use) string {
 	return strings.Join(phrases, ", ")
 }
 
+func NeedsConnect(names []string) string {
+	switch len(names) {
+	case 0:
+		return ""
+	case 1:
+		return names[0] + " needs `neonmodem connect`"
+	}
+	return joinNames(names) + " need `neonmodem connect`"
+}
+
 func possessive(one bool) string {
 	if one {
 		return "its"

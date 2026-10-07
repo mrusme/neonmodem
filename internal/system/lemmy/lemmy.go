@@ -40,8 +40,8 @@ type System struct {
 	logger   *slog.Logger
 	client   *lemmy.Client
 
-	loginMu  sync.Mutex
-	loggedIn bool
+	sessionMu sync.Mutex
+	ended     error
 }
 
 func New(env system.Env) (system.System, error) {
@@ -57,6 +57,7 @@ func New(env system.Env) (system.System, error) {
 		if err != nil {
 			return nil, err
 		}
+		client.Token = sys.token()
 		sys.client = client
 	}
 
@@ -90,9 +91,16 @@ func (sys *System) Description() string {
 	return "Lemmy"
 }
 
+func (sys *System) username() string {
+	return sys.settings.Credential(system.CredentialUsername)
+}
+
+func (sys *System) token() string {
+	return sys.settings.Credential(system.CredentialToken)
+}
+
 func (sys *System) hasAccount() bool {
-	return sys.settings.Credential(system.CredentialUsername) != "" &&
-		sys.settings.Credential(system.CredentialPassword) != ""
+	return sys.username() != "" || sys.token() != ""
 }
 
 func (sys *System) Capabilities() system.Capabilities {
@@ -118,28 +126,12 @@ func (sys *System) listingType() lemmy.ListingType {
 	}
 }
 
-func (sys *System) ensureLogin(ctx context.Context) error {
-	if !sys.hasAccount() {
-		return nil
+func errorString(err error) string {
+	var le lemmy.Error
+	if errors.As(err, &le) {
+		return le.ErrStr
 	}
-
-	sys.loginMu.Lock()
-	defer sys.loginMu.Unlock()
-
-	if sys.loggedIn {
-		return nil
-	}
-
-	err := sys.client.ClientLogin(ctx, lemmy.Login{
-		UsernameOrEmail: sys.settings.Credential(system.CredentialUsername),
-		Password:        sys.settings.Credential(system.CredentialPassword),
-	})
-	if err != nil {
-		return fmt.Errorf("logging in to %s: %w", sys.Title(), err)
-	}
-	sys.loggedIn = true
-
-	return nil
+	return ""
 }
 
 func isAuthError(err error) bool {
@@ -152,30 +144,84 @@ func isAuthError(err error) bool {
 		le.ErrStr == "incorrect_login"
 }
 
-func (sys *System) withLogin(ctx context.Context, call func() error) error {
-	if err := sys.ensureLogin(ctx); err != nil {
+func (sys *System) connectCommand() string {
+	return "`" + system.ConnectCommand(Kind, sys.settings.URL) + "`"
+}
+
+func (sys *System) sessionErr() error {
+	if sys.username() != "" && sys.token() == "" {
+		return system.NeedsConnect(fmt.Sprintf(
+			"there's no session token for %s; log in with %s",
+			sys.username(), sys.connectCommand()))
+	}
+
+	sys.sessionMu.Lock()
+	defer sys.sessionMu.Unlock()
+	return sys.ended
+}
+
+func (sys *System) end() error {
+	sys.sessionMu.Lock()
+	defer sys.sessionMu.Unlock()
+
+	if sys.ended == nil {
+		whose := "the session"
+		if sys.username() != "" {
+			whose = "the session of " + sys.username()
+		}
+		sys.ended = system.NeedsConnect(fmt.Sprintf(
+			"%s has ended; log in again with %s", whose, sys.connectCommand()))
+		sys.logger.Warn("the session has ended", "url", sys.settings.URL)
+	}
+	return sys.ended
+}
+
+func (sys *System) listing(ctx context.Context, call func(ctx context.Context) error) error {
+	if err := sys.sessionErr(); err != nil {
+		return err
+	}
+	if sys.token() == "" {
+		return call(ctx)
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	checked := make(chan error, 1)
+	go func() {
+		_, err := sys.client.ValidateAuth(ctx)
+		if err != nil {
+			cancel()
+		}
+		checked <- err
+	}()
+
+	err := call(ctx)
+	if checkErr := <-checked; checkErr != nil {
+		if isAuthError(checkErr) {
+			return sys.end()
+		}
+		return fmt.Errorf("checking the session: %w", checkErr)
+	}
+	return err
+}
+
+func (sys *System) write(ctx context.Context, call func(ctx context.Context) error) error {
+	if err := sys.sessionErr(); err != nil {
 		return err
 	}
 
-	err := call()
-	if err == nil || !isAuthError(err) || !sys.hasAccount() {
-		return err
+	err := call(ctx)
+	if err != nil && sys.token() != "" && isAuthError(err) {
+		return sys.end()
 	}
-
-	sys.loginMu.Lock()
-	sys.loggedIn = false
-	sys.loginMu.Unlock()
-
-	if err := sys.ensureLogin(ctx); err != nil {
-		return err
-	}
-	return call()
+	return err
 }
 
 func (sys *System) ListForums(ctx context.Context) ([]forum.Forum, error) {
 	var models []forum.Forum
 
-	err := sys.withLogin(ctx, func() error {
+	err := sys.listing(ctx, func(ctx context.Context) error {
 		models = nil
 		for page := int64(1); page <= maxPages; page++ {
 			resp, err := sys.client.Communities(ctx, lemmy.ListCommunities{
@@ -255,7 +301,7 @@ func (sys *System) ListPosts(
 	}
 
 	var resp *lemmy.GetPostsResponse
-	err := sys.withLogin(ctx, func() error {
+	err := sys.listing(ctx, func(ctx context.Context) error {
 		var err error
 		resp, err = sys.client.Posts(ctx, params)
 		return err
@@ -321,21 +367,19 @@ func (sys *System) LoadPost(ctx context.Context, p *post.Post) error {
 		return fmt.Errorf("invalid post id %q: %w", p.ID, err)
 	}
 
-	var postResp *lemmy.GetPostResponse
-	var comments *lemmy.GetCommentsResponse
-	err = sys.withLogin(ctx, func() error {
-		var err error
-		postResp, err = sys.client.Post(ctx, lemmy.GetPost{ID: lemmy.NewOptional(postID)})
-		if err != nil {
-			return err
-		}
-		comments, err = sys.client.Comments(ctx, lemmy.GetComments{
-			PostID:   lemmy.NewOptional(postID),
-			MaxDepth: lemmy.NewOptional(int64(commentDepth)),
-			Sort:     lemmy.NewOptional(lemmy.CommentSortTypeOld),
-			Type:     lemmy.NewOptional(lemmy.ListingTypeAll),
-		})
+	if err := sys.sessionErr(); err != nil {
 		return err
+	}
+
+	postResp, err := sys.client.Post(ctx, lemmy.GetPost{ID: lemmy.NewOptional(postID)})
+	if err != nil {
+		return err
+	}
+	comments, err := sys.client.Comments(ctx, lemmy.GetComments{
+		PostID:   lemmy.NewOptional(postID),
+		MaxDepth: lemmy.NewOptional(int64(commentDepth)),
+		Sort:     lemmy.NewOptional(lemmy.CommentSortTypeOld),
+		Type:     lemmy.NewOptional(lemmy.ListingTypeAll),
 	})
 	if err != nil {
 		return err
@@ -436,7 +480,7 @@ func (sys *System) CreatePost(ctx context.Context, p *post.Post) error {
 	}
 
 	var resp *lemmy.PostResponse
-	err = sys.withLogin(ctx, func() error {
+	err = sys.write(ctx, func(ctx context.Context) error {
 		var err error
 		resp, err = sys.client.CreatePost(ctx, create)
 		return err
@@ -472,7 +516,7 @@ func (sys *System) CreateReply(ctx context.Context, r *reply.Reply) error {
 	}
 
 	var resp *lemmy.CommentResponse
-	err = sys.withLogin(ctx, func() error {
+	err = sys.write(ctx, func(ctx context.Context) error {
 		var err error
 		resp, err = sys.client.CreateComment(ctx, create)
 		return err

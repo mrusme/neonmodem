@@ -2,6 +2,7 @@ package lemmy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -9,6 +10,15 @@ import (
 	"github.com/mrusme/neonmodem/internal/system/prompt"
 	"go.elara.ws/go-lemmy"
 )
+
+const (
+	codeDigits = 6
+	maxCodes   = 3
+)
+
+var errTooManyLogins = errors.New(
+	"too many logins from this IP address; please try again later, since Lemmy " +
+		"limits logins per hour")
 
 func (sys *System) Connect(
 	ctx context.Context,
@@ -42,15 +52,22 @@ func (sys *System) Connect(
 		if err != nil {
 			return settings, err
 		}
-		if err := client.ClientLogin(ctx, lemmy.Login{
+		jwt, err := logIn(ctx, client, p, lemmy.Login{
 			UsernameOrEmail: username.Value,
 			Password:        password.Value,
-		}); err != nil {
+		})
+		if err != nil {
 			return settings, fmt.Errorf("could not log in to %s: %w", sysURL, err)
+		}
+		p.Notice("Logged in. Your password won't be stored, only the session token Lemmy issued.")
+
+		token, err := p.Generated(ctx, prompt.Field{Name: "session token", Secret: true}, jwt)
+		if err != nil {
+			return settings, err
 		}
 
 		settings.SetCredential(system.CredentialUsername, username)
-		settings.SetCredential(system.CredentialPassword, password)
+		settings.SetCredential(system.CredentialToken, token)
 	}
 
 	listing, err := p.Optional(
@@ -74,4 +91,85 @@ func (sys *System) Connect(
 	settings.Options[OptionListing] = listing
 
 	return settings, nil
+}
+
+func logIn(
+	ctx context.Context,
+	client *lemmy.Client,
+	p prompt.Prompter,
+	login lemmy.Login,
+) (string, error) {
+	resp, err := client.Login(ctx, login)
+	if errorString(err) == "missing_totp_token" {
+		p.Notice("Your account uses two-factor authentication.")
+		resp, err = logInWithCode(ctx, client, p, login)
+	}
+	if errorString(err) == "rate_limit_error" {
+		return "", errTooManyLogins
+	}
+	if err != nil {
+		return "", err
+	}
+
+	jwt, ok := resp.JWT.Value()
+	if !ok || jwt == "" {
+		return "", lemmy.ErrNoToken
+	}
+	return jwt, nil
+}
+
+func logInWithCode(
+	ctx context.Context,
+	client *lemmy.Client,
+	p prompt.Prompter,
+	login lemmy.Login,
+) (*lemmy.LoginResponse, error) {
+	for rejected := 0; ; {
+		code, err := readCode(p)
+		if err != nil {
+			return nil, err
+		}
+
+		login.TOTP2FAToken = lemmy.NewOptional(code)
+		resp, err := client.Login(ctx, login)
+		if errorString(err) != "incorrect_totp_token" {
+			return resp, err
+		}
+
+		rejected++
+		if rejected == maxCodes {
+			return nil, errors.New("three codes were rejected; check the clock of " +
+				"the device with your authenticator app")
+		}
+		p.Notice("The code was rejected. Codes change every 30 seconds, " +
+			"and a device with a wrong clock shows wrong codes.")
+	}
+}
+
+func readCode(p prompt.Prompter) (string, error) {
+	for {
+		answer, err := p.Line(
+			"Please enter the current 2FA code from your authenticator app", "2FA code")
+		if err != nil {
+			return "", err
+		}
+
+		code := strings.Join(strings.Fields(answer), "")
+		if isCode(code) {
+			return code, nil
+		}
+		p.Notice("A 2FA code has six digits.")
+	}
+}
+
+func isCode(code string) bool {
+	if len(code) != codeDigits {
+		return false
+	}
+	for _, c := range code {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
 }

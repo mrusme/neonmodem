@@ -107,4 +107,28 @@ var (
 	ErrNoCredentials    = errors.New(
 		"this system is connected without an account; run neonmodem connect " +
 			"again with credentials to post")
+	ErrNeedsConnect = errors.New("this system needs neonmodem connect")
 )
+
+type connectError struct {
+	text string
+}
+
+func (e connectError) Error() string {
+	return e.text
+}
+
+func (e connectError) Unwrap() error {
+	return ErrNeedsConnect
+}
+
+func NeedsConnect(text string) error {
+	return connectError{text: text}
+}
+
+func ConnectCommand(kind string, sysURL string) string {
+	if sysURL == "" {
+		return "neonmodem connect --type " + kind
+	}
+	return "neonmodem connect --type " + kind + " --url " + sysURL
+}

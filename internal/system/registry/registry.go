@@ -40,7 +40,7 @@ var descriptors = map[string]Descriptor{
 		Name:          "Lemmy",
 		NeedsURL:      true,
 		AllowMultiple: true,
-		Credentials:   []string{system.CredentialUsername, system.CredentialPassword},
+		Credentials:   []string{system.CredentialUsername, system.CredentialToken},
 		New:           lemmy.New,
 	},
 	lobsters.Kind: {
