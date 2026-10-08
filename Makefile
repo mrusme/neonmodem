@@ -1,4 +1,4 @@
-.PHONY: all build install-deps install-deps-go test vet fmt fmt-check lint check
+.PHONY: all build install-deps install-deps-go test vet vet-cross fmt fmt-check lint vuln probes check
 VERSION := $(shell git describe --tags 2> /dev/null || git rev-parse --short HEAD)
 
 all: install-deps build
@@ -17,6 +17,10 @@ test:
 vet:
 	go vet ./...
 
+vet-cross:
+	GOOS=windows go vet ./...
+	GOOS=darwin go vet ./...
+
 fmt:
 	gofmt -l -w .
 
@@ -26,4 +30,11 @@ fmt-check:
 lint:
 	golangci-lint run ./...
 
-check: fmt-check vet test
+vuln:
+	govulncheck ./...
+
+probes:
+	@if [ -d _internal/probe ]; then go vet ./_internal/probe/...; fi
+
+check: fmt-check vet vet-cross test probes
+	@if command -v golangci-lint > /dev/null 2>&1; then $(MAKE) lint; else echo "golangci-lint is not on the path, lint skipped"; fi

@@ -1,0 +1,6 @@
+{"hits":[
+ {"objectID":"50000001","title":"Ask HN: How do you keep your notes?","url":null,"author":"alice","points":412,"num_comments":501,"created_at_i":1791200000,"story_text":"<p>Curious about your setup.</p>","_tags":["story","author_alice","story_50000001","ask_hn"]},
+ {"objectID":"50000002","title":"Show HN: A tiny Forth for microcontrollers","url":"https://example.com/forth","author":"bob","points":312,"num_comments":87,"created_at_i":1791190000,"story_text":null,"_tags":["story","author_bob","story_50000002","show_hn"]},
+ {"objectID":"50000004","title":"Tell HN: The office cat retired","url":null,"author":"dave","points":95,"num_comments":40,"created_at_i":1791170000,"story_text":"<p>Thanks for all the treats.</p>","_tags":["story","author_dave","story_50000004","ask_hn"]},
+ {"objectID":"50000003","title":"Example Corp (YC W24) is hiring engineers","url":"https://example.com/jobs","author":"carol","points":null,"num_comments":null,"created_at_i":1791180000,"_tags":["job","author_carol","story_50000003"]}
+],"nbHits":3}
