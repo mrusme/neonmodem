@@ -92,11 +92,15 @@ file location depends on the operating system. On Unix systems, it is in
 `%AppData%\neonmodem.toml`.
 
 Connecting a system that is already connected asks whether to keep the existing
-connection or to replace it. Credentials are stored in plain text unless they
-are read from a command, so the file is created with mode `0600`.
+connection or to replace it. The previous credentials stay valid on the site
+until you revoke them there, since Neon Modem can't do that for every system.
 
-The top-level settings can also be set through environment variables, for
-example `NEONMODEM_RENDERSPLASH=false` or `NEONMODEM_PROXY=http://proxy:8080`.
+Credentials are stored in plain text unless they are read from a command, so the
+file is created with mode `0600`. When the file can't be written, for example
+because it's a link into the Nix store, the command prints the `[[Systems]]`
+tables to add by hand.
+
+**Note:** Comments in the file are lost on a write.
 
 ### Credentials
 
@@ -187,7 +191,9 @@ key, but no password. The key can also be read from a command. Neon Modem then
 shows the key once, so it can be saved e.g. in a password manager. It stays in
 the terminal's scrollback until that is cleared. Choose _No account_ when asked
 for the username to connect without an account, which allows you to read public
-categories, but not posted anything.
+categories, but not posted anything. The key is checked once before it's stored,
+and a key the instance stops accepting later makes the status line name the
+connect command.
 
 ```sh
 neonmodem connect --type discourse --url https://www.keebtalk.com
@@ -278,7 +284,9 @@ In the posts list:
 - `C-e`: Open system selector
 - `C-t`: Open forum selector
 - `C-o`: Open sort order selector
+- `!`: Show the recent notices
 - `esc`: Quit
+- `C-c`: Quit, from every view and dialog
 
 In the post view dialog:
 
