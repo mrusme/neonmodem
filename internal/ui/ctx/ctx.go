@@ -1,18 +1,36 @@
 package ctx
 
 import (
+	"context"
 	"embed"
 	"log/slog"
-	"sync/atomic"
+	"sync"
 
 	"github.com/mrusme/neonmodem/internal/config"
+	"github.com/mrusme/neonmodem/internal/feed"
 	"github.com/mrusme/neonmodem/internal/models/forum"
 	"github.com/mrusme/neonmodem/internal/system"
+	"github.com/mrusme/neonmodem/internal/ui/images"
 	"github.com/mrusme/neonmodem/internal/ui/theme"
 )
 
 type Launcher interface {
 	Start(name string, line string, env []string) error
+}
+
+type LoadSource string
+
+const (
+	LoadFeed   LoadSource = "feed"
+	LoadPost   LoadSource = "post"
+	LoadSubmit LoadSource = "submit"
+	LoadForums LoadSource = "forums"
+)
+
+type loadState struct {
+	mu     sync.Mutex
+	gen    int64
+	cancel context.CancelFunc
 }
 
 type Ctx struct {
@@ -28,10 +46,11 @@ type Ctx struct {
 	OpenWith []config.OpenWith
 	Launcher Launcher
 
-	Loading  bool
 	Progress string
 	Logger   *slog.Logger
 	Theme    *theme.Theme
+	Images   *images.Renderer
+	Feed     *feed.Feed
 
 	DarkBackground bool
 
@@ -39,7 +58,8 @@ type Ctx struct {
 	currentForum  forum.Forum
 	currentOrder  system.Order
 
-	loadGen *atomic.Int64
+	loading map[LoadSource]struct{}
+	load    *loadState
 }
 
 func New(
@@ -60,14 +80,29 @@ func New(
 		Systems: systems,
 		Logger:  logger,
 		Theme:   theme.New(&cfg.Theme, true),
+		Images:  images.New(logger, cfg.Proxy),
+		Feed:    feed.New(systems, cfg.ReadDeadline(), cfg.WriteDeadline()),
 
 		DarkBackground: true,
 
 		currentSystem: -1,
 		currentOrder:  system.OrderNew,
 
-		loadGen: new(atomic.Int64),
+		loading: map[LoadSource]struct{}{},
+		load:    &loadState{},
 	}
+}
+
+func (c *Ctx) StartLoading(source LoadSource) {
+	c.loading[source] = struct{}{}
+}
+
+func (c *Ctx) StopLoading(source LoadSource) {
+	delete(c.loading, source)
+}
+
+func (c *Ctx) IsLoading() bool {
+	return len(c.loading) > 0
 }
 
 func (c *Ctx) SetDarkBackground(dark bool) bool {
@@ -79,24 +114,35 @@ func (c *Ctx) SetDarkBackground(dark bool) bool {
 	return true
 }
 
-func (c *Ctx) NextLoadGen() int64 {
-	return c.loadGen.Add(1)
+func (c *Ctx) NextLoad() (context.Context, int64) {
+	c.load.mu.Lock()
+	defer c.load.mu.Unlock()
+
+	if c.load.cancel != nil {
+		c.load.cancel()
+	}
+	loadCtx, cancel := context.WithCancel(context.Background())
+	c.load.cancel = cancel
+	c.load.gen++
+
+	return loadCtx, c.load.gen
 }
 
 func (c *Ctx) IsCurrentLoadGen(gen int64) bool {
-	return c.loadGen.Load() == gen
+	c.load.mu.Lock()
+	defer c.load.mu.Unlock()
+	return c.load.gen == gen
 }
 
 func (c *Ctx) CancelLoad() {
-	c.loadGen.Add(1)
-}
+	c.load.mu.Lock()
+	defer c.load.mu.Unlock()
 
-func (c *Ctx) AddSystem(sys system.System) {
-	c.Systems = append(c.Systems, sys)
-}
-
-func (c *Ctx) NumSystems() int {
-	return len(c.Systems)
+	if c.load.cancel != nil {
+		c.load.cancel()
+		c.load.cancel = nil
+	}
+	c.load.gen++
 }
 
 func (c *Ctx) SetCurrentSystem(idx int) {

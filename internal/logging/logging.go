@@ -45,7 +45,3 @@ func restrict(f *os.File) error {
 	}
 	return f.Chmod(0o600)
 }
-
-func Discard() *slog.Logger {
-	return slog.New(slog.DiscardHandler)
-}

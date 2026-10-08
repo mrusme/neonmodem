@@ -81,8 +81,9 @@ func topSince(order system.Order, now time.Time) time.Time {
 		return now.Add(-30 * 24 * time.Hour)
 	case system.OrderTopYear:
 		return now.Add(-365 * 24 * time.Hour)
+	default:
+		return time.Time{}
 	}
-	return time.Time{}
 }
 
 type recentWrite struct {
@@ -91,12 +92,13 @@ type recentWrite struct {
 }
 
 type System struct {
-	idx      int
-	settings system.Settings
-	proxy    string
-	logger   *slog.Logger
-	client   *api.Client
-	web      *webSession
+	idx         int
+	settings    system.Settings
+	proxy       string
+	logger      *slog.Logger
+	readTimeout time.Duration
+	client      *api.Client
+	web         *webSession
 
 	writesMu sync.Mutex
 	writes   map[string][]recentWrite
@@ -104,10 +106,11 @@ type System struct {
 
 func New(env system.Env) (system.System, error) {
 	sys := &System{
-		idx:      env.Index,
-		settings: env.Settings,
-		proxy:    env.Proxy,
-		logger:   env.Log(),
+		idx:         env.Index,
+		settings:    env.Settings,
+		proxy:       env.Proxy,
+		logger:      env.Log(),
+		readTimeout: env.ReadTimeout,
 	}
 	if sys.settings.URL == "" {
 		sys.settings.URL = api.SiteURL
@@ -123,23 +126,27 @@ func New(env system.Env) (system.System, error) {
 		return nil, err
 	}
 
-	return newWithClients(sys, client, api.SiteURL), nil
+	return newWithClients(sys, client, api.SiteURL)
 }
 
-func newWithClients(sys *System, client *api.Client, siteURL string) *System {
+func newWithClients(sys *System, client *api.Client, siteURL string) (*System, error) {
 	sys.client = client
 
 	if sys.hasAccount() {
-		sys.web = newWebSession(
+		web, err := newWebSession(
 			siteURL,
 			sys.settings.Credential(system.CredentialUsername),
 			sys.settings.Credential(system.CredentialPassword),
 			sys.proxy,
 			sys.logger,
 		)
+		if err != nil {
+			return nil, err
+		}
+		sys.web = web
 	}
 
-	return sys
+	return sys, nil
 }
 
 func titleFor(forumID string, subject string) string {
@@ -176,18 +183,11 @@ func (sys *System) Title() string {
 }
 
 func (sys *System) Description() string {
-	if !sys.hasAccount() {
-		return "Hacker News (read-only)"
-	}
-	return "Hacker News"
+	return system.Describe("Hacker News", sys.hasAccount())
 }
 
 func (sys *System) Capabilities() system.Capabilities {
-	caps := system.CapRead
-	if sys.hasAccount() {
-		caps |= system.CapWrite
-	}
-	return caps
+	return system.AccountCapabilities(sys.hasAccount())
 }
 
 func (sys *System) ListForums(ctx context.Context) ([]forum.Forum, error) {
@@ -313,16 +313,6 @@ func (sys *System) forumForHit(h api.SearchHit) forum.Forum {
 	return sys.forumFor(h.Title, false)
 }
 
-func linkOrText(link string, body string) (post.Kind, string) {
-	if link == "" {
-		return post.KindText, body
-	}
-	if body == "" {
-		return post.KindLink, link
-	}
-	return post.KindLink, link + "\n\n" + body
-}
-
 func points(value int, job bool) post.Score {
 	if job {
 		return post.Score{}
@@ -331,7 +321,7 @@ func points(value int, job bool) post.Score {
 }
 
 func (sys *System) toPost(item *api.Item) post.Post {
-	kind, body := linkOrText(item.URL, text.Markdown(item.Text))
+	kind, body := post.LinkBody(item.URL, text.Markdown(item.Text))
 	job := item.Type == "job"
 
 	return post.Post{
@@ -362,7 +352,7 @@ func (sys *System) toPost(item *api.Item) post.Post {
 }
 
 func (sys *System) hitToPost(h api.SearchHit) post.Post {
-	kind, body := linkOrText(h.URL, text.Markdown(h.Text()))
+	kind, body := post.LinkBody(h.URL, text.Markdown(h.Text()))
 	job := slices.Contains(h.Tags, "job")
 
 	return post.Post{
@@ -400,6 +390,8 @@ func (sys *System) LoadPost(ctx context.Context, p *post.Post) error {
 
 	tree, err := sys.client.Tree(ctx, id)
 	switch {
+	case err != nil && ctx.Err() != nil:
+		return err
 	case err != nil:
 		sys.logger.Warn("algolia tree failed, falling back to the official api",
 			"id", id, "error", err)
@@ -515,12 +507,7 @@ func (sys *System) loadFromFirebase(ctx context.Context, p *post.Post, id int) e
 		return err
 	}
 
-	fresh := sys.toPost(root)
-	p.Subject = fresh.Subject
-	p.Body = fresh.Body
-	p.Kind = fresh.Kind
-	p.Link = fresh.Link
-	p.ReplyCount = fresh.ReplyCount
+	p.Refresh(sys.toPost(root))
 
 	items, err := sys.client.Descendants(ctx, root)
 	if err != nil && len(items) == 0 {
@@ -561,8 +548,8 @@ func (sys *System) loadFromFirebase(ctx context.Context, p *post.Post, id int) e
 }
 
 func (sys *System) CreatePost(ctx context.Context, p *post.Post) error {
-	if sys.web == nil {
-		return system.ErrNoCredentials
+	if !sys.Capabilities().Has(system.CapCreatePost) {
+		return system.NoCredentials(Kind, sys.URL())
 	}
 
 	title := titleFor(p.Forum.ID, p.Subject)
@@ -586,8 +573,8 @@ func (sys *System) CreatePost(ctx context.Context, p *post.Post) error {
 }
 
 func (sys *System) CreateReply(ctx context.Context, r *reply.Reply) error {
-	if sys.web == nil {
-		return system.ErrNoCredentials
+	if !sys.Capabilities().Has(system.CapCreateReply) {
+		return system.NoCredentials(Kind, sys.URL())
 	}
 
 	parent := r.ParentID

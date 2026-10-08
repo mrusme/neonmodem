@@ -102,7 +102,7 @@ type BlurWindow struct {
 }
 
 type ShowError struct {
-	Errors []error
+	Messages []string
 }
 
 type Notice struct {
@@ -110,10 +110,30 @@ type Notice struct {
 	IsError bool
 }
 
+type NoticeEntry struct {
+	At      time.Time
+	Text    string
+	IsError bool
+}
+
+type NoticesChanged struct {
+	Count int
+}
+
+type OpenNotices struct{}
+
+type ShowNotices struct {
+	Entries []NoticeEntry
+}
+
 type ThemeChanged struct{}
 
 func Error(err error) ShowError {
-	return ShowError{Errors: []error{err}}
+	return ShowError{Messages: []string{err.Error()}}
+}
+
+func Message(text string) ShowError {
+	return ShowError{Messages: []string{text}}
 }
 
 func Send(msg tea.Msg) tea.Cmd {

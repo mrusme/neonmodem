@@ -1,20 +1,17 @@
 package postshow
 
 import (
-	"errors"
-	"os"
-	"os/exec"
 	"strconv"
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
+	"github.com/mrusme/neonmodem/internal/browser"
 	"github.com/mrusme/neonmodem/internal/system"
+	"github.com/mrusme/neonmodem/internal/ui/ctx"
 	"github.com/mrusme/neonmodem/internal/ui/msgs"
-	"github.com/pkg/browser"
 )
 
-func handleReply(mi interface{}) (bool, []tea.Cmd) {
-	m := mi.(*Model)
+func (m *Model) handleReply() (bool, []tea.Cmd) {
 	buffer := m.buffer
 	m.buffer = ""
 
@@ -24,15 +21,15 @@ func handleReply(mi interface{}) (bool, []tea.Cmd) {
 
 	sys := m.ctx.Systems[m.activePost.SysIDX]
 	if !sys.Capabilities().Has(system.CapCreateReply) {
-		return true, []tea.Cmd{msgs.Send(msgs.Error(errors.New(
+		return true, []tea.Cmd{msgs.Send(msgs.Message(
 			sys.Title() + " is connected without an account, so replying isn't " +
-				"available here. Press `o` to open the post in your browser, or run " +
-				"`neonmodem connect --type " + sys.Kind() + "` again with credentials.")))}
+				"available here. Press `o` to open the post in your browser, or run `" +
+				system.ConnectCommand(sys.Kind(), sys.URL()) + "` again with credentials."))}
 	}
 
 	if m.activePost.Closed {
-		return true, []tea.Cmd{msgs.Send(msgs.Error(errors.New(
-			"This post is closed, replies aren't accepted anymore.")))}
+		return true, []tea.Cmd{msgs.Send(msgs.Message(
+			"This post is closed, replies aren't accepted anymore."))}
 	}
 
 	replyToIdx := 0
@@ -42,8 +39,8 @@ func handleReply(mi interface{}) (bool, []tea.Cmd) {
 			return true, []tea.Cmd{msgs.Send(msgs.Error(err))}
 		}
 		if n >= len(m.replyIDs) {
-			return true, []tea.Cmd{msgs.Send(msgs.Error(errors.New(
-				"Reply #" + buffer + " does not exist.")))}
+			return true, []tea.Cmd{msgs.Send(msgs.Message(
+				"Reply #" + buffer + " does not exist."))}
 		}
 		replyToIdx = n
 	}
@@ -56,8 +53,8 @@ func handleReply(mi interface{}) (bool, []tea.Cmd) {
 	if replyToIdx > 0 {
 		parent := m.allReplies[replyToIdx-1]
 		if parent.Deleted {
-			return true, []tea.Cmd{msgs.Send(msgs.Error(errors.New(
-				"That reply was deleted and can't be replied to.")))}
+			return true, []tea.Cmd{msgs.Send(msgs.Message(
+				"That reply was deleted and can't be replied to."))}
 		}
 		copied := *parent
 		copied.Replies = nil
@@ -67,41 +64,26 @@ func handleReply(mi interface{}) (bool, []tea.Cmd) {
 	return true, []tea.Cmd{msgs.Send(compose)}
 }
 
-func handleOpen(mi interface{}) (bool, []tea.Cmd) {
-	m := mi.(*Model)
+func (m *Model) handleOpen() (bool, []tea.Cmd) {
 	m.buffer = ""
 
 	if m.activePost == nil || m.activePost.URL == "" {
 		return true, nil
 	}
 	openURL := m.activePost.URL
+	program := m.ctx.Config.Browser
+	logger := m.ctx.Logger
 
-	if browserPath := m.ctx.Config.Browser; browserPath != "" {
-		if _, err := os.Stat(browserPath); err != nil {
-			m.ctx.Logger.Error("configured browser not found", "path", browserPath, "error", err)
-			return true, []tea.Cmd{msgs.Send(msgs.Error(err))}
-		}
-		return true, []tea.Cmd{func() tea.Msg {
-			cmd := exec.Command(browserPath, openURL)
-			if err := cmd.Run(); err != nil {
-				return msgs.Error(err)
-			}
-			return msgs.Notice{Text: "Opened in the browser"}
-		}}
-	}
-
-	browser.Stderr = nil
-	browser.Stdout = nil
 	return true, []tea.Cmd{func() tea.Msg {
-		if err := browser.OpenURL(openURL); err != nil {
+		if err := browser.Open(openURL, program, logger); err != nil {
+			logger.Error("opening the browser failed", "url", openURL, "error", err)
 			return msgs.Error(err)
 		}
 		return msgs.Notice{Text: "Opened in the browser"}
 	}}
 }
 
-func handleOlder(mi interface{}) (bool, []tea.Cmd) {
-	m := mi.(*Model)
+func (m *Model) handleOlder() (bool, []tea.Cmd) {
 	m.buffer = ""
 
 	if m.activePost == nil || m.loading {
@@ -118,12 +100,11 @@ func handleOlder(mi interface{}) (bool, []tea.Cmd) {
 	}
 
 	m.loading = true
-	m.ctx.Loading = true
-	return true, []tea.Cmd{m.loadPost(m.activePost, m.ctx.NextLoadGen(), 0)}
+	m.ctx.StartLoading(ctx.LoadPost)
+	return true, []tea.Cmd{m.loadPost(m.activePost, 0)}
 }
 
-func handleOpenWith(mi interface{}) (bool, []tea.Cmd) {
-	m := mi.(*Model)
+func (m *Model) handleOpenWith() (bool, []tea.Cmd) {
 	m.buffer = ""
 
 	if m.activePost == nil {
@@ -132,20 +113,17 @@ func handleOpenWith(mi interface{}) (bool, []tea.Cmd) {
 	return true, []tea.Cmd{msgs.Send(msgs.OpenWithMenu{Post: *m.activePost})}
 }
 
-func handleNumberKeys(mi interface{}, n int8) (bool, []tea.Cmd) {
-	m := mi.(*Model)
+func (m *Model) handleNumberKeys(n int8) (bool, []tea.Cmd) {
 	m.buffer += strconv.Itoa(int(n))
 	return false, nil
 }
 
-func handleUncaughtKeys(mi interface{}, k tea.KeyPressMsg) (bool, []tea.Cmd) {
-	m := mi.(*Model)
+func (m *Model) handleUncaughtKeys(tea.KeyPressMsg) (bool, []tea.Cmd) {
 	m.buffer = ""
 	return false, nil
 }
 
-func handleViewResize(mi interface{}) (bool, []tea.Cmd) {
-	m := mi.(*Model)
+func (m *Model) handleViewResize() (bool, []tea.Cmd) {
 
 	offset := m.viewport.YOffset()
 	content := m.viewport.GetContent()

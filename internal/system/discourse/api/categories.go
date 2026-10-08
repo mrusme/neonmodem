@@ -27,37 +27,27 @@ type CategoryModel struct {
 	TopicCount         int             `json:"topic_count"`
 	PostCount          int             `json:"post_count"`
 	Position           int             `json:"position"`
-	Description        null.String     `json:"description,omitempty"`
-	DescriptionText    null.String     `json:"description_text,omitempty"`
-	DescriptionExcerpt null.String     `json:"description_excerpt,omitempty"`
-	TopicUrl           null.String     `json:"topic_url,omitempty"`
+	Description        null.String     `json:"description"`
+	DescriptionText    null.String     `json:"description_text"`
+	DescriptionExcerpt null.String     `json:"description_excerpt"`
+	TopicUrl           null.String     `json:"topic_url"`
 	ReadRestricted     bool            `json:"read_restricted"`
-	Permission         null.Int        `json:"permission,omitempty"`
+	Permission         null.Int        `json:"permission"`
 	NotificationLevel  int             `json:"notification_level"`
 	CanEdit            bool            `json:"can_edit"`
-	HasChildren        null.Bool       `json:"has_children,omitempty"`
-	ParentCategoryID   null.Int        `json:"parent_category_id,omitempty"`
+	HasChildren        null.Bool       `json:"has_children"`
+	ParentCategoryID   null.Int        `json:"parent_category_id"`
 	IsUncategorized    bool            `json:"is_uncategorized"`
 	SubcategoryIDs     []int           `json:"subcategory_ids"`
 	SubcategoryList    []CategoryModel `json:"subcategory_list"`
 }
 
-type CategoriesService interface {
-	List(ctx context.Context) (*LatestCategoriesResponse, error)
-}
-
-type CategoryServiceHandler struct {
-	client *Client
-}
-
-func (a *CategoryServiceHandler) List(
-	ctx context.Context,
-) (*LatestCategoriesResponse, error) {
+func (c *Client) Categories(ctx context.Context) (*LatestCategoriesResponse, error) {
 	query := url.Values{}
 	query.Set("include_subcategories", "true")
 
 	response := new(LatestCategoriesResponse)
-	if err := a.client.http.Get(ctx, CategoriesBaseURL+".json", query, response); err != nil {
+	if err := c.http.Get(ctx, CategoriesBaseURL+".json", query, response); err != nil {
 		return nil, err
 	}
 

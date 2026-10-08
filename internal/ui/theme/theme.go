@@ -31,8 +31,6 @@ type List struct {
 }
 
 type Theme struct {
-	Dark bool
-
 	Header struct {
 		Selector lipgloss.Style
 		Spinner  lipgloss.Style
@@ -60,7 +58,7 @@ type Theme struct {
 
 func New(cfg *config.Theme, dark bool) *Theme {
 	b := builder{dark: dark}
-	t := &Theme{Dark: dark}
+	t := &Theme{}
 
 	t.Header.Selector = b.style(cfg.Header.Selector)
 	t.Header.Spinner = b.style(cfg.Header.Spinner)

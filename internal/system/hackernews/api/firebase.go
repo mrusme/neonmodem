@@ -13,7 +13,6 @@ var ErrNotFound = errors.New("item not found")
 var Lists = map[string]string{
 	"top":  "topstories",
 	"new":  "newstories",
-	"best": "beststories",
 	"ask":  "askstories",
 	"show": "showstories",
 	"jobs": "jobstories",

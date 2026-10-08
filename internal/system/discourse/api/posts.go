@@ -58,55 +58,20 @@ type PostModel struct {
 	Wiki              bool    `json:"wiki"`
 }
 
-type ShowPostResponse struct {
-	Post PostModel `json:"post,omitempty"`
-}
-
-type ListPostsResponse struct {
-	LatestPosts []PostModel `json:"latest_posts,omitempty"`
-}
-
-type PostsService interface {
-	Create(ctx context.Context, w *CreatePostModel) (PostModel, error)
-	Show(ctx context.Context, id string) (PostModel, error)
-	List(ctx context.Context) (*ListPostsResponse, error)
-}
-
-type PostServiceHandler struct {
-	client *Client
-}
-
-func (a *PostServiceHandler) Create(
-	ctx context.Context,
-	w *CreatePostModel,
-) (PostModel, error) {
+func (c *Client) CreatePost(ctx context.Context, w *CreatePostModel) (PostModel, error) {
 	response := new(PostModel)
-	if err := a.client.http.Post(ctx, PostsBaseURL+".json", w, response); err != nil {
+	if err := c.http.Post(ctx, PostsBaseURL+".json", w, response); err != nil {
 		return PostModel{}, err
 	}
 
 	return *response, nil
 }
 
-func (a *PostServiceHandler) Show(
-	ctx context.Context,
-	id string,
-) (PostModel, error) {
+func (c *Client) Post(ctx context.Context, id string) (PostModel, error) {
 	response := new(PostModel)
-	if err := a.client.http.Get(ctx, PostsBaseURL+"/"+id+".json", nil, response); err != nil {
+	if err := c.http.Get(ctx, PostsBaseURL+"/"+id+".json", nil, response); err != nil {
 		return PostModel{}, err
 	}
 
 	return *response, nil
-}
-
-func (a *PostServiceHandler) List(
-	ctx context.Context,
-) (*ListPostsResponse, error) {
-	response := new(ListPostsResponse)
-	if err := a.client.http.Get(ctx, PostsBaseURL+".json", nil, response); err != nil {
-		return nil, err
-	}
-
-	return response, nil
 }

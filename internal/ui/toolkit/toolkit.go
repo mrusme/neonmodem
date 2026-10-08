@@ -6,7 +6,7 @@ import (
 	"github.com/mrusme/neonmodem/internal/ui/theme"
 )
 
-type ViewFunc func(m interface{}, cached bool) string
+type ViewFunc func(cached bool) string
 
 type ToolKit struct {
 	winID string
@@ -18,7 +18,6 @@ type ToolKit struct {
 	focused bool
 
 	keybindings map[string]key.Binding
-	keyOrder    []string
 
 	viewfunc  ViewFunc
 	viewcache string
@@ -46,51 +45,35 @@ func (tk *ToolKit) SetViewFunc(fn ViewFunc) {
 	tk.viewfunc = fn
 }
 
-func (tk *ToolKit) CacheView(m interface{}) bool {
-	if tk.viewfunc != nil {
-		tk.viewcache = tk.viewfunc(m, false)
-		return true
-	}
-	return false
-}
-
 func (tk *ToolKit) InvalidateCache() {
 	tk.viewcache = ""
 }
 
-func (tk *ToolKit) GetCachedView() string {
-	return tk.viewcache
-}
-
-func (tk *ToolKit) IsCached() bool {
-	return tk.viewcache != ""
-}
-
 func (tk *ToolKit) DefaultCaching(cached bool) string {
-	if cached && !tk.IsFocused() && tk.IsCached() {
-		return tk.GetCachedView()
+	if cached && !tk.focused && tk.viewcache != "" {
+		return tk.viewcache
 	}
 
 	return ""
 }
 
-func (tk *ToolKit) View(m interface{}, cached bool) string {
-	return tk.viewfunc(m, cached)
+func (tk *ToolKit) View(cached bool) string {
+	return tk.viewfunc(cached)
 }
 
-func (tk *ToolKit) Focus(m interface{}) {
+func (tk *ToolKit) Focus() {
 	tk.focused = true
-
-	if tk.viewfunc != nil {
-		tk.viewcache = tk.viewfunc(m, false)
-	}
+	tk.cache()
 }
 
-func (tk *ToolKit) Blur(m interface{}) {
+func (tk *ToolKit) Blur() {
 	tk.focused = false
+	tk.cache()
+}
 
+func (tk *ToolKit) cache() {
 	if tk.viewfunc != nil {
-		tk.viewcache = tk.viewfunc(m, false)
+		tk.viewcache = tk.viewfunc(false)
 	}
 }
 

@@ -60,8 +60,7 @@ type Post struct {
 	Pinned bool
 	Closed bool
 
-	CreatedAt       time.Time
-	LastCommentedAt time.Time
+	CreatedAt time.Time
 
 	Author author.Author
 
@@ -76,6 +75,29 @@ type Post struct {
 	Link string
 
 	SysIDX int
+}
+
+func LinkBody(link string, body string) (Kind, string) {
+	if link == "" {
+		return KindText, body
+	}
+	if body == "" {
+		return KindLink, link
+	}
+	return KindLink, link + "\n\n" + body
+}
+
+func (post *Post) Refresh(fresh Post) {
+	post.Subject = fresh.Subject
+	post.Body = fresh.Body
+	post.Kind = fresh.Kind
+	post.Link = fresh.Link
+	post.Pinned = fresh.Pinned
+	post.Closed = fresh.Closed
+	post.Author = fresh.Author
+	post.ReplyCount = fresh.ReplyCount
+	post.Score = fresh.Score
+	post.URL = fresh.URL
 }
 
 func (post Post) FilterValue() string {

@@ -1,12 +1,10 @@
 package postshow
 
 import (
-	"context"
 	"time"
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	"github.com/mrusme/neonmodem/internal/feed"
 	"github.com/mrusme/neonmodem/internal/models/post"
 	"github.com/mrusme/neonmodem/internal/models/reply"
 	"github.com/mrusme/neonmodem/internal/ui/ctx"
@@ -54,21 +52,21 @@ func NewModel(c *ctx.Ctx) *Model {
 	m.tk.KeymapAdd("open", "open in browser", "o")
 	m.tk.KeymapAdd("older", "older replies", "z")
 	keys := []toolkit.MsgHandlingKeymapKey{
-		{ID: "reply", Handler: handleReply},
-		{ID: "open", Handler: handleOpen},
-		{ID: "older", Handler: handleOlder},
+		{ID: "reply", Handler: m.handleReply},
+		{ID: "open", Handler: m.handleOpen},
+		{ID: "older", Handler: m.handleOlder},
 	}
 	if len(c.OpenWith) > 0 {
 		m.tk.KeymapAdd("openwith", "open with", "O")
-		keys = append(keys, toolkit.MsgHandlingKeymapKey{ID: "openwith", Handler: handleOpenWith})
+		keys = append(keys, toolkit.MsgHandlingKeymapKey{ID: "openwith", Handler: m.handleOpenWith})
 	}
 
-	m.tk.SetViewFunc(buildView)
+	m.tk.SetViewFunc(m.buildView)
 	m.tk.SetMsgHandling(toolkit.MsgHandling{
 		OnKeymapKey:      keys,
-		OnAnyNumberKey:   handleNumberKeys,
-		OnAnyUncaughtKey: handleUncaughtKeys,
-		OnViewResize:     handleViewResize,
+		OnAnyNumberKey:   m.handleNumberKeys,
+		OnAnyUncaughtKey: m.handleUncaughtKeys,
+		OnViewResize:     m.handleViewResize,
 	})
 
 	return m
@@ -84,8 +82,8 @@ func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
 			return m, nil
 		}
 		m.loading = true
-		m.ctx.Loading = true
-		return m, m.loadPost(m.activePost, m.ctx.NextLoadGen(), msg.Delay)
+		m.ctx.StartLoading(ctx.LoadPost)
+		return m, m.loadPost(m.activePost, msg.Delay)
 
 	case loadedMsg:
 		if !m.ctx.IsCurrentLoadGen(msg.gen) {
@@ -96,7 +94,7 @@ func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
 		m.replyIDs = msg.rendered.replyIDs
 		m.allReplies = msg.rendered.allReplies
 		m.loading = false
-		m.ctx.Loading = false
+		m.ctx.StopLoading(ctx.LoadPost)
 		m.tk.InvalidateCache()
 		return m, nil
 
@@ -105,11 +103,11 @@ func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
 			return m, nil
 		}
 		m.loading = false
-		m.ctx.Loading = false
+		m.ctx.StopLoading(ctx.LoadPost)
 		return m, msgs.Send(msgs.Error(msg.err))
 	}
 
-	if handled, cmds := m.tk.HandleMsg(m, msg); handled {
+	if handled, cmds := m.tk.HandleMsg(msg); handled {
 		return m, tea.Batch(cmds...)
 	}
 
@@ -125,36 +123,36 @@ func (m *Model) open(p post.Post) tea.Cmd {
 	m.replyIDs = []string{m.activePost.ID}
 	m.allReplies = nil
 	m.loading = true
-	m.ctx.Loading = true
+	m.ctx.StartLoading(ctx.LoadPost)
 	m.tk.InvalidateCache()
-	return m.loadPost(m.activePost, m.ctx.NextLoadGen(), 0)
+	return m.loadPost(m.activePost, 0)
 }
 
-func (m *Model) loadPost(p *post.Post, gen int64, delay time.Duration) tea.Cmd {
+func (m *Model) loadPost(p *post.Post, delay time.Duration) tea.Cmd {
 	c := m.ctx
 	viewportWidth := m.viewport.Width()
 	imageWidth := viewportWidth - 2
-	systems := c.Systems
+	f := c.Feed
+	loadCtx, gen := c.NextLoad()
 
 	return func() tea.Msg {
 		if delay > 0 {
-			time.Sleep(delay)
-		}
-
-		isCurrent := func() bool { return c.IsCurrentLoadGen(gen) }
-		if !isCurrent() {
-			return nil
-		}
-
-		if err := feed.LoadPost(context.Background(), systems, p); err != nil {
-			c.Logger.Error("loading post failed", "id", p.ID, "error", err)
-			if !isCurrent() {
+			select {
+			case <-time.After(delay):
+			case <-loadCtx.Done():
 				return nil
 			}
+		}
+
+		if err := f.LoadPost(loadCtx, p); err != nil {
+			if loadCtx.Err() != nil {
+				return nil
+			}
+			c.Logger.Error("loading post failed", "id", p.ID, "error", err)
 			return loadFailedMsg{gen: gen, err: err}
 		}
 
-		rendered, ok := renderPost(c, p, viewportWidth, imageWidth, isCurrent)
+		rendered, ok := renderPost(loadCtx, c, p, viewportWidth, imageWidth)
 		if !ok {
 			return nil
 		}

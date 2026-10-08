@@ -44,6 +44,8 @@ func Defaults(cacheDir string) Config {
 		RenderImages:  true,
 		RenderSplash:  true,
 		RenderBanner:  true,
+		ReadTimeout:   DefaultReadTimeout,
+		WriteTimeout:  DefaultWriteTimeout,
 	}
 
 	t := &cfg.Theme
@@ -65,8 +67,8 @@ func Defaults(cacheDir string) Config {
 	t.DialogBox = dialogTheme(same("#82e4dc"))
 	t.ErrorDialogBox = dialogTheme(same("#dc143c"))
 
-	t.PostsList = listTheme(DoubleBorder)
-	t.PopupList = withoutVerticalFrame(listTheme(HiddenBorder))
+	t.PostsList = listTheme(DoubleBorder, []int{1, 1, 1, 1}, []bool{true, true, true, true})
+	t.PopupList = listTheme(HiddenBorder, []int{0, 1, 0, 1}, []bool{false, true, false, true})
 
 	t.Post.Author = ThemeItem{
 		Padding:    []int{0, 1, 0, 1},
@@ -126,22 +128,14 @@ func dialogTheme(accent Adaptive) DialogTheme {
 	}
 }
 
-func withoutVerticalFrame(lt ListTheme) ListTheme {
-	for _, frame := range []*ThemeItem{&lt.List.Focused, &lt.List.Blurred} {
-		frame.Padding = []int{0, 1, 0, 1}
-		frame.Border.Sides = []bool{false, true, false, true}
-	}
-	return lt
-}
-
-func listTheme(border Border) ListTheme {
+func listTheme(border Border, padding []int, sides []bool) ListTheme {
 	list := func(frame Adaptive) ThemeItem {
 		return ThemeItem{
 			Margin:  []int{0, 0, 0, 0},
-			Padding: []int{1, 1, 1, 1},
+			Padding: padding,
 			Border: BorderConfig{
 				Border:     border,
-				Sides:      []bool{true, true, true, true},
+				Sides:      sides,
 				Foreground: frame,
 			},
 		}

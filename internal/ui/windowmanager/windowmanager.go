@@ -1,6 +1,7 @@
 package windowmanager
 
 import (
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -50,23 +51,23 @@ func New(c *ctx.Ctx) *WM {
 }
 
 func (wm *WM) Open(id string, win windows.Window, geom Geometry, init tea.Msg) []tea.Cmd {
-	if wm.IsOpen(id) {
-		if wm.IsFocused(id) {
-			return nil
-		}
-		return wm.Focus(id)
+	if i := wm.index(id); i >= 0 {
+		item := wm.stack[i]
+		item.geom = geom
+		wm.stack = append(slices.Delete(wm.stack, i, i+1), item)
+	} else {
+		wm.stack = append(wm.stack, stackItem{id: id, win: win, geom: geom})
 	}
 
-	wm.stack = append(wm.stack, stackItem{id: id, win: win, geom: geom})
-
-	var cmds []tea.Cmd
-	cmds = append(cmds, wm.Resize(id, wm.ctx.Content[0], wm.ctx.Content[1])...)
+	cmds := wm.Resize(id, wm.ctx.Content[0], wm.ctx.Content[1])
 	if init != nil {
 		cmds = append(cmds, wm.Update(id, init))
 	}
-	cmds = append(cmds, wm.Focus(id)...)
+	return append(cmds, wm.Focus(id)...)
+}
 
-	return cmds
+func (wm *WM) index(id string) int {
+	return slices.IndexFunc(wm.stack, func(item stackItem) bool { return item.id == id })
 }
 
 func (wm *WM) CloseFocused() (bool, []tea.Cmd) {
@@ -74,12 +75,12 @@ func (wm *WM) CloseFocused() (bool, []tea.Cmd) {
 }
 
 func (wm *WM) Close(id string) (bool, []tea.Cmd) {
-	for i := len(wm.stack) - 1; i >= 0; i-- {
-		if wm.stack[i].id != id {
+	for i, item := range slices.Backward(wm.stack) {
+		if item.id != id {
 			continue
 		}
 
-		wm.stack = append(wm.stack[:i], wm.stack[i+1:]...)
+		wm.stack = slices.Delete(wm.stack, i, i+1)
 
 		cmds := []tea.Cmd{msgs.Send(msgs.WindowClosed{ID: id})}
 		if len(wm.stack) == 0 {
@@ -118,12 +119,7 @@ func (wm *WM) Focused() string {
 }
 
 func (wm *WM) IsOpen(id string) bool {
-	for _, item := range wm.stack {
-		if item.id == id {
-			return true
-		}
-	}
-	return false
+	return wm.index(id) >= 0
 }
 
 func (wm *WM) IsFocused(id string) bool {
@@ -135,14 +131,14 @@ func (wm *WM) GetNumberOpen() int {
 }
 
 func (wm *WM) Update(id string, msg tea.Msg) tea.Cmd {
-	for i := range wm.stack {
-		if wm.stack[i].id == id {
-			var cmd tea.Cmd
-			wm.stack[i].win, cmd = wm.stack[i].win.Update(msg)
-			return cmd
-		}
+	i := wm.index(id)
+	if i < 0 {
+		return nil
 	}
-	return nil
+
+	var cmd tea.Cmd
+	wm.stack[i].win, cmd = wm.stack[i].win.Update(msg)
+	return cmd
 }
 
 func (wm *WM) UpdateAll(msg tea.Msg) []tea.Cmd {
@@ -174,15 +170,14 @@ func (wm *WM) sizeOf(item stackItem, w int, h int) tea.WindowSizeMsg {
 }
 
 func (wm *WM) Resize(id string, w int, h int) []tea.Cmd {
-	var cmds []tea.Cmd
-	for i := range wm.stack {
-		if wm.stack[i].id == id {
-			var cmd tea.Cmd
-			wm.stack[i].win, cmd = wm.stack[i].win.Update(wm.sizeOf(wm.stack[i], w, h))
-			cmds = append(cmds, cmd)
-		}
+	i := wm.index(id)
+	if i < 0 {
+		return nil
 	}
-	return cmds
+
+	var cmd tea.Cmd
+	wm.stack[i].win, cmd = wm.stack[i].win.Update(wm.sizeOf(wm.stack[i], w, h))
+	return []tea.Cmd{cmd}
 }
 
 func (wm *WM) ResizeAll(w int, h int) []tea.Cmd {

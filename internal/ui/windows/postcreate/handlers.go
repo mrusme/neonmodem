@@ -1,18 +1,17 @@
 package postcreate
 
 import (
-	"errors"
 	"net/url"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/mrusme/neonmodem/internal/models/post"
 	"github.com/mrusme/neonmodem/internal/models/reply"
+	"github.com/mrusme/neonmodem/internal/ui/ctx"
 	"github.com/mrusme/neonmodem/internal/ui/msgs"
 )
 
-func handleTab(mi interface{}) (bool, []tea.Cmd) {
-	m := mi.(*Model)
+func (m *Model) handleTab() (bool, []tea.Cmd) {
 
 	if m.action == msgs.ComposeReply || m.submitting {
 		return true, nil
@@ -42,11 +41,10 @@ func IsLink(body string) bool {
 }
 
 func rejected(text string) (bool, []tea.Cmd) {
-	return true, []tea.Cmd{msgs.Send(msgs.Error(errors.New(text)))}
+	return true, []tea.Cmd{msgs.Send(msgs.Message(text))}
 }
 
-func handleSubmit(mi interface{}) (bool, []tea.Cmd) {
-	m := mi.(*Model)
+func (m *Model) handleSubmit() (bool, []tea.Cmd) {
 
 	if m.submitting {
 		return true, nil
@@ -77,7 +75,7 @@ func handleSubmit(mi interface{}) (bool, []tea.Cmd) {
 		}
 
 		m.submitting = true
-		m.ctx.Loading = true
+		m.ctx.StartLoading(ctx.LoadSubmit)
 		return true, []tea.Cmd{m.createPost(p)}
 
 	case msgs.ComposeReply:
@@ -99,15 +97,14 @@ func handleSubmit(mi interface{}) (bool, []tea.Cmd) {
 		}
 
 		m.submitting = true
-		m.ctx.Loading = true
+		m.ctx.StartLoading(ctx.LoadSubmit)
 		return true, []tea.Cmd{m.createReply(r)}
 	}
 
 	return true, nil
 }
 
-func handleViewResize(mi interface{}) (bool, []tea.Cmd) {
-	m := mi.(*Model)
+func (m *Model) handleViewResize() (bool, []tea.Cmd) {
 
 	m.resize()
 

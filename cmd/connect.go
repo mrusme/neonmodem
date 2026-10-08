@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -82,17 +83,11 @@ func (a *app) connect(
 
 	replace := existingConnection(a.cfg.Systems, desc, sysURL)
 	if replace >= 0 {
-		name := sysURL
-		if !desc.AllowMultiple || name == "" {
-			name = desc.Name
-		}
-		p.Notice(name + " is already connected.")
-		choice, err := p.Choose("What do you want to do?",
-			[]string{"Keep the existing connection", "Replace it"})
+		keep, err := askToKeep(p, desc, sysURL)
 		if err != nil {
 			return err
 		}
-		if choice == 0 {
+		if keep {
 			fmt.Fprintln(out, "Nothing changed.")
 			return nil
 		}
@@ -103,9 +98,10 @@ func (a *app) connect(
 		index = replace
 	}
 	sys, err := desc.New(system.Env{
-		Index:  index,
-		Proxy:  a.cfg.Proxy,
-		Logger: a.logger.With("system", kind),
+		Index:       index,
+		Proxy:       a.cfg.Proxy,
+		Logger:      a.logger.With("system", kind),
+		ReadTimeout: a.cfg.ReadDeadline(),
 	})
 	if err != nil {
 		return err
@@ -117,22 +113,48 @@ func (a *app) connect(
 		return err
 	}
 
-	entry := config.SystemConfig{Type: kind, Settings: settings}
+	return a.save(out, config.SystemConfig{Type: kind, Settings: settings}, replace)
+}
+
+func askToKeep(p prompt.Prompter, desc registry.Descriptor, sysURL string) (bool, error) {
+	name := sysURL
+	if !desc.AllowMultiple || name == "" {
+		name = desc.Name
+	}
+	p.Notice(name + " is already connected.")
+
+	choice, err := p.Choose("What do you want to do?",
+		[]string{"Keep the existing connection", "Replace it"})
+	if err != nil {
+		return false, err
+	}
+	return choice == 0, nil
+}
+
+func (a *app) save(out io.Writer, entry config.SystemConfig, replace int) error {
 	if replace >= 0 {
 		a.cfg.Systems[replace] = entry
 	} else {
 		a.cfg.Systems = append(a.cfg.Systems, entry)
 	}
 	if err := a.cfg.Save(); err != nil {
-		return fmt.Errorf("saving the configuration: %w", err)
+		snippet, snippetErr := config.Snippet(entry)
+		if snippetErr != nil {
+			return fmt.Errorf("saving the configuration: %w", err)
+		}
+		fmt.Fprintf(out, "The configuration %s couldn't be written: %v\n\nAdd this to it yourself:\n\n%s",
+			a.cfg.Path(), err, snippet)
+		return errors.New("the configuration wasn't saved")
 	}
 
+	done := "added new connection"
 	if replace >= 0 {
-		fmt.Fprintf(out, "Successfully replaced the connection! Configuration saved to %s\n",
-			a.cfg.Path())
-	} else {
-		fmt.Fprintf(out, "Successfully added new connection! Configuration saved to %s\n",
-			a.cfg.Path())
+		done = "replaced the connection"
+	}
+	fmt.Fprintf(out, "Successfully %s! Configuration saved to %s\n", done, a.cfg.Path())
+	if replace >= 0 {
+		fmt.Fprintf(out, "The previous credentials stay valid until you revoke them on %s.\n",
+			system.HostTitle(entry.Settings.URL))
 	}
 	return nil
 }

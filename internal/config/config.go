@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/mrusme/neonmodem/internal/system"
 	"github.com/pelletier/go-toml/v2"
@@ -19,6 +21,9 @@ var VERSION string
 const (
 	FileName  = "neonmodem.toml"
 	envPrefix = "NEONMODEM_"
+
+	DefaultReadTimeout  = 20
+	DefaultWriteTimeout = 60
 )
 
 type SystemConfig struct {
@@ -125,6 +130,8 @@ type Config struct {
 	RenderImages  bool
 	RenderSplash  bool
 	RenderBanner  bool
+	ReadTimeout   int
+	WriteTimeout  int
 
 	Systems []SystemConfig `toml:"Systems,omitempty"`
 
@@ -133,6 +140,8 @@ type Config struct {
 	Theme Theme
 
 	path     string
+	notices  []string
+	loaded   *Config
 	file     fs.FileInfo
 	defaults *Config
 }
@@ -167,6 +176,7 @@ func Load() (*Config, error) {
 	}
 
 	cfg.applyEnv()
+	cfg.normalize()
 
 	return cfg, nil
 }
@@ -192,6 +202,9 @@ func LoadFrom(candidates []string, cacheDir string) (*Config, error) {
 		cfg.file = info
 		break
 	}
+	loaded := cfg
+	cfg.loaded = &loaded
+	cfg.normalize()
 
 	return &cfg, nil
 }
@@ -246,6 +259,55 @@ func (c *Config) applyEnv() {
 			}
 		}
 	}
+	for _, t := range c.timeouts() {
+		v, ok := lookupEnv(t.env)
+		if !ok {
+			continue
+		}
+		n, err := strconv.Atoi(strings.TrimSpace(v))
+		if err != nil {
+			c.notices = append(c.notices, fmt.Sprintf(
+				"%s%s=%q isn't a whole number of seconds; using %d", envPrefix, t.env, v, *t.value))
+			continue
+		}
+		*t.value = n
+	}
+}
+
+type timeoutSetting struct {
+	name     string
+	env      string
+	value    *int
+	fallback int
+}
+
+func (c *Config) timeouts() []timeoutSetting {
+	return []timeoutSetting{
+		{"ReadTimeout", "READTIMEOUT", &c.ReadTimeout, DefaultReadTimeout},
+		{"WriteTimeout", "WRITETIMEOUT", &c.WriteTimeout, DefaultWriteTimeout},
+	}
+}
+
+func (c *Config) normalize() {
+	for _, t := range c.timeouts() {
+		if *t.value < 0 {
+			c.notices = append(c.notices, fmt.Sprintf(
+				"The %s setting %d is negative; using %d", t.name, *t.value, t.fallback))
+			*t.value = t.fallback
+		}
+	}
+}
+
+func (c *Config) Notices() []string {
+	return c.notices
+}
+
+func (c *Config) ReadDeadline() time.Duration {
+	return time.Duration(c.ReadTimeout) * time.Second
+}
+
+func (c *Config) WriteDeadline() time.Duration {
+	return time.Duration(c.WriteTimeout) * time.Second
 }
 
 func lookupEnv(name string) (string, bool) {
@@ -267,7 +329,7 @@ func (c *Config) Save() error {
 		return err
 	}
 
-	if err := writeAtomic(path, doc); err != nil {
+	if err := writeInPlace(path, doc); err != nil {
 		return err
 	}
 	c.path = path
@@ -276,7 +338,14 @@ func (c *Config) Save() error {
 }
 
 func (c *Config) Document() ([]byte, error) {
-	current, err := toMap(c)
+	saved := c
+	if c.loaded != nil {
+		copied := *c.loaded
+		copied.Systems = c.Systems
+		saved = &copied
+	}
+
+	current, err := toMap(saved)
 	if err != nil {
 		return nil, err
 	}
@@ -328,40 +397,68 @@ func prune(current map[string]any, defaults map[string]any) {
 	}
 }
 
-func writeAtomic(path string, data []byte) error {
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+func writeInPlace(path string, data []byte) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
 
-	tmp, err := os.CreateTemp(dir, "."+FileName+".*")
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}
-	tmpPath := tmp.Name()
-
-	cleanup := func() {
-		tmp.Close()
-		os.Remove(tmpPath)
-	}
-
-	if err := tmp.Chmod(0o600); err != nil {
-		cleanup()
+	if _, err := f.Write(data); err != nil {
+		f.Close()
 		return err
 	}
-	if _, err := tmp.Write(data); err != nil {
-		cleanup()
+	if err := f.Sync(); err != nil {
+		f.Close()
 		return err
 	}
-	if err := tmp.Close(); err != nil {
-		os.Remove(tmpPath)
+	if err := f.Close(); err != nil {
 		return err
 	}
 
-	if err := os.Rename(tmpPath, path); err != nil {
-		os.Remove(tmpPath)
+	info, err := os.Stat(path)
+	if err != nil {
 		return err
 	}
-
+	if info.Mode().Perm()&0o077 == 0 {
+		return nil
+	}
+	if err := os.Chmod(path, 0o600); err != nil {
+		return fmt.Errorf("the file was written, but its mode couldn't be set to 0600: %w", err)
+	}
 	return nil
+}
+
+func Snippet(entry SystemConfig) (string, error) {
+	m, err := toMap(map[string]any{"Systems": []SystemConfig{entry}})
+	if err != nil {
+		return "", err
+	}
+	dropEmpty(m)
+
+	data, err := toml.Marshal(m)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func dropEmpty(m map[string]any) {
+	for key, value := range m {
+		switch v := value.(type) {
+		case map[string]any:
+			dropEmpty(v)
+			if len(v) == 0 {
+				delete(m, key)
+			}
+		case []any:
+			for _, item := range v {
+				if sub, ok := item.(map[string]any); ok {
+					dropEmpty(sub)
+				}
+			}
+		}
+	}
 }

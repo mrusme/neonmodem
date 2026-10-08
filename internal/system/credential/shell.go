@@ -83,11 +83,10 @@ func (s Shell) Run(ctx context.Context, command string) (string, error) {
 	case ctx.Err() != nil:
 		return "", fmt.Errorf("was canceled: %w", ctx.Err())
 	default:
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			return "", &ExitError{
 				Code:   exitErr.ExitCode(),
-				State:  exitErr.ProcessState.String(),
+				State:  exitErr.String(),
 				Stderr: stderr.lastLine(),
 			}
 		}

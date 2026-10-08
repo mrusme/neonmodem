@@ -3,7 +3,7 @@ package lobsters
 import (
 	"context"
 	"log/slog"
-	"net/url"
+	"time"
 
 	"github.com/mrusme/neonmodem/internal/models/author"
 	"github.com/mrusme/neonmodem/internal/models/forum"
@@ -18,20 +18,22 @@ import (
 const Kind = "lobsters"
 
 type System struct {
-	idx      int
-	settings system.Settings
-	proxy    string
-	logger   *slog.Logger
-	client   *api.Client
-	web      *webSession
+	idx         int
+	settings    system.Settings
+	proxy       string
+	logger      *slog.Logger
+	readTimeout time.Duration
+	client      *api.Client
+	web         *webSession
 }
 
 func New(env system.Env) (system.System, error) {
 	sys := &System{
-		idx:      env.Index,
-		settings: env.Settings,
-		proxy:    env.Proxy,
-		logger:   env.Log(),
+		idx:         env.Index,
+		settings:    env.Settings,
+		proxy:       env.Proxy,
+		logger:      env.Log(),
+		readTimeout: env.ReadTimeout,
 	}
 
 	if env.Settings.URL != "" {
@@ -87,30 +89,19 @@ func (sys *System) URL() string {
 }
 
 func (sys *System) Title() string {
-	u, err := url.Parse(sys.settings.URL)
-	if err != nil || u.Hostname() == "" {
-		return sys.settings.URL
-	}
-	return u.Hostname()
+	return system.HostTitle(sys.settings.URL)
 }
 
 func (sys *System) Description() string {
-	if !sys.hasAccount() {
-		return "Lobsters (read-only)"
-	}
-	return "Lobsters"
+	return system.Describe("Lobsters", sys.hasAccount())
 }
 
 func (sys *System) Capabilities() system.Capabilities {
-	caps := system.CapRead
-	if sys.hasAccount() {
-		caps |= system.CapWrite
-	}
-	return caps
+	return system.AccountCapabilities(sys.hasAccount())
 }
 
 func (sys *System) ListForums(ctx context.Context) ([]forum.Forum, error) {
-	tags, err := sys.client.Tags.List(ctx)
+	tags, err := sys.client.Tags(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -147,8 +138,9 @@ func storyList(order system.Order) string {
 		return "active"
 	case system.OrderHot:
 		return "hottest"
+	default:
+		return "newest"
 	}
-	return "newest"
 }
 
 func (sys *System) ListPosts(
@@ -159,9 +151,9 @@ func (sys *System) ListPosts(
 	var items []api.StoryModel
 	var err error
 	if forumID != "" {
-		items, err = sys.client.Stories.Tagged(ctx, forumID)
+		items, err = sys.client.Tagged(ctx, forumID)
 	} else {
-		items, err = sys.client.Stories.List(ctx, storyList(order))
+		items, err = sys.client.Stories(ctx, storyList(order))
 	}
 	if err != nil {
 		return nil, err
@@ -169,23 +161,18 @@ func (sys *System) ListPosts(
 
 	models := make([]post.Post, 0, len(items))
 	for i := range items {
-		models = append(models, sys.toPost(&items[i]))
+		p := sys.toPost(&items[i])
+		if forumID != "" {
+			p.Forum = forum.Forum{ID: forumID, Name: forumID, SysIDX: sys.idx}
+		}
+		models = append(models, p)
 	}
 
 	return models, nil
 }
 
 func (sys *System) toPost(s *api.StoryModel) post.Post {
-	kind := post.KindText
-	body := text.Markdown(s.Description)
-	if s.URL != "" {
-		kind = post.KindLink
-		if body == "" {
-			body = s.URL
-		} else {
-			body = s.URL + "\n\n" + body
-		}
-	}
+	kind, body := post.LinkBody(s.URL, text.Markdown(s.Description))
 
 	tag := ""
 	if len(s.Tags) > 0 {
@@ -227,35 +214,26 @@ func (sys *System) toPost(s *api.StoryModel) post.Post {
 }
 
 func (sys *System) LoadPost(ctx context.Context, p *post.Post) error {
-	item, err := sys.client.Stories.Show(ctx, p.ID)
+	item, err := sys.client.Story(ctx, p.ID)
 	if err != nil {
 		return err
 	}
 
-	fresh := sys.toPost(item)
-	p.Subject = fresh.Subject
-	p.Body = fresh.Body
-	p.Kind = fresh.Kind
-	p.Link = fresh.Link
-	p.Author = fresh.Author
-	p.ReplyCount = fresh.ReplyCount
-	p.URL = fresh.URL
-
+	p.Refresh(sys.toPost(item))
 	p.Replies = sys.buildTree(p.ID, item.Comments)
 
 	return nil
 }
 
 func (sys *System) buildTree(storyID string, comments []api.CommentModel) []reply.Reply {
-	nodes := make([]reply.Reply, 0, len(comments))
-	index := make(map[string]int, len(comments))
+	replies := make([]reply.Reply, 0, len(comments))
 	for _, c := range comments {
 		body := text.Markdown(c.Comment)
 		if body == "" {
 			body = c.CommentPlain
 		}
 
-		nodes = append(nodes, reply.Reply{
+		replies = append(replies, reply.Reply{
 			ID:        c.ShortID,
 			PostID:    storyID,
 			ParentID:  c.ParentComment,
@@ -268,37 +246,14 @@ func (sys *System) buildTree(storyID string, comments []api.CommentModel) []repl
 			},
 			SysIDX: sys.idx,
 		})
-		index[c.ShortID] = len(nodes) - 1
 	}
 
-	children := make(map[int][]int)
-	var roots []int
-	for i, n := range nodes {
-		if parentIdx, ok := index[n.ParentID]; ok && n.ParentID != "" {
-			children[parentIdx] = append(children[parentIdx], i)
-		} else {
-			nodes[i].ParentID = ""
-			roots = append(roots, i)
-		}
-	}
-
-	var build func(indexes []int) []reply.Reply
-	build = func(indexes []int) []reply.Reply {
-		out := make([]reply.Reply, 0, len(indexes))
-		for _, i := range indexes {
-			r := nodes[i]
-			r.Replies = build(children[i])
-			out = append(out, r)
-		}
-		return out
-	}
-
-	return build(roots)
+	return reply.Tree(replies)
 }
 
 func (sys *System) CreatePost(ctx context.Context, p *post.Post) error {
-	if sys.web == nil {
-		return system.ErrNoCredentials
+	if !sys.Capabilities().Has(system.CapCreatePost) {
+		return system.NoCredentials(Kind, sys.settings.URL)
 	}
 
 	id, err := sys.web.SubmitStory(ctx, p.Subject, p.Body, p.Kind == post.KindLink, p.Forum.ID)
@@ -311,8 +266,8 @@ func (sys *System) CreatePost(ctx context.Context, p *post.Post) error {
 }
 
 func (sys *System) CreateReply(ctx context.Context, r *reply.Reply) error {
-	if sys.web == nil {
-		return system.ErrNoCredentials
+	if !sys.Capabilities().Has(system.CapCreateReply) {
+		return system.NoCredentials(Kind, sys.settings.URL)
 	}
 
 	id, err := sys.web.PostComment(ctx, r.PostID, r.ParentID, r.Body)

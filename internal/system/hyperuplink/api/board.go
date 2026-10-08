@@ -36,19 +36,9 @@ type BoardResponse struct {
 	RecentTopics     []TopicModel         `json:"recent_topics"`
 }
 
-type BoardService interface {
-	Get(ctx context.Context) (*BoardResponse, error)
-}
-
-type BoardServiceHandler struct {
-	client *Client
-}
-
-func (a *BoardServiceHandler) Get(
-	ctx context.Context,
-) (*BoardResponse, error) {
+func (c *Client) Board(ctx context.Context) (*BoardResponse, error) {
 	response := new(BoardResponse)
-	if err := a.client.http.Get(ctx, BoardBaseURL, nil, response); err != nil {
+	if err := c.http.Get(ctx, BoardBaseURL, nil, response); err != nil {
 		return nil, err
 	}
 

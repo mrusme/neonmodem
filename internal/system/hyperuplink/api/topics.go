@@ -80,21 +80,7 @@ type CreatedReply struct {
 	ShortID string `json:"short_id"`
 }
 
-type TopicsService interface {
-	List(ctx context.Context, forumID string, page int) (*TopicsResponse, error)
-	Show(ctx context.Context, id string, page int) (*TopicResponse, error)
-	CreateReply(ctx context.Context, topicID string, w *CreateReplyModel) (*CreatedReply, error)
-}
-
-type TopicsServiceHandler struct {
-	client *Client
-}
-
-func (a *TopicsServiceHandler) List(
-	ctx context.Context,
-	forumID string,
-	page int,
-) (*TopicsResponse, error) {
+func (c *Client) Topics(ctx context.Context, forumID string, page int) (*TopicsResponse, error) {
 	query := url.Values{}
 	query.Set("page", strconv.Itoa(page))
 	if forumID != "" {
@@ -102,37 +88,29 @@ func (a *TopicsServiceHandler) List(
 	}
 
 	response := new(TopicsResponse)
-	if err := a.client.http.Get(ctx, TopicsBaseURL, query, response); err != nil {
+	if err := c.http.Get(ctx, TopicsBaseURL, query, response); err != nil {
 		return nil, err
 	}
 
 	return response, nil
 }
 
-func (a *TopicsServiceHandler) Show(
-	ctx context.Context,
-	id string,
-	page int,
-) (*TopicResponse, error) {
+func (c *Client) Topic(ctx context.Context, id string, page int) (*TopicResponse, error) {
 	query := url.Values{}
 	query.Set("page", strconv.Itoa(page))
 
 	response := new(TopicResponse)
-	if err := a.client.http.Get(ctx, TopicsBaseURL+"/"+id, query, response); err != nil {
+	if err := c.http.Get(ctx, TopicsBaseURL+"/"+id, query, response); err != nil {
 		return nil, err
 	}
 
 	return response, nil
 }
 
-func (a *TopicsServiceHandler) CreateReply(
-	ctx context.Context,
-	topicID string,
-	w *CreateReplyModel,
-) (*CreatedReply, error) {
+func (c *Client) CreateReply(ctx context.Context, topicID string, w *CreateReplyModel) (*CreatedReply, error) {
 	response := new(CreatedReply)
 	path := fmt.Sprintf("%s/%s/replies", TopicsBaseURL, topicID)
-	if err := a.client.http.Post(ctx, path, w, response); err != nil {
+	if err := c.http.Post(ctx, path, w, response); err != nil {
 		return nil, err
 	}
 

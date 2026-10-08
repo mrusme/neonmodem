@@ -16,19 +16,9 @@ type SessionResponse struct {
 	User UserModel `json:"user"`
 }
 
-type SessionService interface {
-	Whoami(ctx context.Context) (*SessionResponse, error)
-}
-
-type SessionServiceHandler struct {
-	client *Client
-}
-
-func (a *SessionServiceHandler) Whoami(
-	ctx context.Context,
-) (*SessionResponse, error) {
+func (c *Client) Whoami(ctx context.Context) (*SessionResponse, error) {
 	response := new(SessionResponse)
-	if err := a.client.http.Get(ctx, SessionBaseURL, nil, response); err != nil {
+	if err := c.http.Get(ctx, SessionBaseURL, nil, response); err != nil {
 		return nil, err
 	}
 

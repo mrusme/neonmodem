@@ -14,7 +14,9 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/mrusme/neonmodem/internal/system/httpx"
+	"github.com/mrusme/neonmodem/internal/system/text"
 )
 
 var (
@@ -51,9 +53,15 @@ func newWebSession(
 	password string,
 	proxy string,
 	logger *slog.Logger,
-) *webSession {
-	base, _ := url.Parse(baseURL)
-	jar, _ := cookiejar.New(nil)
+) (*webSession, error) {
+	base, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, err
+	}
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return &webSession{
 		base: base,
@@ -66,7 +74,7 @@ func newWebSession(
 		username: username,
 		password: password,
 		logger:   logger,
-	}
+	}, nil
 }
 
 func (w *webSession) url(path string, query url.Values) string {
@@ -129,11 +137,11 @@ func pageText(doc *goquery.Document) string {
 }
 
 func pageMessage(doc *goquery.Document) string {
-	text := pageText(doc)
-	if len(text) > messageLength {
-		text = text[:messageLength] + " ..."
+	body := pageText(doc)
+	if ansi.StringWidth(body) > messageLength {
+		return text.Truncate(body, messageLength) + " ..."
 	}
-	return text
+	return body
 }
 
 func hasCaptcha(doc *goquery.Document) bool {
@@ -226,7 +234,7 @@ func (w *webSession) formAt(
 	query url.Values,
 	field string,
 ) (*goquery.Selection, string, error) {
-	for attempt := 0; attempt < 2; attempt++ {
+	for range 2 {
 		if err := w.ensureLogin(ctx); err != nil {
 			return nil, "", err
 		}
@@ -256,7 +264,7 @@ func (w *webSession) Comment(ctx context.Context, parentID string, body string) 
 	query := url.Values{}
 	query.Set("id", parentID)
 
-	for attempt := 0; attempt < 2; attempt++ {
+	for range 2 {
 		form, target, err := w.formAt(ctx, "/item", query, "hmac")
 		if err != nil {
 			return "", fmt.Errorf("can't comment on Hacker News item %s: %w", parentID, err)
@@ -314,7 +322,7 @@ func findOwnComment(doc *goquery.Document, username string, body string) string 
 
 func (w *webSession) Submit(ctx context.Context, title string, link string, body string) (string, error) {
 	var lastErr error
-	for attempt := 0; attempt < 2; attempt++ {
+	for range 2 {
 		id, err := w.submitOnce(ctx, title, link, body)
 		if err == nil {
 			return id, nil

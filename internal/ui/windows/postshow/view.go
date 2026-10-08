@@ -1,6 +1,7 @@
 package postshow
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -11,16 +12,18 @@ import (
 	"github.com/mrusme/neonmodem/internal/models/reply"
 	"github.com/mrusme/neonmodem/internal/system"
 	"github.com/mrusme/neonmodem/internal/ui/ctx"
-	"github.com/mrusme/neonmodem/internal/ui/images"
+)
+
+const (
+	minViewportWidth = 20
+	replyIndexInset  = 28
 )
 
 func (m *Model) View() string {
-	return m.tk.View(m, true)
+	return m.tk.View(true)
 }
 
-func buildView(mi interface{}, cached bool) string {
-	m := mi.(*Model)
-
+func (m *Model) buildView(cached bool) string {
 	if vcache := m.tk.DefaultCaching(cached); vcache != "" {
 		return vcache
 	}
@@ -51,139 +54,129 @@ func writesOrAsks(subject string) string {
 	return "writes"
 }
 
-func renderLoadingPlaceholder(c *ctx.Ctx, p *post.Post, width int) string {
-	return ansi.Wrap(fmt.Sprintf(
-		" %s\n\n %s\n\n %s\n",
-		c.Theme.Post.Author.Render(
-			fmt.Sprintf("%s %s:", p.Author.Name, writesOrAsks(p.Subject)),
-		),
-		c.Theme.Post.Subject.Render(p.Subject),
-		c.Theme.Muted.Render("Loading post, please wait (press esc to go back) ..."),
-	), width, "")
+func postHeader(c *ctx.Ctx, p *post.Post) string {
+	return fmt.Sprintf(" %s\n\n %s\n",
+		c.Theme.Post.Author.Render(fmt.Sprintf("%s %s:", p.Author.Name, writesOrAsks(p.Subject))),
+		c.Theme.Post.Subject.Render(p.Subject))
 }
 
-func renderPost(
-	c *ctx.Ctx,
-	p *post.Post,
-	viewportWidth int,
-	imageWidth int,
-	isCurrent func() bool,
-) (rendered renderedPost, ok bool) {
+func renderLoadingPlaceholder(c *ctx.Ctx, p *post.Post, width int) string {
+	loading := c.Theme.Muted.Render("Loading post, please wait (press esc to go back) ...")
+	return ansi.Wrap(postHeader(c, p)+"\n "+loading+"\n", width, "")
+}
+
+func markdownRenderer(c *ctx.Ctx, width int) func(string) string {
 	style := "light"
 	if c.DarkBackground {
 		style = "dark"
 	}
-	if viewportWidth < 20 {
-		viewportWidth = 20
-	}
 
 	glam, err := glamour.NewTermRenderer(
 		glamour.WithStandardStyle(style),
-		glamour.WithWordWrap(viewportWidth),
+		glamour.WithWordWrap(width),
 	)
 	if err != nil {
 		c.Logger.Error("creating the markdown renderer failed", "error", err)
-		glam = nil
+		return func(s string) string { return s }
 	}
 
-	render := func(s string) string {
-		if glam == nil {
-			return s
-		}
-		out, rerr := glam.Render(s)
-		if rerr != nil {
-			c.Logger.Error("rendering markdown failed", "error", rerr)
+	return func(s string) string {
+		out, err := glam.Render(s)
+		if err != nil {
+			c.Logger.Error("rendering markdown failed", "error", err)
 			return s
 		}
 		return out
 	}
+}
+
+func listsReplies(c *ctx.Ctx, p *post.Post) bool {
+	if p.SysIDX < 0 || p.SysIDX >= len(c.Systems) {
+		return true
+	}
+	return c.Systems[p.SysIDX].Capabilities().Has(system.CapListReplies)
+}
+
+func renderPost(
+	loadCtx context.Context,
+	c *ctx.Ctx,
+	p *post.Post,
+	viewportWidth int,
+	imageWidth int,
+) (renderedPost, bool) {
+	viewportWidth = max(viewportWidth, minViewportWidth)
+	render := markdownRenderer(c, viewportWidth)
 
 	body := render(p.Body)
 	if c.Config.RenderImages {
-		body = images.RenderInline(c.Logger, body, imageWidth)
+		body = c.Images.RenderInline(loadCtx, body, imageWidth)
 	}
-
-	if !isCurrent() {
+	if loadCtx.Err() != nil {
 		return renderedPost{}, false
 	}
 
 	var out strings.Builder
-	out.WriteString(fmt.Sprintf(
-		" %s\n\n %s\n%s",
-		c.Theme.Post.Author.Render(
-			fmt.Sprintf("%s %s:", p.Author.Name, writesOrAsks(p.Subject)),
-		),
-		c.Theme.Post.Subject.Render(p.Subject),
-		body,
-	))
+	out.WriteString(postHeader(c, p))
+	out.WriteString(body)
 
-	rendered.replyIDs = []string{p.ID}
-	rendered.allReplies = []*reply.Reply{}
-
-	if p.SysIDX >= 0 && p.SysIDX < len(c.Systems) {
-		if !c.Systems[p.SysIDX].Capabilities().Has(system.CapListReplies) {
-			rendered.content = ansi.Wrap(out.String(), viewportWidth, "")
-			return rendered, true
+	rendered := renderedPost{replyIDs: []string{p.ID}, allReplies: []*reply.Reply{}}
+	if listsReplies(c, p) {
+		if p.ReplyPage.HasOlder() {
+			out.WriteString(render("\n---\nOlder replies available, press `z` to load\n\n---\n"))
 		}
-	}
-
-	if p.ReplyPage.HasOlder() {
-		out.WriteString(render(
-			"\n---\nOlder replies available, press `z` to load\n\n---\n"))
-	}
-
-	indexStyle := c.Theme.Muted
-	inReplyStyle := lipgloss.NewStyle().Foreground(c.Theme.Reply.Author.GetBackground())
-
-	var walk func(inReplyTo string, replies []reply.Reply) bool
-	walk = func(inReplyTo string, replies []reply.Reply) bool {
-		for ri := range replies {
-			if !isCurrent() {
-				return false
-			}
-
-			re := &replies[ri]
-
-			var body string
-			var authorName string
-			if re.Deleted {
-				body = "\n  DELETED\n\n"
-				authorName = "DELETED"
-			} else {
-				body = render(re.Body)
-				authorName = re.Author.Name
-			}
-
-			rendered.replyIDs = append(rendered.replyIDs, re.ID)
-			rendered.allReplies = append(rendered.allReplies, re)
-			idx := len(rendered.replyIDs) - 1
-
-			replyIdPadding := viewportWidth - lipgloss.Width(authorName) - lipgloss.Width(inReplyTo) - 28
-			if replyIdPadding < 1 {
-				replyIdPadding = 1
-			}
-
-			out.WriteString(fmt.Sprintf(
-				"\n\n %s %s%s%s\n%s",
-				c.Theme.Reply.Author.Render(authorName),
-				inReplyStyle.Render(fmt.Sprintf("writes in reply to %s:", inReplyTo)),
-				strings.Repeat(" ", replyIdPadding),
-				indexStyle.Render(fmt.Sprintf("#%d", idx)),
-				body,
-			))
-
-			if !walk(re.Author.Name, re.Replies) {
-				return false
-			}
+		w := replyWalker{loadCtx: loadCtx, c: c, out: &out, render: render, width: viewportWidth}
+		if !w.walk(&rendered, p.Author.Name, p.Replies) {
+			return renderedPost{}, false
 		}
-
-		return true
-	}
-
-	if !walk(p.Author.Name, p.Replies) {
-		return renderedPost{}, false
 	}
 
 	rendered.content = ansi.Wrap(out.String(), viewportWidth, "")
 	return rendered, true
+}
+
+type replyWalker struct {
+	loadCtx context.Context
+	c       *ctx.Ctx
+	out     *strings.Builder
+	render  func(string) string
+	width   int
+}
+
+func (w replyWalker) walk(rendered *renderedPost, inReplyTo string, replies []reply.Reply) bool {
+	for i := range replies {
+		if w.loadCtx.Err() != nil {
+			return false
+		}
+
+		re := &replies[i]
+		rendered.replyIDs = append(rendered.replyIDs, re.ID)
+		rendered.allReplies = append(rendered.allReplies, re)
+
+		w.out.WriteString(w.replyHeader(re, inReplyTo, len(rendered.replyIDs)-1))
+		if re.Deleted {
+			w.out.WriteString("\n  DELETED\n\n")
+		} else {
+			w.out.WriteString(w.render(re.Body))
+		}
+
+		if !w.walk(rendered, re.Author.Name, re.Replies) {
+			return false
+		}
+	}
+	return true
+}
+
+func (w replyWalker) replyHeader(re *reply.Reply, inReplyTo string, index int) string {
+	name := re.Author.Name
+	if re.Deleted {
+		name = "DELETED"
+	}
+	inReplyStyle := lipgloss.NewStyle().Foreground(w.c.Theme.Reply.Author.GetBackground())
+	padding := max(w.width-lipgloss.Width(name)-lipgloss.Width(inReplyTo)-replyIndexInset, 1)
+
+	return fmt.Sprintf("\n\n %s %s%s%s\n",
+		w.c.Theme.Reply.Author.Render(name),
+		inReplyStyle.Render(fmt.Sprintf("writes in reply to %s:", inReplyTo)),
+		strings.Repeat(" ", padding),
+		w.c.Theme.Muted.Render(fmt.Sprintf("#%d", index)))
 }

@@ -1,7 +1,6 @@
 package header
 
 import (
-	"fmt"
 	"strings"
 
 	"charm.land/bubbles/v2/spinner"
@@ -12,7 +11,7 @@ import (
 )
 
 const (
-	Height = 8
+	Height = 7
 
 	bannerWidth   = 33
 	bannerGap     = 3
@@ -57,10 +56,10 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
-	if m.ctx.Loading && !m.loading {
+	if m.ctx.IsLoading() && !m.loading {
 		m.loading = true
 		cmds = append(cmds, m.spinner.Tick)
-	} else if !m.ctx.Loading && m.loading {
+	} else if !m.ctx.IsLoading() && m.loading {
 		m.loading = false
 	}
 
@@ -98,14 +97,14 @@ func (m Model) View() string {
 
 	currentOrder := text.Truncate(m.ctx.GetOrder().Label(), orderWidth-selectorInset)
 
-	systemSelector := t.Header.Selector.Width(selectorWidth).Render(fmt.Sprintf("⏷  %s", currentSystem))
-	forumSelector := t.Header.Selector.Width(selectorWidth).Render(fmt.Sprintf("⏷  %s", currentForum))
-	orderSelector := t.Header.Selector.Width(orderWidth).Render(fmt.Sprintf("⏷  %s", currentOrder))
+	systemSelector := t.Header.Selector.Width(selectorWidth).Render("⏷  " + currentSystem)
+	forumSelector := t.Header.Selector.Width(selectorWidth).Render("⏷  " + currentForum)
+	orderSelector := t.Header.Selector.Width(orderWidth).Render("⏷  " + currentOrder)
 
 	keyStyle := lipgloss.NewStyle().Foreground(t.DialogBox.Bottombar.GetForeground())
 
 	status := ""
-	if m.ctx.Loading {
+	if m.ctx.IsLoading() {
 		status = m.spinner.View()
 		if m.ctx.Progress != "" {
 			status += " " + t.Muted.Render(m.ctx.Progress)
@@ -126,6 +125,6 @@ func (m Model) View() string {
 		logo = banner
 	}
 
-	return lipgloss.PlaceVertical(Height-1, lipgloss.Bottom,
+	return lipgloss.PlaceVertical(Height, lipgloss.Bottom,
 		lipgloss.JoinHorizontal(lipgloss.Bottom, logo, strings.Repeat(" ", bannerGap), selectorColumn))
 }

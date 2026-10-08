@@ -8,11 +8,10 @@ import (
 )
 
 func (m *Model) View() string {
-	return m.tk.View(m, true)
+	return m.tk.View(true)
 }
 
-func buildView(mi interface{}, cached bool) string {
-	m := mi.(*Model)
+func (m *Model) buildView(cached bool) string {
 
 	if vcache := m.tk.DefaultCaching(cached); vcache != "" {
 		return vcache
@@ -26,7 +25,7 @@ func buildView(mi interface{}, cached bool) string {
 			title = fmt.Sprintf("Reply to #%d by %s", m.index, m.parent.Author.Name)
 		}
 	case msgs.ComposePost:
-		title = fmt.Sprintf("New post in %s", m.post.Forum.Name)
+		title = "New post in " + m.post.Forum.Name
 		if m.post.SysIDX >= 0 && m.post.SysIDX < len(m.ctx.Systems) {
 			title += " on " + m.ctx.Systems[m.post.SysIDX].Title()
 		}

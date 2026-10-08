@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/url"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/mrusme/neonmodem/internal/models/author"
 	"github.com/mrusme/neonmodem/internal/models/forum"
@@ -34,11 +34,12 @@ const (
 )
 
 type System struct {
-	idx      int
-	settings system.Settings
-	proxy    string
-	logger   *slog.Logger
-	client   *lemmy.Client
+	idx         int
+	settings    system.Settings
+	proxy       string
+	logger      *slog.Logger
+	readTimeout time.Duration
+	client      *lemmy.Client
 
 	sessionMu sync.Mutex
 	ended     error
@@ -46,10 +47,11 @@ type System struct {
 
 func New(env system.Env) (system.System, error) {
 	sys := &System{
-		idx:      env.Index,
-		settings: env.Settings,
-		proxy:    env.Proxy,
-		logger:   env.Log(),
+		idx:         env.Index,
+		settings:    env.Settings,
+		proxy:       env.Proxy,
+		logger:      env.Log(),
+		readTimeout: env.ReadTimeout,
 	}
 
 	if env.Settings.URL != "" {
@@ -81,18 +83,11 @@ func (sys *System) URL() string {
 }
 
 func (sys *System) Title() string {
-	u, err := url.Parse(sys.settings.URL)
-	if err != nil || u.Hostname() == "" {
-		return sys.settings.URL
-	}
-	return u.Hostname()
+	return system.HostTitle(sys.settings.URL)
 }
 
 func (sys *System) Description() string {
-	if !sys.hasAccount() {
-		return "Lemmy (read-only)"
-	}
-	return "Lemmy"
+	return system.Describe("Lemmy", sys.hasAccount())
 }
 
 func (sys *System) username() string {
@@ -108,11 +103,7 @@ func (sys *System) hasAccount() bool {
 }
 
 func (sys *System) Capabilities() system.Capabilities {
-	caps := system.CapRead
-	if sys.hasAccount() {
-		caps |= system.CapWrite
-	}
-	return caps
+	return system.AccountCapabilities(sys.hasAccount())
 }
 
 func (sys *System) listingType() lemmy.ListingType {
@@ -131,16 +122,15 @@ func (sys *System) listingType() lemmy.ListingType {
 }
 
 func errorString(err error) string {
-	var le lemmy.Error
-	if errors.As(err, &le) {
+	if le, ok := errors.AsType[lemmy.Error](err); ok {
 		return le.ErrStr
 	}
 	return ""
 }
 
 func isAuthError(err error) bool {
-	var le lemmy.Error
-	if !errors.As(err, &le) {
+	le, ok := errors.AsType[lemmy.Error](err)
+	if !ok {
 		return false
 	}
 	return le.Code == 401 ||
@@ -226,7 +216,6 @@ func (sys *System) ListForums(ctx context.Context) ([]forum.Forum, error) {
 	var models []forum.Forum
 
 	err := sys.listing(ctx, func(ctx context.Context) error {
-		models = nil
 		for page := int64(1); page <= maxPages; page++ {
 			resp, err := sys.client.Communities(ctx, lemmy.ListCommunities{
 				Type:  lemmy.NewOptional(sys.listingType()),
@@ -282,8 +271,9 @@ func sortType(order system.Order) lemmy.SortType {
 		return lemmy.SortTypeTopAll
 	case system.OrderComments:
 		return lemmy.SortTypeMostComments
+	default:
+		return lemmy.SortTypeNew
 	}
-	return lemmy.SortTypeNew
 }
 
 func (sys *System) ListPosts(
@@ -323,16 +313,7 @@ func (sys *System) ListPosts(
 }
 
 func (sys *System) toPost(pv lemmy.PostView) post.Post {
-	kind := post.KindText
-	body := pv.Post.Body.ValueOr("")
-	if u, ok := pv.Post.URL.Value(); ok && u != "" {
-		kind = post.KindLink
-		if body == "" {
-			body = u
-		} else {
-			body = u + "\n\n" + body
-		}
-	}
+	kind, body := post.LinkBody(pv.Post.URL.ValueOr(""), pv.Post.Body.ValueOr(""))
 
 	return post.Post{
 		ID:      strconv.FormatInt(pv.Post.ID, 10),
@@ -390,83 +371,41 @@ func (sys *System) LoadPost(ctx context.Context, p *post.Post) error {
 		return err
 	}
 
-	fresh := sys.toPost(postResp.PostView)
-	p.Subject = fresh.Subject
-	p.Body = fresh.Body
-	p.Kind = fresh.Kind
-	p.Link = fresh.Link
-	p.Pinned = fresh.Pinned
-	p.Closed = fresh.Closed
-	p.Author = fresh.Author
-	p.ReplyCount = fresh.ReplyCount
-
+	p.Refresh(sys.toPost(postResp.PostView))
 	p.Replies = sys.buildTree(p.ID, comments.Comments)
 
 	return nil
 }
 
 func (sys *System) buildTree(postID string, views []lemmy.CommentView) []reply.Reply {
-	type node struct {
-		reply    reply.Reply
-		parentID string
-	}
-
-	nodes := make([]node, 0, len(views))
-	index := make(map[string]int, len(views))
-
+	replies := make([]reply.Reply, 0, len(views))
 	for _, cv := range views {
-		id := strconv.FormatInt(cv.Comment.ID, 10)
 		parentID := ""
 		if parts := strings.Split(cv.Comment.Path, "."); len(parts) >= 3 {
 			parentID = parts[len(parts)-2]
 		}
 
-		nodes = append(nodes, node{
-			reply: reply.Reply{
-				ID:        id,
-				PostID:    postID,
-				Body:      cv.Comment.Content,
-				Deleted:   cv.Comment.Deleted || cv.Comment.Removed,
-				CreatedAt: cv.Comment.Published,
-				Author: author.Author{
-					ID:   strconv.FormatInt(cv.Comment.CreatorID, 10),
-					Name: cv.Creator.Name,
-				},
-				SysIDX: sys.idx,
+		replies = append(replies, reply.Reply{
+			ID:        strconv.FormatInt(cv.Comment.ID, 10),
+			PostID:    postID,
+			ParentID:  parentID,
+			Body:      cv.Comment.Content,
+			Deleted:   cv.Comment.Deleted || cv.Comment.Removed,
+			CreatedAt: cv.Comment.Published,
+			Author: author.Author{
+				ID:   strconv.FormatInt(cv.Comment.CreatorID, 10),
+				Name: cv.Creator.Name,
 			},
-			parentID: parentID,
+			SysIDX: sys.idx,
 		})
-		index[id] = len(nodes) - 1
 	}
 
-	children := make(map[int][]int)
-	var roots []int
-	for i, n := range nodes {
-		if parentIdx, ok := index[n.parentID]; ok && n.parentID != "" {
-			nodes[i].reply.ParentID = n.parentID
-			children[parentIdx] = append(children[parentIdx], i)
-		} else {
-			roots = append(roots, i)
-		}
-	}
-
-	var build func(indexes []int) []reply.Reply
-	build = func(indexes []int) []reply.Reply {
-		out := make([]reply.Reply, 0, len(indexes))
-		for _, i := range indexes {
-			r := nodes[i].reply
-			r.Replies = build(children[i])
-			out = append(out, r)
-		}
-		return out
-	}
-
-	return build(roots)
+	return reply.Tree(replies)
 }
 
 func (sys *System) CreatePost(ctx context.Context, p *post.Post) error {
-	if !sys.hasAccount() {
-		return system.ErrNoCredentials
+	if !sys.Capabilities().Has(system.CapCreatePost) {
+		return system.NoCredentials(Kind, sys.settings.URL)
 	}
 
 	communityID, err := strconv.ParseInt(p.Forum.ID, 10, 64)
@@ -500,8 +439,8 @@ func (sys *System) CreatePost(ctx context.Context, p *post.Post) error {
 }
 
 func (sys *System) CreateReply(ctx context.Context, r *reply.Reply) error {
-	if !sys.hasAccount() {
-		return system.ErrNoCredentials
+	if !sys.Capabilities().Has(system.CapCreateReply) {
+		return system.NoCredentials(Kind, sys.settings.URL)
 	}
 
 	postID, err := strconv.ParseInt(r.PostID, 10, 64)

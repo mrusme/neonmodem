@@ -115,8 +115,7 @@ func (e *Error) Unwrap() error {
 }
 
 func StatusOf(err error) int {
-	var e *Error
-	if errors.As(err, &e) {
+	if e, ok := errors.AsType[*Error](err); ok {
 		return e.StatusCode
 	}
 	return 0
@@ -127,7 +126,6 @@ type Client struct {
 	Base        *url.URL
 	Headers     http.Header
 	DecodeError func(status int, body []byte) string
-	Logger      *slog.Logger
 }
 
 func NewClient(httpClient *http.Client, base string) (*Client, error) {

@@ -2,6 +2,7 @@ package images
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"image/color"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/eliukblau/pixterm/pkg/ansimage"
+	"github.com/mrusme/neonmodem/internal/system/httpx"
 )
 
 const (
@@ -19,49 +21,72 @@ const (
 	maxBytes      = 2 << 20
 	fetchTimeout  = 5 * time.Second
 	cacheEntries  = 64
+	minWidth      = 8
 )
 
 var imageURL = regexp.MustCompile(
 	`(?m)(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])\.(jpg|jpeg|png)`)
 
-var (
-	client = &http.Client{Timeout: fetchTimeout}
-	sem    = make(chan struct{}, maxConcurrent)
+type Renderer struct {
+	logger *slog.Logger
+	client *http.Client
+	sem    chan struct{}
 
-	cacheMu sync.Mutex
-	cache   = map[string]string{}
-	order   []string
-)
+	mu    sync.Mutex
+	cache map[string]string
+	order []string
+}
+
+func New(logger *slog.Logger, proxy string) *Renderer {
+	if logger == nil {
+		logger = slog.New(slog.DiscardHandler)
+	}
+
+	return &Renderer{
+		logger: logger,
+		client: httpx.NewHTTPClient(httpx.Options{Proxy: proxy, Timeout: fetchTimeout, Logger: logger}),
+		sem:    make(chan struct{}, maxConcurrent),
+		cache:  map[string]string{},
+	}
+}
 
 func cacheKey(url string, width int) string {
 	return fmt.Sprintf("%d|%s", width, url)
 }
 
-func cached(key string) (string, bool) {
-	cacheMu.Lock()
-	defer cacheMu.Unlock()
-	v, ok := cache[key]
+func (r *Renderer) cached(key string) (string, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	v, ok := r.cache[key]
 	return v, ok
 }
 
-func remember(key string, rendered string) {
-	cacheMu.Lock()
-	defer cacheMu.Unlock()
-	if _, exists := cache[key]; !exists {
-		order = append(order, key)
+func (r *Renderer) remember(key string, rendered string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, exists := r.cache[key]; !exists {
+		r.order = append(r.order, key)
 	}
-	cache[key] = rendered
-	for len(order) > cacheEntries {
-		delete(cache, order[0])
-		order = order[1:]
+	r.cache[key] = rendered
+	for len(r.order) > cacheEntries {
+		delete(r.cache, r.order[0])
+		r.order = r.order[1:]
 	}
 }
 
-func fetch(url string) ([]byte, error) {
-	sem <- struct{}{}
-	defer func() { <-sem }()
+func (r *Renderer) fetch(ctx context.Context, url string) ([]byte, error) {
+	select {
+	case r.sem <- struct{}{}:
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+	defer func() { <-r.sem }()
 
-	res, err := client.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	res, err := r.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +107,8 @@ func fetch(url string) ([]byte, error) {
 	return data, nil
 }
 
-func render(url string, width int) (string, error) {
-	data, err := fetch(url)
+func (r *Renderer) render(ctx context.Context, url string, width int) (string, error) {
+	data, err := r.fetch(ctx, url)
 	if err != nil {
 		return "", err
 	}
@@ -103,24 +128,27 @@ func render(url string, width int) (string, error) {
 	return fmt.Sprintf("\n\n%s\nSource: %s\n\n", pix.RenderExt(false, false), url), nil
 }
 
-func RenderInline(logger *slog.Logger, s string, width int) string {
-	if width < 8 {
+func (r *Renderer) RenderInline(ctx context.Context, s string, width int) string {
+	if width < minWidth {
 		return s
 	}
 
 	return imageURL.ReplaceAllStringFunc(s, func(url string) string {
 		key := cacheKey(url, width)
-		if rendered, ok := cached(key); ok {
+		if rendered, ok := r.cached(key); ok {
 			return rendered
 		}
-
-		rendered, err := render(url, width)
-		if err != nil {
-			logger.Debug("inline image skipped", "url", url, "error", err)
+		if ctx.Err() != nil {
 			return url
 		}
 
-		remember(key, rendered)
+		rendered, err := r.render(ctx, url, width)
+		if err != nil {
+			r.logger.Debug("inline image skipped", "url", url, "error", err)
+			return url
+		}
+
+		r.remember(key, rendered)
 		return rendered
 	})
 }

@@ -6,8 +6,7 @@ import (
 	"github.com/mrusme/neonmodem/internal/ui/msgs"
 )
 
-func handleSelect(mi interface{}) (bool, []tea.Cmd) {
-	m := mi.(*Model)
+func (m *Model) handleSelect() (bool, []tea.Cmd) {
 
 	if m.list.FilterState() == list.Filtering {
 		return false, nil
@@ -21,8 +20,7 @@ func handleSelect(mi interface{}) (bool, []tea.Cmd) {
 	return true, []tea.Cmd{msgs.Send(msgs.Picked{Kind: m.kind, Item: item})}
 }
 
-func handleViewResize(mi interface{}) (bool, []tea.Cmd) {
-	m := mi.(*Model)
+func (m *Model) handleViewResize() (bool, []tea.Cmd) {
 
 	frame := m.ctx.Theme.PopupList.List.Focused
 	m.list.SetSize(

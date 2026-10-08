@@ -41,7 +41,9 @@ func (sys *System) Connect(
 	if err != nil {
 		return settings, err
 	}
-	if err := web.Verify(ctx); err != nil {
+	bounded, cancel := system.Bound(ctx, sys.readTimeout)
+	defer cancel()
+	if err := system.Timeout(ctx, sys.readTimeout, web.Verify(bounded)); err != nil {
 		return settings, fmt.Errorf("could not log in to %s: %w", sysURL, err)
 	}
 

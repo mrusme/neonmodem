@@ -23,7 +23,8 @@ type Model struct {
 	tk  *toolkit.ToolKit
 
 	viewport viewport.Model
-	errs     []error
+	messages []string
+	title    string
 }
 
 func NewModel(c *ctx.Ctx) *Model {
@@ -31,12 +32,13 @@ func NewModel(c *ctx.Ctx) *Model {
 		ctx:      c,
 		tk:       toolkit.New(WIN_ID, c),
 		viewport: viewport.New(),
+		title:    "Error",
 	}
 
 	m.tk.SetErrorDialog(true)
-	m.tk.SetViewFunc(buildView)
+	m.tk.SetViewFunc(m.buildView)
 	m.tk.SetMsgHandling(toolkit.MsgHandling{
-		OnViewResize: handleViewResize,
+		OnViewResize: m.handleViewResize,
 	})
 
 	return m
@@ -45,19 +47,29 @@ func NewModel(c *ctx.Ctx) *Model {
 func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
 	switch msg := msg.(type) {
 	case msgs.ShowError:
-		m.errs = append(m.errs, msg.Errors...)
+		m.title = "Error"
+		m.tk.SetErrorDialog(true)
+		m.messages = append(m.messages, msg.Messages...)
+		m.setContent()
+		m.tk.InvalidateCache()
+		return m, nil
+
+	case msgs.ShowNotices:
+		m.title = "Notices"
+		m.tk.SetErrorDialog(false)
+		m.messages = noticeLines(msg.Entries)
 		m.setContent()
 		m.tk.InvalidateCache()
 		return m, nil
 
 	case msgs.WindowClosed:
 		if msg.ID == WIN_ID {
-			m.errs = nil
+			m.messages = nil
 		}
 		return m, nil
 	}
 
-	if handled, cmds := m.tk.HandleMsg(m, msg); handled {
+	if handled, cmds := m.tk.HandleMsg(msg); handled {
 		return m, tea.Batch(cmds...)
 	}
 
@@ -67,15 +79,10 @@ func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
 }
 
 func (m *Model) setContent() {
-	var lines []string
-	for _, err := range m.errs {
-		lines = append(lines, err.Error())
-	}
-	m.viewport.SetContent(lipgloss.NewStyle().Width(m.viewport.Width()).Render(strings.Join(lines, "\n\n")))
+	m.viewport.SetContent(lipgloss.NewStyle().Width(m.viewport.Width()).Render(strings.Join(m.messages, "\n\n")))
 }
 
-func handleViewResize(mi interface{}) (bool, []tea.Cmd) {
-	m := mi.(*Model)
+func (m *Model) handleViewResize() (bool, []tea.Cmd) {
 
 	m.viewport = viewport.New(
 		viewport.WithWidth(max(m.tk.InnerWidth()-errorPadding*2, 1)),
@@ -87,16 +94,27 @@ func handleViewResize(mi interface{}) (bool, []tea.Cmd) {
 }
 
 func (m *Model) View() string {
-	return m.tk.View(m, true)
+	return m.tk.View(true)
 }
 
-func buildView(mi interface{}, cached bool) string {
-	m := mi.(*Model)
+func (m *Model) buildView(cached bool) string {
 
 	if vcache := m.tk.DefaultCaching(cached); vcache != "" {
 		return vcache
 	}
 
 	content := lipgloss.NewStyle().Padding(0, errorPadding).Render(m.viewport.View())
-	return m.tk.Dialog("Error", content)
+	return m.tk.Dialog(m.title, content)
+}
+
+func noticeLines(entries []msgs.NoticeEntry) []string {
+	if len(entries) == 0 {
+		return []string{"No notices so far."}
+	}
+
+	lines := make([]string, 0, len(entries))
+	for _, e := range entries {
+		lines = append(lines, e.At.Format("15:04:05")+"  "+e.Text)
+	}
+	return lines
 }

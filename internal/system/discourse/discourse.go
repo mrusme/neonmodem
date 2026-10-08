@@ -1,12 +1,13 @@
 package discourse
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
-	"sort"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -29,10 +30,15 @@ const (
 )
 
 type System struct {
-	idx      int
-	settings system.Settings
-	logger   *slog.Logger
-	client   *api.Client
+	idx         int
+	settings    system.Settings
+	proxy       string
+	logger      *slog.Logger
+	readTimeout time.Duration
+	client      *api.Client
+
+	sessionMu sync.Mutex
+	ended     error
 
 	catMu      sync.Mutex
 	categories []api.CategoryModel
@@ -44,9 +50,11 @@ type System struct {
 
 func New(env system.Env) (system.System, error) {
 	sys := &System{
-		idx:      env.Index,
-		settings: env.Settings,
-		logger:   env.Log(),
+		idx:         env.Index,
+		settings:    env.Settings,
+		proxy:       env.Proxy,
+		logger:      env.Log(),
+		readTimeout: env.ReadTimeout,
 	}
 
 	if env.Settings.URL != "" {
@@ -86,29 +94,59 @@ func (sys *System) URL() string {
 }
 
 func (sys *System) Title() string {
-	u, err := url.Parse(sys.settings.URL)
-	if err != nil || u.Hostname() == "" {
-		return sys.settings.URL
-	}
-	return u.Hostname()
+	return system.HostTitle(sys.settings.URL)
+}
+
+func (sys *System) hasAccount() bool {
+	return sys.settings.Credential(system.CredentialKey) != ""
 }
 
 func (sys *System) Description() string {
-	if sys.settings.Credential(system.CredentialKey) == "" {
-		return "Discourse (read-only)"
-	}
-	return "Discourse"
+	return system.Describe("Discourse", sys.hasAccount())
 }
 
 func (sys *System) Capabilities() system.Capabilities {
-	caps := system.CapRead
-	if sys.settings.Credential(system.CredentialKey) != "" {
-		caps |= system.CapWrite
+	return system.AccountCapabilities(sys.hasAccount())
+}
+
+func (sys *System) sessionErr() error {
+	sys.sessionMu.Lock()
+	defer sys.sessionMu.Unlock()
+	return sys.ended
+}
+
+func (sys *System) end() error {
+	sys.sessionMu.Lock()
+	defer sys.sessionMu.Unlock()
+
+	if sys.ended == nil {
+		sys.ended = system.NeedsConnect(fmt.Sprintf(
+			"the stored user API key is no longer accepted; connect again with `%s`",
+			system.ConnectCommand(Kind, sys.settings.URL)))
 	}
-	return caps
+	return sys.ended
+}
+
+func (sys *System) checked(ctx context.Context, err error) error {
+	if err == nil || !sys.hasAccount() || httpx.StatusOf(err) != http.StatusForbidden {
+		return err
+	}
+
+	_, sessionErr := sys.client.CurrentSession(ctx)
+	if sessionErr == nil {
+		return err
+	}
+	if status := httpx.StatusOf(sessionErr); status != http.StatusForbidden && status != http.StatusNotFound {
+		return err
+	}
+	return sys.end()
 }
 
 func (sys *System) loadCategories(ctx context.Context) ([]api.CategoryModel, error) {
+	if err := sys.sessionErr(); err != nil {
+		return nil, err
+	}
+
 	sys.catMu.Lock()
 	defer sys.catMu.Unlock()
 
@@ -116,9 +154,9 @@ func (sys *System) loadCategories(ctx context.Context) ([]api.CategoryModel, err
 		return sys.categories, nil
 	}
 
-	cats, err := sys.client.Categories.List(ctx)
+	cats, err := sys.client.Categories(ctx)
 	if err != nil {
-		return nil, err
+		return nil, sys.checked(ctx, err)
 	}
 
 	sys.categories = cats.CategoryList.Categories
@@ -202,9 +240,10 @@ func topicList(order system.Order) (string, url.Values) {
 	case system.OrderComments:
 		query.Set("order", "posts")
 		return "latest", query
+	default:
+		query.Set("order", "created")
+		return "latest", query
 	}
-	query.Set("order", "created")
-	return "latest", query
 }
 
 func (sys *System) ListPosts(
@@ -238,7 +277,7 @@ func (sys *System) ListPosts(
 	}
 
 	list, query := topicList(order)
-	items, err := sys.client.Topics.List(ctx, list, slugPath, catID, query)
+	items, err := sys.client.Topics(ctx, list, slugPath, catID, query)
 	if err != nil {
 		if order == system.OrderHot && httpx.StatusOf(err) == http.StatusNotFound {
 			sys.ordersMu.Lock()
@@ -246,7 +285,7 @@ func (sys *System) ListPosts(
 			sys.ordersMu.Unlock()
 			return nil, fmt.Errorf("%w: %w", system.ErrOrderUnavailable, err)
 		}
-		return nil, err
+		return nil, sys.checked(ctx, err)
 	}
 
 	users := make(map[int]api.UserModel, len(items.Users))
@@ -270,10 +309,7 @@ func (sys *System) ListPosts(
 			forumName = c.Name
 		}
 
-		replies := t.PostsCount - 1
-		if replies < 0 {
-			replies = 0
-		}
+		replies := max(t.PostsCount-1, 0)
 
 		models = append(models, post.Post{
 			ID:      strconv.Itoa(t.ID),
@@ -283,8 +319,7 @@ func (sys *System) ListPosts(
 			Pinned: t.Pinned,
 			Closed: t.Closed || t.Archived,
 
-			CreatedAt:       text.Time(t.CreatedAt),
-			LastCommentedAt: text.Time(t.LastPostedAt),
+			CreatedAt: text.Time(t.CreatedAt),
 
 			Author: poster,
 
@@ -307,9 +342,13 @@ func (sys *System) ListPosts(
 }
 
 func (sys *System) LoadPost(ctx context.Context, p *post.Post) error {
-	item, err := sys.client.Topics.Show(ctx, p.ID)
-	if err != nil {
+	if err := sys.sessionErr(); err != nil {
 		return err
+	}
+
+	item, err := sys.client.Topic(ctx, p.ID)
+	if err != nil {
+		return sys.checked(ctx, err)
 	}
 
 	chunk := item.ChunkSize
@@ -318,44 +357,29 @@ func (sys *System) LoadPost(ctx context.Context, p *post.Post) error {
 	}
 
 	stream := item.PostStream.Stream
-	total := len(stream) - 1
-	if total < 0 {
-		total = 0
-	}
-
-	maxOffset := total - chunk
-	if maxOffset < 0 {
-		maxOffset = 0
-	}
+	total := max(len(stream)-1, 0)
+	maxOffset := max(total-chunk, 0)
 
 	offset := maxOffset
 	if p.ReplyPage.Total > 0 {
 		offset = p.ReplyPage.Offset
 	}
-	if offset > maxOffset {
-		offset = maxOffset
-	}
-	if offset < 0 {
-		offset = 0
-	}
+	offset = min(max(offset, 0), maxOffset)
 
 	posts := item.PostStream.Posts
 	if len(posts) < len(stream) || offset > 0 {
-		end := 1 + offset + chunk
-		if end > len(stream) {
-			end = len(stream)
-		}
+		end := min(1+offset+chunk, len(stream))
 		ids := append([]int{stream[0]}, stream[1+offset:end]...)
 
-		window, err := sys.client.Topics.ShowPosts(ctx, p.ID, ids)
+		window, err := sys.client.TopicPosts(ctx, p.ID, ids)
 		if err != nil {
-			return err
+			return sys.checked(ctx, err)
 		}
 		posts = window.PostStream.Posts
 	}
 
-	sort.Slice(posts, func(i, j int) bool {
-		return posts[i].PostNumber < posts[j].PostNumber
+	slices.SortFunc(posts, func(a, b api.PostModel) int {
+		return cmp.Compare(a.PostNumber, b.PostNumber)
 	})
 
 	p.Replies = nil
@@ -365,14 +389,12 @@ func (sys *System) LoadPost(ctx context.Context, p *post.Post) error {
 	p.ReplyCount = total
 	p.ReplyPage = post.ReplyPage{Offset: offset, Size: chunk, Total: total}
 
-	type node struct {
-		reply  reply.Reply
-		number int
-		parent int
+	idByNumber := make(map[int]string, len(posts))
+	for _, pm := range posts {
+		idByNumber[pm.PostNumber] = strconv.Itoa(pm.ID)
 	}
 
-	var nodes []node
-	numberToIdx := make(map[int]int, len(posts))
+	var replies []reply.Reply
 	for _, pm := range posts {
 		if pm.PostNumber == 1 {
 			p.Body = text.Markdown(pm.Cooked)
@@ -383,55 +405,37 @@ func (sys *System) LoadPost(ctx context.Context, p *post.Post) error {
 			continue
 		}
 
-		nodes = append(nodes, node{
-			reply: reply.Reply{
-				ID:        strconv.Itoa(pm.ID),
-				PostID:    p.ID,
-				Body:      text.Markdown(pm.Cooked),
-				Deleted:   pm.UserDeleted || pm.DeletedAt != "",
-				CreatedAt: text.Time(pm.CreatedAt),
-				Author: author.Author{
-					ID:   strconv.Itoa(pm.UserID),
-					Name: text.FirstNonEmpty(pm.Name, pm.Username),
-				},
-				SysIDX: sys.idx,
+		parentID := ""
+		if pm.ReplyToPostNumber > 1 {
+			parentID = idByNumber[pm.ReplyToPostNumber]
+		}
+		replies = append(replies, reply.Reply{
+			ID:        strconv.Itoa(pm.ID),
+			PostID:    p.ID,
+			ParentID:  parentID,
+			Body:      text.Markdown(pm.Cooked),
+			Deleted:   pm.UserDeleted || pm.DeletedAt != "",
+			CreatedAt: text.Time(pm.CreatedAt),
+			Author: author.Author{
+				ID:   strconv.Itoa(pm.UserID),
+				Name: text.FirstNonEmpty(pm.Name, pm.Username),
 			},
-			number: pm.PostNumber,
-			parent: pm.ReplyToPostNumber,
+			SysIDX: sys.idx,
 		})
-		numberToIdx[pm.PostNumber] = len(nodes) - 1
 	}
 
-	children := make(map[int][]int)
-	var roots []int
-	for i, n := range nodes {
-		if parentIdx, ok := numberToIdx[n.parent]; ok && n.parent > 1 {
-			nodes[i].reply.ParentID = nodes[parentIdx].reply.ID
-			children[parentIdx] = append(children[parentIdx], i)
-		} else {
-			roots = append(roots, i)
-		}
-	}
-
-	var build func(indexes []int) []reply.Reply
-	build = func(indexes []int) []reply.Reply {
-		out := make([]reply.Reply, 0, len(indexes))
-		for _, i := range indexes {
-			r := nodes[i].reply
-			r.Replies = build(children[i])
-			out = append(out, r)
-		}
-		return out
-	}
-
-	p.Replies = build(roots)
+	p.Replies = reply.Tree(replies)
 
 	return nil
 }
 
 func (sys *System) CreatePost(ctx context.Context, p *post.Post) error {
 	if !sys.Capabilities().Has(system.CapCreatePost) {
-		return system.ErrNoCredentials
+		return system.NoCredentials(Kind, sys.settings.URL)
+	}
+
+	if err := sys.sessionErr(); err != nil {
+		return err
 	}
 
 	categoryID, err := strconv.Atoi(p.Forum.ID)
@@ -439,13 +443,13 @@ func (sys *System) CreatePost(ctx context.Context, p *post.Post) error {
 		return fmt.Errorf("invalid category id %q: %w", p.Forum.ID, err)
 	}
 
-	created, err := sys.client.Posts.Create(ctx, &api.CreatePostModel{
+	created, err := sys.client.CreatePost(ctx, &api.CreatePostModel{
 		Title:    p.Subject,
 		Raw:      p.Body,
 		Category: categoryID,
 	})
 	if err != nil {
-		return err
+		return sys.checked(ctx, err)
 	}
 
 	p.ID = strconv.Itoa(created.TopicID)
@@ -454,7 +458,11 @@ func (sys *System) CreatePost(ctx context.Context, p *post.Post) error {
 
 func (sys *System) CreateReply(ctx context.Context, r *reply.Reply) error {
 	if !sys.Capabilities().Has(system.CapCreateReply) {
-		return system.ErrNoCredentials
+		return system.NoCredentials(Kind, sys.settings.URL)
+	}
+
+	if err := sys.sessionErr(); err != nil {
+		return err
 	}
 
 	topicID, err := strconv.Atoi(r.PostID)
@@ -468,16 +476,16 @@ func (sys *System) CreateReply(ctx context.Context, r *reply.Reply) error {
 	}
 
 	if r.ParentID != "" {
-		parent, err := sys.client.Posts.Show(ctx, r.ParentID)
+		parent, err := sys.client.Post(ctx, r.ParentID)
 		if err != nil {
-			return fmt.Errorf("looking up the reply target: %w", err)
+			return fmt.Errorf("looking up the reply target: %w", sys.checked(ctx, err))
 		}
 		model.ReplyToPostNumber = parent.PostNumber
 	}
 
-	created, err := sys.client.Posts.Create(ctx, &model)
+	created, err := sys.client.CreatePost(ctx, &model)
 	if err != nil {
-		return err
+		return sys.checked(ctx, err)
 	}
 
 	r.ID = strconv.Itoa(created.ID)

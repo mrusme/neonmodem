@@ -8,14 +8,18 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/mrusme/neonmodem/internal/browser"
 	"github.com/mrusme/neonmodem/internal/system"
+	"github.com/mrusme/neonmodem/internal/system/discourse/api"
+	"github.com/mrusme/neonmodem/internal/system/httpx"
 	"github.com/mrusme/neonmodem/internal/system/prompt"
-	"github.com/pkg/browser"
 )
 
 type UserAPIKey struct {
@@ -75,9 +79,7 @@ func (sys *System) Connect(
 	values.Set("nonce", nonce)
 	openURL := fmt.Sprintf("%s/user-api-key/new?%s", sysURL, values.Encode())
 
-	browser.Stdout = nil
-	browser.Stderr = nil
-	if err := browser.OpenURL(openURL); err != nil {
+	if err := browser.Open(openURL, "", sys.logger); err != nil {
 		p.Notice("Could not open a browser. Please open this address yourself:")
 		p.Notice(openURL)
 	}
@@ -94,6 +96,10 @@ func (sys *System) Connect(
 	if err != nil {
 		return settings, err
 	}
+	if err := sys.verifyKey(ctx, sysURL, clientID, userAPIKey.Key); err != nil {
+		return settings, err
+	}
+	p.Notice(system.HostTitle(sysURL) + " accepted the key.")
 
 	key, err := p.Generated(ctx, prompt.Field{Name: "user API key", Secret: true}, userAPIKey.Key)
 	if err != nil {
@@ -105,6 +111,28 @@ func (sys *System) Connect(
 	settings.SetCredential(system.CredentialClientID, prompt.Answer{Value: clientID})
 
 	return settings, nil
+}
+
+func (sys *System) verifyKey(ctx context.Context, sysURL string, clientID string, key string) error {
+	httpClient := httpx.NewHTTPClient(httpx.Options{Proxy: sys.proxy, Logger: sys.logger})
+	client, err := api.NewClient(httpClient, sysURL, api.Credentials{ClientID: clientID, Key: key})
+	if err != nil {
+		return err
+	}
+
+	bounded, cancel := system.Bound(ctx, sys.readTimeout)
+	defer cancel()
+	_, err = client.CurrentSession(bounded)
+	err = system.Timeout(ctx, sys.readTimeout, err)
+
+	switch status := httpx.StatusOf(err); {
+	case err == nil:
+		return nil
+	case status == http.StatusForbidden || status == http.StatusNotFound:
+		return fmt.Errorf("%s rejected the user API key", system.HostTitle(sysURL))
+	default:
+		return fmt.Errorf("could not check the user API key with %s: %w", sysURL, err)
+	}
 }
 
 func decodeUserAPIKey(
@@ -130,7 +158,7 @@ func decodeUserAPIKey(
 		return userAPIKey, fmt.Errorf("the pasted key has an unexpected format: %w", err)
 	}
 	if userAPIKey.Nonce != nonce {
-		return userAPIKey, fmt.Errorf("the pasted key was issued for a different request")
+		return userAPIKey, errors.New("the pasted key was issued for a different request")
 	}
 
 	return userAPIKey, nil

@@ -302,8 +302,6 @@ func createdCommentID(doc *goquery.Document, parentID string) string {
 }
 
 func firstLine(s string) string {
-	if i := strings.IndexByte(s, '\n'); i >= 0 {
-		return s[:i]
-	}
-	return s
+	line, _, _ := strings.Cut(s, "\n")
+	return line
 }

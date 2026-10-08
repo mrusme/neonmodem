@@ -46,7 +46,10 @@ func (sys *System) Connect(
 		return settings, err
 	}
 
-	session, err := client.Session.Whoami(ctx)
+	bounded, cancel := system.Bound(ctx, sys.readTimeout)
+	defer cancel()
+	session, err := client.Whoami(bounded)
+	err = system.Timeout(ctx, sys.readTimeout, err)
 	if err != nil {
 		if errors.Is(err, api.ErrNotAnAPI) {
 			return settings, fmt.Errorf(

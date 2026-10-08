@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
@@ -23,6 +23,7 @@ type KeyMap struct {
 	Refresh key.Binding
 	NewPost key.Binding
 	Select  key.Binding
+	Notices key.Binding
 	Quit    key.Binding
 }
 
@@ -30,6 +31,10 @@ var DefaultKeyMap = KeyMap{
 	Refresh: key.NewBinding(
 		key.WithKeys("ctrl+r"),
 		key.WithHelp("ctrl+r", "refresh"),
+	),
+	Notices: key.NewBinding(
+		key.WithKeys("!"),
+		key.WithHelp("!", "notices"),
 	),
 	NewPost: key.NewBinding(
 		key.WithKeys("n"),
@@ -108,6 +113,15 @@ func NewModel(c *ctx.Ctx) Model {
 	return m
 }
 
+func (m *Model) setNoticeHelp(count int) {
+	if count == 0 {
+		m.list.AdditionalShortHelpKeys = nil
+		return
+	}
+	binding := m.keymap.Notices
+	m.list.AdditionalShortHelpKeys = func() []key.Binding { return []key.Binding{binding} }
+}
+
 func (m Model) delegate() list.DefaultDelegate {
 	t := m.ctx.Theme
 	d := list.NewDefaultDelegate()
@@ -151,12 +165,22 @@ func (m Model) Update(msg tea.Msg) (views.View, tea.Cmd) {
 				break
 			}
 			return m, m.compose()
+
+		case key.Matches(msg, m.keymap.Notices):
+			if m.list.FilterState() == list.Filtering {
+				break
+			}
+			return m, msgs.Send(msgs.OpenNotices{})
 		}
 
+	case msgs.NoticesChanged:
+		m.setNoticeHelp(msg.Count)
+		return m, nil
+
 	case tea.WindowSizeMsg:
-		m.width = m.ctx.Content[0] - 2
-		m.height = m.ctx.Content[1] - 1
-		m.list.SetSize(m.width-2, m.height-2)
+		m.width = msg.Width
+		m.height = msg.Height
+		m.resize()
 
 	case msgs.FocusView:
 		m.focused = true
@@ -168,6 +192,7 @@ func (m Model) Update(msg tea.Msg) (views.View, tea.Cmd) {
 
 	case msgs.ThemeChanged:
 		m.list.SetDelegate(m.delegate())
+		m.resize()
 		return m, nil
 
 	case msgs.RefreshFeed:
@@ -187,23 +212,38 @@ func (m Model) Update(msg tea.Msg) (views.View, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+func (m *Model) frameSize() (int, int) {
+	t := m.ctx.Theme.PostsList.List
+	return max(t.Focused.GetHorizontalFrameSize(), t.Blurred.GetHorizontalFrameSize()),
+		max(t.Focused.GetVerticalFrameSize(), t.Blurred.GetVerticalFrameSize())
+}
+
+func (m *Model) innerSize() (int, int) {
+	h, v := m.frameSize()
+	return max(m.width-h, 1), max(m.height-v, 1)
+}
+
+func (m *Model) resize() {
+	m.list.SetSize(m.innerSize())
+}
+
 func (m *Model) compose() tea.Cmd {
 	item, ok := m.list.SelectedItem().(Item)
 	if !ok {
 		if len(m.ctx.Systems) == 0 {
-			return msgs.Send(msgs.Error(errors.New(
-				"No systems are connected. Run `neonmodem connect` first.")))
+			return msgs.Send(msgs.Message(
+				"No systems are connected. Run `neonmodem connect` first."))
 		}
-		return msgs.Send(msgs.Error(errors.New(
-			"Select a post first; a new post goes to the forum of the selected post.")))
+		return msgs.Send(msgs.Message(
+			"Select a post first; a new post goes to the forum of the selected post."))
 	}
 
 	sys := m.ctx.Systems[item.SysIDX]
 	if !sys.Capabilities().Has(system.CapCreatePost) {
-		return msgs.Send(msgs.Error(fmt.Errorf(
+		return msgs.Send(msgs.Message(fmt.Sprintf(
 			"%s is connected without an account, so posting isn't available. "+
-				"Run `neonmodem connect --type %s` again with credentials to post.",
-			sys.Title(), sys.Kind())))
+				"Run `%s` again with credentials to post.",
+			sys.Title(), system.ConnectCommand(sys.Kind(), sys.URL()))))
 	}
 
 	return msgs.Send(msgs.Compose{Action: msgs.ComposePost, Post: item.Post})
@@ -242,7 +282,7 @@ func (m *Model) reorder() tea.Cmd {
 }
 
 func (m *Model) load(indexes []int) tea.Cmd {
-	m.gen = m.ctx.NextLoadGen()
+	m.gen++
 	m.order = m.ctx.GetOrder()
 	m.pending = len(indexes)
 	m.total = len(m.selected())
@@ -252,16 +292,15 @@ func (m *Model) load(indexes []int) tea.Cmd {
 		return nil
 	}
 
-	systems := m.ctx.Systems
+	f := m.ctx.Feed
 	forumID := m.ctx.GetCurrentForum().ID
 	want := m.order
 	gen := m.gen
 
 	cmds := make([]tea.Cmd, 0, len(indexes))
 	for _, idx := range indexes {
-		sys := systems[idx]
 		cmds = append(cmds, func() tea.Msg {
-			res, err := feed.List(context.Background(), idx, sys, forumID, want)
+			res, err := f.List(context.Background(), idx, forumID, want)
 			return msgs.FeedResult{Gen: gen, System: idx, Order: res.Order, Posts: res.Posts, Err: err}
 		})
 	}
@@ -334,12 +373,22 @@ func (m *Model) statusText() string {
 	}
 
 	var parts []string
-	for _, part := range []string{feed.NeedsConnect(reconnect), feed.Status(m.order, uses)} {
+	for _, part := range []string{needsConnect(reconnect), feed.Status(m.order, uses)} {
 		if part != "" {
 			parts = append(parts, part)
 		}
 	}
 	return strings.Join(parts, "; ")
+}
+
+func needsConnect(names []string) string {
+	switch len(names) {
+	case 0:
+		return ""
+	case 1:
+		return names[0] + " needs `neonmodem connect`"
+	}
+	return feed.JoinNames(names) + " need `neonmodem connect`"
 }
 
 func (m *Model) sendStatus() tea.Cmd {
@@ -353,7 +402,7 @@ func (m *Model) sendStatus() tea.Cmd {
 
 func (m *Model) updateProgress() {
 	if m.pending > 0 {
-		m.ctx.Loading = true
+		m.ctx.StartLoading(ctx.LoadFeed)
 		if m.total > 1 {
 			m.ctx.Progress = fmt.Sprintf("%d/%d", m.total-m.pending, m.total)
 		} else {
@@ -361,7 +410,7 @@ func (m *Model) updateProgress() {
 		}
 		return
 	}
-	m.ctx.Loading = false
+	m.ctx.StopLoading(ctx.LoadFeed)
 	m.ctx.Progress = ""
 }
 
@@ -375,8 +424,9 @@ func (m Model) View() string {
 	frame = frame.Width(m.width).Height(m.height)
 
 	if len(m.list.Items()) == 0 {
+		width, height := m.innerSize()
 		return frame.Render(lipgloss.Place(
-			m.width-2, m.height-2, lipgloss.Center, lipgloss.Center, m.placeholder()))
+			width, height, lipgloss.Center, lipgloss.Center, m.placeholder()))
 	}
 
 	return frame.Render(m.list.View())
@@ -401,16 +451,17 @@ func (m Model) placeholder() string {
 				keys = append(keys, idx)
 			}
 		}
-		sort.Ints(keys)
-		out := t.Alert.Render("No posts could be loaded.") + "\n"
+		slices.Sort(keys)
+		var out strings.Builder
+		out.WriteString(t.Alert.Render("No posts could be loaded.") + "\n")
 		for _, idx := range keys {
 			name := fmt.Sprintf("system %d", idx)
 			if idx >= 0 && idx < len(m.ctx.Systems) {
 				name = m.ctx.Systems[idx].Title()
 			}
-			out += "\n" + t.Muted.Render(name+": "+m.feeds[idx].err.Error())
+			out.WriteString("\n" + t.Muted.Render(name+": "+m.feeds[idx].err.Error()))
 		}
-		return out
+		return out.String()
 	default:
 		return t.Muted.Render("No posts here yet. Press ctrl+r to refresh.")
 	}

@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -69,6 +70,9 @@ func newRootCmd(a *app) *cobra.Command {
 			}
 
 			a.cfg = cfg
+			for _, notice := range cfg.Notices() {
+				logger.Warn(notice)
+			}
 			a.logger = logger
 			a.closeLog = closer
 
@@ -94,9 +98,8 @@ func newRootCmd(a *app) *cobra.Command {
 
 func commandRunner() credential.Shell {
 	return credential.Shell{
-		Stdin:   os.Stdin,
-		Stderr:  os.Stderr,
-		Timeout: credential.Timeout,
+		Stdin:  os.Stdin,
+		Stderr: os.Stderr,
 	}
 }
 
@@ -144,10 +147,11 @@ func (a *app) loadSystem(
 	settings.Credentials = credentials
 
 	return desc.New(system.Env{
-		Index:    index,
-		Settings: settings,
-		Proxy:    a.cfg.Proxy,
-		Logger:   logger,
+		Index:       index,
+		Settings:    settings,
+		Proxy:       a.cfg.Proxy,
+		Logger:      logger,
+		ReadTimeout: a.cfg.ReadDeadline(),
 	})
 }
 
@@ -195,6 +199,7 @@ func (a *app) runTUI(ctx context.Context) error {
 	if notice != "" {
 		c.StartupNotices = append(c.StartupNotices, notice)
 	}
+	c.StartupNotices = append(c.StartupNotices, a.cfg.Notices()...)
 
 	commands, notices := a.openWithCommands()
 	c.OpenWith = commands
@@ -205,7 +210,7 @@ func (a *app) runTUI(ctx context.Context) error {
 	c.Launcher = runner
 
 	program := tea.NewProgram(ui.NewModel(&c))
-	if _, err := program.Run(); err != nil {
+	if _, err := program.Run(); err != nil && !errors.Is(err, tea.ErrInterrupted) {
 		return err
 	}
 

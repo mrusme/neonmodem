@@ -20,20 +20,9 @@ type CreatedPost struct {
 	ForumSlug    string `json:"forum_slug"`
 }
 
-type PostsService interface {
-	Create(ctx context.Context, w *NewPostModel) (*CreatedPost, error)
-}
-
-type PostsServiceHandler struct {
-	client *Client
-}
-
-func (a *PostsServiceHandler) Create(
-	ctx context.Context,
-	w *NewPostModel,
-) (*CreatedPost, error) {
+func (c *Client) CreatePost(ctx context.Context, w *NewPostModel) (*CreatedPost, error) {
 	response := new(CreatedPost)
-	if err := a.client.http.Post(ctx, NewPostBaseURL, w, response); err != nil {
+	if err := c.http.Post(ctx, NewPostBaseURL, w, response); err != nil {
 		return nil, err
 	}
 

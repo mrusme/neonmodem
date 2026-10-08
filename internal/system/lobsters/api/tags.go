@@ -18,19 +18,9 @@ type TagModel struct {
 	CategoryID       int     `json:"category_id"`
 }
 
-type TagsService interface {
-	List(ctx context.Context) ([]TagModel, error)
-}
-
-type TagServiceHandler struct {
-	client *Client
-}
-
-func (a *TagServiceHandler) List(
-	ctx context.Context,
-) ([]TagModel, error) {
+func (c *Client) Tags(ctx context.Context) ([]TagModel, error) {
 	var response []TagModel
-	if err := a.client.http.Get(ctx, TagsBaseURL+".json", nil, &response); err != nil {
+	if err := c.http.Get(ctx, TagsBaseURL+".json", nil, &response); err != nil {
 		return nil, err
 	}
 

@@ -14,7 +14,15 @@ func (sys *System) Connect(
 	p prompt.Prompter,
 	sysURL string,
 ) (system.Settings, error) {
-	settings := system.Settings{URL: api.SiteURL}
+	return sys.connect(ctx, p, api.SiteURL)
+}
+
+func (sys *System) connect(
+	ctx context.Context,
+	p prompt.Prompter,
+	siteURL string,
+) (system.Settings, error) {
+	settings := system.Settings{URL: siteURL}
 
 	username, err := p.Credential(ctx, prompt.Field{
 		Name:      "Hacker News username",
@@ -38,8 +46,13 @@ func (sys *System) Connect(
 		return settings, err
 	}
 
-	web := newWebSession(api.SiteURL, username.Value, password.Value, sys.proxy, sys.logger)
-	if err := web.Verify(ctx); err != nil {
+	web, err := newWebSession(siteURL, username.Value, password.Value, sys.proxy, sys.logger)
+	if err != nil {
+		return settings, err
+	}
+	bounded, cancel := system.Bound(ctx, sys.readTimeout)
+	defer cancel()
+	if err := system.Timeout(ctx, sys.readTimeout, web.Verify(bounded)); err != nil {
 		return settings, fmt.Errorf("could not log in to Hacker News: %w", err)
 	}
 

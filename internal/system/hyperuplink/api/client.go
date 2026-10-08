@@ -14,11 +14,6 @@ var ErrNotAnAPI = httpx.ErrNotJSON
 
 type Client struct {
 	http *httpx.Client
-
-	Board   BoardService
-	Topics  TopicsService
-	Posts   PostsService
-	Session SessionService
 }
 
 func NewClient(httpClient *http.Client, endpoint string, token string) (*Client, error) {
@@ -31,13 +26,7 @@ func NewClient(httpClient *http.Client, endpoint string, token string) (*Client,
 		hc.Headers.Set("Authorization", "Bearer "+token)
 	}
 
-	c := &Client{http: hc}
-	c.Board = &BoardServiceHandler{client: c}
-	c.Topics = &TopicsServiceHandler{client: c}
-	c.Posts = &PostsServiceHandler{client: c}
-	c.Session = &SessionServiceHandler{client: c}
-
-	return c, nil
+	return &Client{http: hc}, nil
 }
 
 type ErrorBody struct {

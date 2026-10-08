@@ -17,10 +17,6 @@ type Credentials struct {
 
 type Client struct {
 	http *httpx.Client
-
-	Posts      PostsService
-	Topics     TopicsService
-	Categories CategoriesService
 }
 
 func NewClient(httpClient *http.Client, endpoint string, creds Credentials) (*Client, error) {
@@ -35,12 +31,7 @@ func NewClient(httpClient *http.Client, endpoint string, creds Credentials) (*Cl
 		hc.Headers.Set("User-Api-Key", creds.Key)
 	}
 
-	c := &Client{http: hc}
-	c.Posts = &PostServiceHandler{client: c}
-	c.Topics = &TopicServiceHandler{client: c}
-	c.Categories = &CategoryServiceHandler{client: c}
-
-	return c, nil
+	return &Client{http: hc}, nil
 }
 
 type ErrorBody struct {

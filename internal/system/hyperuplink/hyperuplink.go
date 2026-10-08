@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net/url"
+	"time"
 
 	"github.com/mrusme/neonmodem/internal/models/author"
 	"github.com/mrusme/neonmodem/internal/models/forum"
@@ -19,19 +19,21 @@ import (
 const Kind = "hyperuplink"
 
 type System struct {
-	idx      int
-	settings system.Settings
-	proxy    string
-	logger   *slog.Logger
-	client   *api.Client
+	idx         int
+	settings    system.Settings
+	proxy       string
+	logger      *slog.Logger
+	readTimeout time.Duration
+	client      *api.Client
 }
 
 func New(env system.Env) (system.System, error) {
 	sys := &System{
-		idx:      env.Index,
-		settings: env.Settings,
-		proxy:    env.Proxy,
-		logger:   env.Log(),
+		idx:         env.Index,
+		settings:    env.Settings,
+		proxy:       env.Proxy,
+		logger:      env.Log(),
+		readTimeout: env.ReadTimeout,
 	}
 
 	if env.Settings.URL != "" {
@@ -63,23 +65,19 @@ func (sys *System) URL() string {
 }
 
 func (sys *System) Title() string {
-	u, err := url.Parse(sys.settings.URL)
-	if err != nil || u.Hostname() == "" {
-		return sys.settings.URL
-	}
-	return u.Hostname()
+	return system.HostTitle(sys.settings.URL)
 }
 
 func (sys *System) Description() string {
-	return "Hyperuplink"
+	return system.Describe("Hyperuplink", true)
 }
 
 func (sys *System) Capabilities() system.Capabilities {
-	return system.CapRead | system.CapWrite
+	return system.AccountCapabilities(true)
 }
 
 func (sys *System) ListForums(ctx context.Context) ([]forum.Forum, error) {
-	board, err := sys.client.Board.Get(ctx)
+	board, err := sys.client.Board(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +106,7 @@ func (sys *System) ListPosts(
 	forumID string,
 	order system.Order,
 ) ([]post.Post, error) {
-	resp, err := sys.client.Topics.List(ctx, forumID, 1)
+	resp, err := sys.client.Topics(ctx, forumID, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -122,15 +120,6 @@ func (sys *System) ListPosts(
 }
 
 func (sys *System) topicToPost(t *api.TopicModel) post.Post {
-	createdAt := text.Time(t.CreatedAt)
-
-	lastCommentedAt := createdAt
-	if t.LastReplyAt != "" {
-		if parsed := text.Time(t.LastReplyAt); !parsed.IsZero() {
-			lastCommentedAt = parsed
-		}
-	}
-
 	return post.Post{
 		ID:      t.ID,
 		Subject: t.Name,
@@ -140,8 +129,7 @@ func (sys *System) topicToPost(t *api.TopicModel) post.Post {
 		Pinned: t.Pinned,
 		Closed: t.LockedAt != "",
 
-		CreatedAt:       createdAt,
-		LastCommentedAt: lastCommentedAt,
+		CreatedAt: text.Time(t.CreatedAt),
 
 		Author: author.Author{
 			ID:   t.AuthorID,
@@ -168,7 +156,7 @@ func (sys *System) LoadPost(ctx context.Context, p *post.Post) error {
 
 	page := 1
 	for {
-		resp, err := sys.client.Topics.Show(ctx, p.ID, page)
+		resp, err := sys.client.Topic(ctx, p.ID, page)
 		if err != nil {
 			return err
 		}
@@ -197,53 +185,28 @@ func (sys *System) buildReplyTree(
 	topicID string,
 	replies []api.ReplyModel,
 ) []reply.Reply {
-	present := make(map[string]bool, len(replies))
+	flat := make([]reply.Reply, 0, len(replies))
 	for _, r := range replies {
-		present[r.ID] = true
+		flat = append(flat, reply.Reply{
+			ID:        r.ID,
+			PostID:    topicID,
+			ParentID:  r.ReplyID,
+			Body:      r.Text,
+			Deleted:   r.DeletedAt != "",
+			CreatedAt: text.Time(r.CreatedAt),
+			Author: author.Author{
+				ID:   r.AuthorID,
+				Name: r.AuthorUsername,
+			},
+			SysIDX: sys.idx,
+		})
 	}
 
-	childrenOf := make(map[string][]api.ReplyModel)
-	for _, r := range replies {
-		parent := r.ReplyID
-		if parent != "" && !present[parent] {
-			parent = ""
-		}
-		childrenOf[parent] = append(childrenOf[parent], r)
-	}
-
-	var build func(parentID string) []reply.Reply
-	build = func(parentID string) []reply.Reply {
-		out := []reply.Reply{}
-		for _, r := range childrenOf[parentID] {
-			out = append(out, reply.Reply{
-				ID:       r.ID,
-				PostID:   topicID,
-				ParentID: parentID,
-
-				Body: r.Text,
-
-				Deleted: r.DeletedAt != "",
-
-				CreatedAt: text.Time(r.CreatedAt),
-
-				Author: author.Author{
-					ID:   r.AuthorID,
-					Name: r.AuthorUsername,
-				},
-
-				Replies: build(r.ID),
-
-				SysIDX: sys.idx,
-			})
-		}
-		return out
-	}
-
-	return build("")
+	return reply.Tree(flat)
 }
 
 func (sys *System) CreatePost(ctx context.Context, p *post.Post) error {
-	created, err := sys.client.Posts.Create(ctx, &api.NewPostModel{
+	created, err := sys.client.CreatePost(ctx, &api.NewPostModel{
 		Name:    p.Subject,
 		Text:    p.Body,
 		ForumID: p.Forum.ID,
@@ -263,7 +226,7 @@ func (sys *System) CreateReply(ctx context.Context, r *reply.Reply) error {
 		ReplyID: r.ParentID,
 	}
 
-	created, err := sys.client.Topics.CreateReply(ctx, r.PostID, &body)
+	created, err := sys.client.CreateReply(ctx, r.PostID, &body)
 	if err != nil {
 		return err
 	}

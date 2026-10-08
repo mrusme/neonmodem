@@ -7,7 +7,6 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"github.com/mrusme/neonmodem/internal/feed"
 	"github.com/mrusme/neonmodem/internal/models/post"
 	"github.com/mrusme/neonmodem/internal/models/reply"
 	"github.com/mrusme/neonmodem/internal/ui/ctx"
@@ -65,13 +64,13 @@ func NewModel(c *ctx.Ctx) *Model {
 	m.tk.KeymapAdd("tab", "switch field", "tab")
 	m.tk.KeymapAdd("submit", "submit", "ctrl+s")
 
-	m.tk.SetViewFunc(buildView)
+	m.tk.SetViewFunc(m.buildView)
 	m.tk.SetMsgHandling(toolkit.MsgHandling{
 		OnKeymapKey: []toolkit.MsgHandlingKeymapKey{
-			{ID: "tab", Handler: handleTab},
-			{ID: "submit", Handler: handleSubmit},
+			{ID: "tab", Handler: m.handleTab},
+			{ID: "submit", Handler: m.handleSubmit},
 		},
-		OnViewResize: handleViewResize,
+		OnViewResize: m.handleViewResize,
 	})
 
 	return m
@@ -90,7 +89,7 @@ func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
 		m.textarea.SetStyles(textarea.DefaultStyles(m.ctx.DarkBackground))
 	}
 
-	if handled, cmds := m.tk.HandleMsg(m, msg); handled {
+	if handled, cmds := m.tk.HandleMsg(msg); handled {
 		return m, tea.Batch(cmds...)
 	}
 
@@ -145,7 +144,7 @@ func (m *Model) open(c msgs.Compose) tea.Cmd {
 
 func (m *Model) submitted(err error) tea.Cmd {
 	m.submitting = false
-	m.ctx.Loading = false
+	m.ctx.StopLoading(ctx.LoadSubmit)
 
 	if err != nil {
 		m.ctx.Logger.Error("submitting failed", "action", m.action, "error", err)
@@ -168,15 +167,15 @@ func (m *Model) submitted(err error) tea.Cmd {
 }
 
 func (m *Model) createPost(p post.Post) tea.Cmd {
-	systems := m.ctx.Systems
+	f := m.ctx.Feed
 	return func() tea.Msg {
-		return submittedMsg{err: feed.CreatePost(context.Background(), systems, &p)}
+		return submittedMsg{err: f.CreatePost(context.Background(), &p)}
 	}
 }
 
 func (m *Model) createReply(r reply.Reply) tea.Cmd {
-	systems := m.ctx.Systems
+	f := m.ctx.Feed
 	return func() tea.Msg {
-		return submittedMsg{err: feed.CreateReply(context.Background(), systems, &r)}
+		return submittedMsg{err: f.CreateReply(context.Background(), &r)}
 	}
 }

@@ -43,45 +43,26 @@ type StoryModel struct {
 	Comments         []CommentModel `json:"comments"`
 }
 
-type StoriesService interface {
-	Show(ctx context.Context, id string) (*StoryModel, error)
-	List(ctx context.Context, list string) ([]StoryModel, error)
-	Tagged(ctx context.Context, tag string) ([]StoryModel, error)
-}
-
-type StoryServiceHandler struct {
-	client *Client
-}
-
-func (a *StoryServiceHandler) Show(
-	ctx context.Context,
-	id string,
-) (*StoryModel, error) {
+func (c *Client) Story(ctx context.Context, id string) (*StoryModel, error) {
 	response := new(StoryModel)
-	if err := a.client.http.Get(ctx, StoriesBaseURL+"/"+url.PathEscape(id)+".json", nil, response); err != nil {
+	if err := c.http.Get(ctx, StoriesBaseURL+"/"+url.PathEscape(id)+".json", nil, response); err != nil {
 		return nil, err
 	}
 
 	return response, nil
 }
 
-func (a *StoryServiceHandler) List(
-	ctx context.Context,
-	list string,
-) ([]StoryModel, error) {
-	return a.get(ctx, "/"+url.PathEscape(list)+".json")
+func (c *Client) Stories(ctx context.Context, list string) ([]StoryModel, error) {
+	return c.stories(ctx, "/"+url.PathEscape(list)+".json")
 }
 
-func (a *StoryServiceHandler) Tagged(
-	ctx context.Context,
-	tag string,
-) ([]StoryModel, error) {
-	return a.get(ctx, "/t/"+url.PathEscape(tag)+".json")
+func (c *Client) Tagged(ctx context.Context, tag string) ([]StoryModel, error) {
+	return c.stories(ctx, "/t/"+url.PathEscape(tag)+".json")
 }
 
-func (a *StoryServiceHandler) get(ctx context.Context, path string) ([]StoryModel, error) {
+func (c *Client) stories(ctx context.Context, path string) ([]StoryModel, error) {
 	var response []StoryModel
-	if err := a.client.http.Get(ctx, path, nil, &response); err != nil {
+	if err := c.http.Get(ctx, path, nil, &response); err != nil {
 		return nil, err
 	}
 

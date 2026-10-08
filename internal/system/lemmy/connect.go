@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mrusme/neonmodem/internal/system"
 	"github.com/mrusme/neonmodem/internal/system/prompt"
@@ -52,7 +53,7 @@ func (sys *System) Connect(
 		if err != nil {
 			return settings, err
 		}
-		jwt, err := logIn(ctx, client, p, lemmy.Login{
+		jwt, err := logIn(ctx, sys.readTimeout, client, p, lemmy.Login{
 			UsernameOrEmail: username.Value,
 			Password:        password.Value,
 		})
@@ -95,14 +96,15 @@ func (sys *System) Connect(
 
 func logIn(
 	ctx context.Context,
+	timeout time.Duration,
 	client *lemmy.Client,
 	p prompt.Prompter,
 	login lemmy.Login,
 ) (string, error) {
-	resp, err := client.Login(ctx, login)
+	resp, err := login1(ctx, timeout, client, login)
 	if errorString(err) == "missing_totp_token" {
 		p.Notice("Your account uses two-factor authentication.")
-		resp, err = logInWithCode(ctx, client, p, login)
+		resp, err = logInWithCode(ctx, timeout, client, p, login)
 	}
 	if errorString(err) == "rate_limit_error" {
 		return "", errTooManyLogins
@@ -118,8 +120,22 @@ func logIn(
 	return jwt, nil
 }
 
+func login1(
+	ctx context.Context,
+	timeout time.Duration,
+	client *lemmy.Client,
+	login lemmy.Login,
+) (*lemmy.LoginResponse, error) {
+	bounded, cancel := system.Bound(ctx, timeout)
+	defer cancel()
+
+	resp, err := client.Login(bounded, login)
+	return resp, system.Timeout(ctx, timeout, err)
+}
+
 func logInWithCode(
 	ctx context.Context,
+	timeout time.Duration,
 	client *lemmy.Client,
 	p prompt.Prompter,
 	login lemmy.Login,
@@ -131,7 +147,7 @@ func logInWithCode(
 		}
 
 		login.TOTP2FAToken = lemmy.NewOptional(code)
-		resp, err := client.Login(ctx, login)
+		resp, err := login1(ctx, timeout, client, login)
 		if errorString(err) != "incorrect_totp_token" {
 			return resp, err
 		}

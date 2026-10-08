@@ -13,9 +13,6 @@ func (tk *ToolKit) KeymapAdd(id string, help string, keys ...string) {
 		key.WithHelp(strings.Join(keys, "/"), help),
 	)
 
-	if _, exists := tk.keybindings[id]; !exists {
-		tk.keyOrder = append(tk.keyOrder, id)
-	}
 	tk.keybindings[id] = binding
 }
 

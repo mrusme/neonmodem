@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/mrusme/neonmodem/internal/models/forum"
 	"github.com/mrusme/neonmodem/internal/models/post"
@@ -72,10 +73,11 @@ func (s Settings) Option(key string, fallback string) string {
 }
 
 type Env struct {
-	Index    int
-	Settings Settings
-	Proxy    string
-	Logger   *slog.Logger
+	Index       int
+	Settings    Settings
+	Proxy       string
+	Logger      *slog.Logger
+	ReadTimeout time.Duration
 }
 
 func (e Env) Log() *slog.Logger {
@@ -103,12 +105,9 @@ type System interface {
 }
 
 var (
-	ErrUnsupported      = errors.New("this system doesn't support that")
 	ErrOrderUnavailable = errors.New("this order isn't available on this site")
-	ErrNoCredentials    = errors.New(
-		"this system is connected without an account; run neonmodem connect " +
-			"again with credentials to post")
-	ErrNeedsConnect = errors.New("this system needs neonmodem connect")
+	ErrNoCredentials    = errors.New("this system is connected without an account")
+	ErrNeedsConnect     = errors.New("this system needs neonmodem connect")
 )
 
 type connectError struct {

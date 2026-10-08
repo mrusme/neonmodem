@@ -9,7 +9,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/mrusme/neonmodem/internal/system/credential"
 	"golang.org/x/term"
@@ -57,7 +56,7 @@ func NewTerminal(in io.Reader, out io.Writer, runner credential.Runner) *Termina
 		in:  in,
 		out: out,
 		readSecret: func() ([]byte, error) {
-			return term.ReadPassword(int(syscall.Stdin))
+			return term.ReadPassword(int(os.Stdin.Fd()))
 		},
 		runner: runner,
 	}
@@ -223,7 +222,7 @@ func (t *Terminal) Generated(ctx context.Context, f Field, value string) (Answer
 }
 
 func commandQuestion(f Field) string {
-	return fmt.Sprintf("Please enter the command that prints your %s", f.Name)
+	return "Please enter the command that prints your " + f.Name
 }
 
 func (t *Terminal) enter(f Field) (string, error) {

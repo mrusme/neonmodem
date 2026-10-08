@@ -41,12 +41,12 @@ func NewModel(c *ctx.Ctx) *Model {
 	m.tk.KeymapAdd("enter", "choose", "enter")
 	m.tk.KeymapAdd("filter", "filter", "/")
 
-	m.tk.SetViewFunc(buildView)
+	m.tk.SetViewFunc(m.buildView)
 	m.tk.SetMsgHandling(toolkit.MsgHandling{
 		OnKeymapKey: []toolkit.MsgHandlingKeymapKey{
-			{ID: "enter", Handler: handleSelect},
+			{ID: "enter", Handler: m.handleSelect},
 		},
-		OnViewResize: handleViewResize,
+		OnViewResize: m.handleViewResize,
 	})
 
 	return m
@@ -100,7 +100,6 @@ func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
 			return m, nil
 		}
 		m.loading = false
-		m.ctx.Loading = false
 		var cmds []tea.Cmd
 		cmds = append(cmds, m.setItems(msg.Items))
 		for _, err := range msg.Errors {
@@ -114,7 +113,7 @@ func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
 		m.list.SetDelegate(m.delegate())
 	}
 
-	if handled, cmds := m.tk.HandleMsg(m, msg); handled {
+	if handled, cmds := m.tk.HandleMsg(msg); handled {
 		return m, tea.Batch(cmds...)
 	}
 

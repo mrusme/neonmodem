@@ -103,8 +103,9 @@ func (o Order) Compare() func(a, b post.Post) int {
 		return newestFirst
 	case OrderComments:
 		return mostRepliesFirst
+	default:
+		return nil
 	}
-	return nil
 }
 
 func (o Order) Sources() []Order {

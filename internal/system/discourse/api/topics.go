@@ -74,47 +74,30 @@ type TopicModel struct {
 	Posters            []PosterModel `json:"posters"`
 }
 
-type TopicsService interface {
-	Show(ctx context.Context, id string) (*SingleTopicResponse, error)
-	ShowPosts(ctx context.Context, id string, postIDs []int) (*SingleTopicResponse, error)
-	List(ctx context.Context, list string, categorySlugPath string, categoryID int, query url.Values) (*TopicListResponse, error)
-}
-
-type TopicServiceHandler struct {
-	client *Client
-}
-
-func (a *TopicServiceHandler) Show(
-	ctx context.Context,
-	id string,
-) (*SingleTopicResponse, error) {
+func (c *Client) Topic(ctx context.Context, id string) (*SingleTopicResponse, error) {
 	response := new(SingleTopicResponse)
-	if err := a.client.http.Get(ctx, TopicsBaseURL+"/"+id+".json", nil, response); err != nil {
+	if err := c.http.Get(ctx, TopicsBaseURL+"/"+id+".json", nil, response); err != nil {
 		return nil, err
 	}
 
 	return response, nil
 }
 
-func (a *TopicServiceHandler) ShowPosts(
-	ctx context.Context,
-	id string,
-	postIDs []int,
-) (*SingleTopicResponse, error) {
+func (c *Client) TopicPosts(ctx context.Context, id string, postIDs []int) (*SingleTopicResponse, error) {
 	query := url.Values{}
 	for _, postID := range postIDs {
 		query.Add("post_ids[]", strconv.Itoa(postID))
 	}
 
 	response := new(SingleTopicResponse)
-	if err := a.client.http.Get(ctx, TopicsBaseURL+"/"+id+"/posts.json", query, response); err != nil {
+	if err := c.http.Get(ctx, TopicsBaseURL+"/"+id+"/posts.json", query, response); err != nil {
 		return nil, err
 	}
 
 	return response, nil
 }
 
-func (a *TopicServiceHandler) List(
+func (c *Client) Topics(
 	ctx context.Context,
 	list string,
 	categorySlugPath string,
@@ -127,7 +110,7 @@ func (a *TopicServiceHandler) List(
 	}
 
 	response := new(TopicListResponse)
-	if err := a.client.http.Get(ctx, path, query, response); err != nil {
+	if err := c.http.Get(ctx, path, query, response); err != nil {
 		return nil, err
 	}
 
