@@ -169,8 +169,9 @@ window, for example with `tmux new-window`. When Neon Modem quits, it ends the
 commands that still run, including the programs they started. `setsid -f` in
 front of a program keeps it running.
 
-**Note:** Commands from a configuration file that every user can write to, or
-that belongs to a user other than you or root, are not run for safety reasons.
+**Note:** On Unix, commands from a configuration file that every user can write
+to, or that belongs to a user other than you or root, are not run for safety
+reasons.
 
 ### Systems
 

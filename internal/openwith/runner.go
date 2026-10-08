@@ -39,6 +39,7 @@ type Runner struct {
 
 type run struct {
 	cmd    *exec.Cmd
+	tree   *processTree
 	active sync.WaitGroup
 	ended  chan struct{}
 }
@@ -92,7 +93,16 @@ func (r *Runner) Start(name string, line string, env []string) error {
 		stderr.Close()
 		return fmt.Errorf("couldn't be started: %w", err)
 	}
-	current := &run{cmd: cmd, ended: make(chan struct{})}
+	tree, err := attach(cmd)
+	if err != nil {
+		r.mu.Unlock()
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+		stdout.Close()
+		stderr.Close()
+		return fmt.Errorf("couldn't be started: %w", err)
+	}
+	current := &run{cmd: cmd, tree: tree, ended: make(chan struct{})}
 	current.active.Add(3)
 	r.running[current] = struct{}{}
 	r.mu.Unlock()
@@ -105,6 +115,7 @@ func (r *Runner) Start(name string, line string, env []string) error {
 	go r.wait(logger, current, time.Now())
 	go func() {
 		current.active.Wait()
+		current.tree.release()
 		r.mu.Lock()
 		delete(r.running, current)
 		r.mu.Unlock()
@@ -191,7 +202,7 @@ func (r *Runner) Stop() {
 	r.logger.Info("ending open with commands at quit", "count", len(runs))
 
 	for _, current := range runs {
-		if err := terminate(current.cmd); err != nil {
+		if err := current.tree.terminate(); err != nil {
 			r.logger.Warn("couldn't end an open with command", "pid", current.cmd.Process.Pid, "error", err)
 		}
 	}
@@ -208,7 +219,7 @@ func (r *Runner) Stop() {
 			select {
 			case <-rest.ended:
 			default:
-				if err := kill(rest.cmd); err != nil {
+				if err := rest.tree.kill(); err != nil {
 					r.logger.Warn("couldn't kill an open with command", "pid", rest.cmd.Process.Pid, "error", err)
 				}
 			}

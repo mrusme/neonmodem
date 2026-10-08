@@ -8,16 +8,29 @@ import (
 	"os/exec"
 )
 
+type processTree struct {
+	process *os.Process
+}
+
 func prepare(*exec.Cmd) {}
 
-func terminate(*exec.Cmd) error {
+func attach(cmd *exec.Cmd) (*processTree, error) {
+	if cmd.Process == nil {
+		return nil, errors.New("the shell has no process")
+	}
+	return &processTree{process: cmd.Process}, nil
+}
+
+func (t *processTree) terminate() error {
 	return nil
 }
 
-func kill(cmd *exec.Cmd) error {
-	err := cmd.Process.Kill()
+func (t *processTree) kill() error {
+	err := t.process.Kill()
 	if errors.Is(err, os.ErrProcessDone) {
 		return nil
 	}
 	return err
 }
+
+func (t *processTree) release() {}

@@ -90,3 +90,18 @@ func TestStopEndsTheProcessTree(t *testing.T) {
 		t.Errorf("got %v", finished)
 	}
 }
+
+func TestStopEndsProgramsLeftByAFinishedShell(t *testing.T) {
+	r, logs := newTestRunner(t)
+
+	if err := r.Start("Background", "start /b ping -n 30 127.0.0.1", nil); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, "the start", func() bool { return len(logs.find(t, "open with started")) == 1 })
+	pid := int(logs.find(t, "open with started")[0]["pid"].(float64))
+	waitFor(t, "the ping process", func() bool { return len(children(t, pid)) > 0 })
+	waitFor(t, "the shell's end", func() bool { return len(logs.find(t, "open with finished")) == 1 })
+
+	r.Stop()
+	waitFor(t, "the ping process to end", func() bool { return len(children(t, pid)) == 0 })
+}
