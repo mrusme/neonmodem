@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/mrusme/neonmodem/internal/models/forum"
@@ -102,6 +103,14 @@ type System interface {
 	LoadPost(ctx context.Context, p *post.Post) error
 	CreatePost(ctx context.Context, p *post.Post) error
 	CreateReply(ctx context.Context, r *reply.Reply) error
+}
+
+type Revoker interface {
+	Revoke(ctx context.Context, old Settings) error
+}
+
+type MediaAuthorizer interface {
+	AuthorizeMedia(req *http.Request)
 }
 
 var (

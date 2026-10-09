@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/araddon/dateparse"
@@ -62,6 +63,32 @@ func Truncate(s string, width int) string {
 	return ansi.Truncate(s, width, "")
 }
 
+func Printable(s string) string {
+	return printable(s, false)
+}
+
+func PrintableLines(s string) string {
+	return printable(s, true)
+}
+
+func printable(s string, lines bool) string {
+	s = ansi.Strip(s)
+	if lines {
+		s = strings.ReplaceAll(s, "\r\n", "\n")
+	}
+	return strings.Map(func(r rune) rune {
+		switch {
+		case lines && r == '\n':
+			return r
+		case r == '\t' || r == '\n' || r == '\r':
+			return ' '
+		case unicode.IsControl(r):
+			return -1
+		}
+		return r
+	}, s)
+}
+
 func FirstNonEmpty(values ...string) string {
 	for _, v := range values {
 		if v != "" {
@@ -79,14 +106,18 @@ func FirstParagraph(markdown string) string {
 		if _, ok := node.(*ast.Paragraph); !ok {
 			continue
 		}
-		var b strings.Builder
-		writeInline(&b, node, source, false)
-		paragraph := strings.Join(strings.Fields(b.String()), " ")
+		paragraph := InlineText(node, source)
 		if paragraph != "" && !strings.HasPrefix(paragraph, ":::") {
 			return paragraph
 		}
 	}
 	return ""
+}
+
+func InlineText(node ast.Node, source []byte) string {
+	var b strings.Builder
+	writeInline(&b, node, source, false)
+	return strings.Join(strings.Fields(b.String()), " ")
 }
 
 func writeInline(b *strings.Builder, parent ast.Node, source []byte, code bool) {

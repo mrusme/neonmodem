@@ -25,6 +25,7 @@ const (
 	LoadPost   LoadSource = "post"
 	LoadSubmit LoadSource = "submit"
 	LoadForums LoadSource = "forums"
+	LoadImages LoadSource = "images"
 )
 
 type loadState struct {

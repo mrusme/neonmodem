@@ -12,11 +12,6 @@ import (
 	"go.elara.ws/go-lemmy"
 )
 
-const (
-	codeDigits = 6
-	maxCodes   = 3
-)
-
 var errTooManyLogins = errors.New(
 	"too many logins from this IP address; please try again later, since Lemmy " +
 		"limits logins per hour")
@@ -141,7 +136,7 @@ func logInWithCode(
 	login lemmy.Login,
 ) (*lemmy.LoginResponse, error) {
 	for rejected := 0; ; {
-		code, err := readCode(p)
+		code, err := prompt.Code(p)
 		if err != nil {
 			return nil, err
 		}
@@ -153,39 +148,9 @@ func logInWithCode(
 		}
 
 		rejected++
-		if rejected == maxCodes {
-			return nil, errors.New("three codes were rejected; check the clock of " +
-				"the device with your authenticator app")
+		if rejected == prompt.MaxCodes {
+			return nil, prompt.ErrCodesRejected
 		}
-		p.Notice("The code was rejected. Codes change every 30 seconds, " +
-			"and a device with a wrong clock shows wrong codes.")
+		p.Notice(prompt.CodeRejected)
 	}
-}
-
-func readCode(p prompt.Prompter) (string, error) {
-	for {
-		answer, err := p.Line(
-			"Please enter the current 2FA code from your authenticator app", "2FA code")
-		if err != nil {
-			return "", err
-		}
-
-		code := strings.Join(strings.Fields(answer), "")
-		if isCode(code) {
-			return code, nil
-		}
-		p.Notice("A 2FA code has six digits.")
-	}
-}
-
-func isCode(code string) bool {
-	if len(code) != codeDigits {
-		return false
-	}
-	for _, c := range code {
-		if c < '0' || c > '9' {
-			return false
-		}
-	}
-	return true
 }

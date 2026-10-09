@@ -1,12 +1,15 @@
 package postshow
 
 import (
+	"context"
+	"net/http"
 	"time"
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"github.com/mrusme/neonmodem/internal/models/post"
 	"github.com/mrusme/neonmodem/internal/models/reply"
+	"github.com/mrusme/neonmodem/internal/system"
 	"github.com/mrusme/neonmodem/internal/ui/ctx"
 	"github.com/mrusme/neonmodem/internal/ui/msgs"
 	"github.com/mrusme/neonmodem/internal/ui/toolkit"
@@ -17,7 +20,13 @@ const WIN_ID = "postshow"
 
 type loadedMsg struct {
 	gen      int64
+	loadCtx  context.Context
 	post     *post.Post
+	rendered renderedPost
+}
+
+type imagesMsg struct {
+	gen      int64
 	rendered renderedPost
 }
 
@@ -34,6 +43,7 @@ type Model struct {
 
 	buffer   string
 	replyIDs []string
+	lines    []int
 
 	activePost *post.Post
 	allReplies []*reply.Reply
@@ -93,8 +103,25 @@ func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
 		m.viewport.SetContent(msg.rendered.content)
 		m.replyIDs = msg.rendered.replyIDs
 		m.allReplies = msg.rendered.allReplies
+		m.lines = msg.rendered.lines
 		m.loading = false
 		m.ctx.StopLoading(ctx.LoadPost)
+		m.tk.InvalidateCache()
+		if !msg.rendered.hasImages() {
+			return m, nil
+		}
+		m.ctx.StartLoading(ctx.LoadImages)
+		return m, m.loadImages(msg.loadCtx, msg.gen, msg.rendered)
+
+	case imagesMsg:
+		if !m.ctx.IsCurrentLoadGen(msg.gen) {
+			return m, nil
+		}
+		top := anchor(m.lines, msg.rendered.lines, m.viewport.YOffset())
+		m.viewport.SetContent(msg.rendered.content)
+		m.viewport.SetYOffset(top)
+		m.lines = msg.rendered.lines
+		m.ctx.StopLoading(ctx.LoadImages)
 		m.tk.InvalidateCache()
 		return m, nil
 
@@ -131,8 +158,8 @@ func (m *Model) open(p post.Post) tea.Cmd {
 func (m *Model) loadPost(p *post.Post, delay time.Duration) tea.Cmd {
 	c := m.ctx
 	viewportWidth := m.viewport.Width()
-	imageWidth := viewportWidth - 2
 	f := c.Feed
+	c.StopLoading(ctx.LoadImages)
 	loadCtx, gen := c.NextLoad()
 
 	return func() tea.Msg {
@@ -152,11 +179,35 @@ func (m *Model) loadPost(p *post.Post, delay time.Duration) tea.Cmd {
 			return loadFailedMsg{gen: gen, err: err}
 		}
 
-		rendered, ok := renderPost(loadCtx, c, p, viewportWidth, imageWidth)
+		rendered, ok := renderPost(loadCtx, c, p, viewportWidth)
 		if !ok {
 			return nil
 		}
 
-		return loadedMsg{gen: gen, post: p, rendered: rendered}
+		return loadedMsg{gen: gen, loadCtx: loadCtx, post: p, rendered: rendered}
 	}
+}
+
+func (m *Model) loadImages(loadCtx context.Context, gen int64, rendered renderedPost) tea.Cmd {
+	c := m.ctx
+	height := max(m.viewport.Height()-captionLines, 1)
+	authorize := mediaAuthorizer(c, m.activePost)
+
+	return func() tea.Msg {
+		withImages, ok := renderImages(loadCtx, c, rendered, height, authorize)
+		if !ok {
+			return nil
+		}
+		return imagesMsg{gen: gen, rendered: withImages}
+	}
+}
+
+func mediaAuthorizer(c *ctx.Ctx, p *post.Post) func(*http.Request) {
+	if p == nil || p.SysIDX < 0 || p.SysIDX >= len(c.Systems) {
+		return nil
+	}
+	if a, ok := c.Systems[p.SysIDX].(system.MediaAuthorizer); ok {
+		return a.AuthorizeMedia
+	}
+	return nil
 }

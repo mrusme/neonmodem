@@ -3,6 +3,8 @@ package postshow
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"slices"
 	"strings"
 
 	"charm.land/glamour/v2"
@@ -12,11 +14,14 @@ import (
 	"github.com/mrusme/neonmodem/internal/models/reply"
 	"github.com/mrusme/neonmodem/internal/system"
 	"github.com/mrusme/neonmodem/internal/ui/ctx"
+	"github.com/mrusme/neonmodem/internal/ui/images"
 )
 
 const (
 	minViewportWidth = 20
 	replyIndexInset  = 28
+	imageIndent      = "  "
+	captionLines     = 1
 )
 
 func (m *Model) View() string {
@@ -41,10 +46,38 @@ func (m *Model) buildView(cached bool) string {
 	return m.tk.Dialog(title, m.viewport.View())
 }
 
+type unit struct {
+	head  string
+	body  string
+	plain bool
+	tail  string
+	refs  []images.Ref
+	text  string
+}
+
 type renderedPost struct {
 	content    string
 	replyIDs   []string
 	allReplies []*reply.Reply
+	units      []unit
+	lines      []int
+	width      int
+}
+
+func (r *renderedPost) assemble() {
+	var b strings.Builder
+	r.lines = make([]int, len(r.units))
+	line := 0
+	for i, u := range r.units {
+		r.lines[i] = line
+		b.WriteString(u.text)
+		line += strings.Count(u.text, "\n")
+	}
+	r.content = b.String()
+}
+
+func (r renderedPost) hasImages() bool {
+	return slices.ContainsFunc(r.units, func(u unit) bool { return len(u.refs) > 0 })
 }
 
 func writesOrAsks(subject string) string {
@@ -102,43 +135,48 @@ func renderPost(
 	c *ctx.Ctx,
 	p *post.Post,
 	viewportWidth int,
-	imageWidth int,
 ) (renderedPost, bool) {
 	viewportWidth = max(viewportWidth, minViewportWidth)
 	render := markdownRenderer(c, viewportWidth)
 
-	body := render(p.Body)
-	if c.Config.RenderImages {
-		body = c.Images.RenderInline(loadCtx, body, imageWidth)
+	rendered := renderedPost{
+		replyIDs:   []string{p.ID},
+		allReplies: []*reply.Reply{},
+		units:      []unit{{head: postHeader(c, p), body: p.Body}},
+		width:      viewportWidth,
 	}
-	if loadCtx.Err() != nil {
-		return renderedPost{}, false
-	}
-
-	var out strings.Builder
-	out.WriteString(postHeader(c, p))
-	out.WriteString(body)
-
-	rendered := renderedPost{replyIDs: []string{p.ID}, allReplies: []*reply.Reply{}}
 	if listsReplies(c, p) {
 		if p.ReplyPage.HasOlder() {
-			out.WriteString(render("\n---\nOlder replies available, press `z` to load\n\n---\n"))
+			rendered.units[0].tail = render("\n---\nOlder replies available, press `z` to load\n\n---\n")
 		}
-		w := replyWalker{loadCtx: loadCtx, c: c, out: &out, render: render, width: viewportWidth}
+		w := replyWalker{loadCtx: loadCtx, c: c, width: viewportWidth}
 		if !w.walk(&rendered, p.Author.Name, p.Replies) {
 			return renderedPost{}, false
 		}
 	}
 
-	rendered.content = ansi.Wrap(out.String(), viewportWidth, "")
+	for i := range rendered.units {
+		if loadCtx.Err() != nil {
+			return renderedPost{}, false
+		}
+		u := &rendered.units[i]
+		if c.Config.RenderImages && !u.plain {
+			u.refs = images.Find(u.body)
+		}
+		body := u.body
+		if !u.plain {
+			body = render(u.body)
+		}
+		u.text = ansi.Wrap(u.head+body+u.tail, viewportWidth, "")
+	}
+
+	rendered.assemble()
 	return rendered, true
 }
 
 type replyWalker struct {
 	loadCtx context.Context
 	c       *ctx.Ctx
-	out     *strings.Builder
-	render  func(string) string
 	width   int
 }
 
@@ -152,12 +190,11 @@ func (w replyWalker) walk(rendered *renderedPost, inReplyTo string, replies []re
 		rendered.replyIDs = append(rendered.replyIDs, re.ID)
 		rendered.allReplies = append(rendered.allReplies, re)
 
-		w.out.WriteString(w.replyHeader(re, inReplyTo, len(rendered.replyIDs)-1))
+		u := unit{head: w.replyHeader(re, inReplyTo, len(rendered.replyIDs)-1), body: re.Body}
 		if re.Deleted {
-			w.out.WriteString("\n  DELETED\n\n")
-		} else {
-			w.out.WriteString(w.render(re.Body))
+			u.body, u.plain = "\n  DELETED\n\n", true
 		}
+		rendered.units = append(rendered.units, u)
 
 		if !w.walk(rendered, re.Author.Name, re.Replies) {
 			return false
@@ -179,4 +216,77 @@ func (w replyWalker) replyHeader(re *reply.Reply, inReplyTo string, index int) s
 		inReplyStyle.Render(fmt.Sprintf("writes in reply to %s:", inReplyTo)),
 		strings.Repeat(" ", padding),
 		w.c.Theme.Muted.Render(fmt.Sprintf("#%d", index)))
+}
+
+func renderImages(
+	loadCtx context.Context,
+	c *ctx.Ctx,
+	rendered renderedPost,
+	height int,
+	authorize func(*http.Request),
+) (renderedPost, bool) {
+	var reqs []images.Request
+	for _, u := range rendered.units {
+		for _, ref := range u.refs {
+			reqs = append(reqs, images.Request{
+				URL:       ref.URL,
+				Width:     rendered.width - len(imageIndent),
+				Height:    height,
+				Authorize: authorize,
+			})
+		}
+	}
+
+	results := c.Images.Load(loadCtx, reqs)
+	if loadCtx.Err() != nil {
+		return renderedPost{}, false
+	}
+
+	render := markdownRenderer(c, rendered.width)
+	units := slices.Clone(rendered.units)
+	next := 0
+	for i := range units {
+		u := &units[i]
+		loaded := results[next : next+len(u.refs)]
+		next += len(u.refs)
+		if !slices.ContainsFunc(loaded, func(r images.Result) bool { return r.Err == nil }) {
+			continue
+		}
+
+		marked := images.Mark(u.body, u.refs, func(j int) bool { return loaded[j].Err == nil })
+		body := marked.Fill(render(marked.Text), func(j int) string {
+			return imageBlock(c, loaded[j].Image, u.refs[j].Caption())
+		})
+		u.text = ansi.Wrap(u.head+body+u.tail, rendered.width, "")
+
+		if loadCtx.Err() != nil {
+			return renderedPost{}, false
+		}
+	}
+
+	rendered.units = units
+	rendered.assemble()
+	return rendered, true
+}
+
+func imageBlock(c *ctx.Ctx, image string, caption string) string {
+	lines := strings.Split(image, "\n")
+	for i := range lines {
+		lines[i] = imageIndent + lines[i]
+	}
+	return strings.Join(lines, "\n") + "\n" + imageIndent + c.Theme.Muted.Render(caption)
+}
+
+func anchor(old []int, fresh []int, top int) int {
+	at := 0
+	for i, line := range old {
+		if line > top {
+			break
+		}
+		at = i
+	}
+	if at >= len(old) || at >= len(fresh) {
+		return top
+	}
+	return fresh[at] + top - old[at]
 }

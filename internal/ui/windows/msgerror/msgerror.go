@@ -6,6 +6,7 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/mrusme/neonmodem/internal/system/text"
 	"github.com/mrusme/neonmodem/internal/ui/ctx"
 	"github.com/mrusme/neonmodem/internal/ui/msgs"
 	"github.com/mrusme/neonmodem/internal/ui/toolkit"
@@ -79,7 +80,11 @@ func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
 }
 
 func (m *Model) setContent() {
-	m.viewport.SetContent(lipgloss.NewStyle().Width(m.viewport.Width()).Render(strings.Join(m.messages, "\n\n")))
+	shown := make([]string, len(m.messages))
+	for i, message := range m.messages {
+		shown[i] = text.PrintableLines(message)
+	}
+	m.viewport.SetContent(lipgloss.NewStyle().Width(m.viewport.Width()).Render(strings.Join(shown, "\n\n")))
 }
 
 func (m *Model) handleViewResize() (bool, []tea.Cmd) {

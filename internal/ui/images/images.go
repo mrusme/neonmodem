@@ -3,12 +3,14 @@ package images
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"image/color"
 	"io"
 	"log/slog"
+	"mime"
 	"net/http"
-	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,14 +20,28 @@ import (
 
 const (
 	maxConcurrent = 4
-	maxBytes      = 2 << 20
-	fetchTimeout  = 5 * time.Second
+	maxBytes      = 10 << 20
+	fetchTimeout  = 15 * time.Second
 	cacheEntries  = 64
 	minWidth      = 8
 )
 
-var imageURL = regexp.MustCompile(
-	`(?m)(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])\.(jpg|jpeg|png)`)
+var (
+	errTooNarrow = errors.New("the window is too narrow for images")
+	errEmpty     = errors.New("the image rendered empty")
+)
+
+type Request struct {
+	URL       string
+	Width     int
+	Height    int
+	Authorize func(*http.Request)
+}
+
+type Result struct {
+	Image string
+	Err   error
+}
 
 type Renderer struct {
 	logger *slog.Logger
@@ -50,8 +66,8 @@ func New(logger *slog.Logger, proxy string) *Renderer {
 	}
 }
 
-func cacheKey(url string, width int) string {
-	return fmt.Sprintf("%d|%s", width, url)
+func cacheKey(req Request) string {
+	return fmt.Sprintf("%d|%d|%s", req.Width, req.Height, req.URL)
 }
 
 func (r *Renderer) cached(key string) (string, bool) {
@@ -74,19 +90,68 @@ func (r *Renderer) remember(key string, rendered string) {
 	}
 }
 
-func (r *Renderer) fetch(ctx context.Context, url string) ([]byte, error) {
+func (r *Renderer) Load(ctx context.Context, reqs []Request) []Result {
+	results := make([]Result, len(reqs))
+	groups := map[string][]int{}
+	var keys []string
+	for i, req := range reqs {
+		key := cacheKey(req)
+		if _, ok := groups[key]; !ok {
+			keys = append(keys, key)
+		}
+		groups[key] = append(groups[key], i)
+	}
+
+	var wg sync.WaitGroup
+	for _, key := range keys {
+		indexes := groups[key]
+		wg.Go(func() {
+			result := r.load(ctx, key, reqs[indexes[0]])
+			for _, i := range indexes {
+				results[i] = result
+			}
+		})
+	}
+	wg.Wait()
+
+	return results
+}
+
+func (r *Renderer) load(ctx context.Context, key string, req Request) Result {
+	if req.Width < minWidth {
+		return Result{Err: errTooNarrow}
+	}
+	if rendered, ok := r.cached(key); ok {
+		return Result{Image: rendered}
+	}
+
 	select {
 	case r.sem <- struct{}{}:
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return Result{Err: ctx.Err()}
 	}
 	defer func() { <-r.sem }()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	rendered, err := r.render(ctx, req)
+	if err != nil {
+		r.logger.Debug("image skipped", "url", req.URL, "error", err)
+		return Result{Err: err}
+	}
+
+	r.remember(key, rendered)
+	return Result{Image: rendered}
+}
+
+func (r *Renderer) fetch(ctx context.Context, req Request) ([]byte, error) {
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, req.URL, nil)
 	if err != nil {
 		return nil, err
 	}
-	res, err := r.client.Do(req)
+	if req.Authorize != nil {
+		req.Authorize(httpReq)
+	}
+
+	res, err := r.client.Do(httpReq)
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +159,9 @@ func (r *Renderer) fetch(ctx context.Context, url string) ([]byte, error) {
 
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("status %d", res.StatusCode)
+	}
+	if contentType := res.Header.Get("Content-Type"); !imageType(contentType) {
+		return nil, fmt.Errorf("type %s", contentType)
 	}
 
 	data, err := io.ReadAll(io.LimitReader(res.Body, maxBytes+1))
@@ -107,48 +175,38 @@ func (r *Renderer) fetch(ctx context.Context, url string) ([]byte, error) {
 	return data, nil
 }
 
-func (r *Renderer) render(ctx context.Context, url string, width int) (string, error) {
-	data, err := r.fetch(ctx, url)
+func imageType(contentType string) bool {
+	if contentType == "" {
+		return true
+	}
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+	return strings.HasPrefix(mediaType, "image/") || mediaType == "application/octet-stream"
+}
+
+func (r *Renderer) render(ctx context.Context, req Request) (string, error) {
+	data, err := r.fetch(ctx, req)
 	if err != nil {
 		return "", err
 	}
 
 	pix, err := ansimage.NewScaledFromReader(
 		bytes.NewReader(data),
-		int(float32(width)*0.75),
-		width,
+		2*max(req.Height, 1),
+		req.Width,
 		color.Transparent,
-		ansimage.ScaleModeResize,
+		ansimage.ScaleModeFit,
 		ansimage.NoDithering,
 	)
 	if err != nil {
 		return "", err
 	}
 
-	return fmt.Sprintf("\n\n%s\nSource: %s\n\n", pix.RenderExt(false, false), url), nil
-}
-
-func (r *Renderer) RenderInline(ctx context.Context, s string, width int) string {
-	if width < minWidth {
-		return s
+	rendered := strings.Trim(pix.RenderExt(false, false), "\n")
+	if rendered == "" {
+		return "", errEmpty
 	}
-
-	return imageURL.ReplaceAllStringFunc(s, func(url string) string {
-		key := cacheKey(url, width)
-		if rendered, ok := r.cached(key); ok {
-			return rendered
-		}
-		if ctx.Err() != nil {
-			return url
-		}
-
-		rendered, err := r.render(ctx, url, width)
-		if err != nil {
-			r.logger.Debug("inline image skipped", "url", url, "error", err)
-			return url
-		}
-
-		r.remember(key, rendered)
-		return rendered
-	})
+	return rendered, nil
 }

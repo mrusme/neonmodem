@@ -5,13 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/mrusme/neonmodem/internal/config"
 	"github.com/mrusme/neonmodem/internal/system"
+	"github.com/mrusme/neonmodem/internal/system/credential"
+	"github.com/mrusme/neonmodem/internal/system/httpx"
 	"github.com/mrusme/neonmodem/internal/system/prompt"
 	"github.com/mrusme/neonmodem/internal/system/registry"
+	"github.com/mrusme/neonmodem/internal/system/text"
 	"github.com/spf13/cobra"
 )
 
@@ -82,7 +86,9 @@ func (a *app) connect(
 	}
 
 	replace := existingConnection(a.cfg.Systems, desc, sysURL)
+	var previous config.SystemConfig
 	if replace >= 0 {
+		previous = a.cfg.Systems[replace]
 		keep, err := askToKeep(p, desc, sysURL)
 		if err != nil {
 			return err
@@ -113,7 +119,50 @@ func (a *app) connect(
 		return err
 	}
 
-	return a.save(out, config.SystemConfig{Type: kind, Settings: settings}, replace)
+	entry := config.SystemConfig{Type: kind, Settings: settings}
+	if err := a.save(out, entry, replace); err != nil {
+		return err
+	}
+	if replace >= 0 {
+		a.afterReplace(ctx, out, sys, entry, previous)
+	}
+	return nil
+}
+
+func (a *app) afterReplace(
+	ctx context.Context,
+	out io.Writer,
+	sys system.System,
+	entry config.SystemConfig,
+	previous config.SystemConfig,
+) {
+	host := system.HostTitle(entry.Settings.URL)
+	revoker, ok := sys.(system.Revoker)
+	if !ok {
+		fmt.Fprintf(out, "The previous credentials stay valid until you revoke them on %s.\n", host)
+		return
+	}
+
+	if previous.Settings.Credential(system.CredentialToken+credential.Suffix) != "" {
+		fmt.Fprintf(out, "The previous API key comes from a command and wasn't revoked. "+
+			"It stays valid until you revoke it on %s.\n", host)
+		return
+	}
+	if previous.Settings.Credential(system.CredentialToken) == "" {
+		return
+	}
+
+	err := revoker.Revoke(ctx, previous.Settings)
+	switch {
+	case err == nil:
+		fmt.Fprintf(out, "Revoked the previous API key on %s.\n", host)
+	case httpx.StatusOf(err) == http.StatusUnauthorized:
+		fmt.Fprintln(out, "The previous API key was already invalid.")
+	default:
+		a.logger.Warn("revoking the previous key failed", "type", entry.Type, "error", err)
+		fmt.Fprintf(out, "The previous API key couldn't be revoked on %s: %s. "+
+			"It stays valid until you revoke it there.\n", host, text.Printable(err.Error()))
+	}
 }
 
 func askToKeep(p prompt.Prompter, desc registry.Descriptor, sysURL string) (bool, error) {
@@ -152,10 +201,6 @@ func (a *app) save(out io.Writer, entry config.SystemConfig, replace int) error 
 		done = "replaced the connection"
 	}
 	fmt.Fprintf(out, "Successfully %s! Configuration saved to %s\n", done, a.cfg.Path())
-	if replace >= 0 {
-		fmt.Fprintf(out, "The previous credentials stay valid until you revoke them on %s.\n",
-			system.HostTitle(entry.Settings.URL))
-	}
 	return nil
 }
 

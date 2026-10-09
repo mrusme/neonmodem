@@ -252,6 +252,14 @@ func (c *Client) Post(ctx context.Context, path string, body any, out any) error
 	return c.Do(req, out)
 }
 
+func (c *Client) Delete(ctx context.Context, path string) error {
+	req, err := c.NewRequest(ctx, http.MethodDelete, path, nil, nil)
+	if err != nil {
+		return err
+	}
+	return c.Do(req, nil)
+}
+
 func isJSON(res *http.Response) bool {
 	mediatype, _, err := mime.ParseMediaType(res.Header.Get("Content-Type"))
 	if err != nil {

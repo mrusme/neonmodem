@@ -14,6 +14,7 @@ import (
 	"github.com/mrusme/neonmodem/internal/feed"
 	"github.com/mrusme/neonmodem/internal/models/post"
 	"github.com/mrusme/neonmodem/internal/system"
+	"github.com/mrusme/neonmodem/internal/system/text"
 	"github.com/mrusme/neonmodem/internal/ui/ctx"
 	"github.com/mrusme/neonmodem/internal/ui/msgs"
 	"github.com/mrusme/neonmodem/internal/ui/views"
@@ -459,7 +460,7 @@ func (m Model) placeholder() string {
 			if idx >= 0 && idx < len(m.ctx.Systems) {
 				name = m.ctx.Systems[idx].Title()
 			}
-			out.WriteString("\n" + t.Muted.Render(name+": "+m.feeds[idx].err.Error()))
+			out.WriteString("\n" + t.Muted.Render(name+": "+text.Printable(m.feeds[idx].err.Error())))
 		}
 		return out.String()
 	default:

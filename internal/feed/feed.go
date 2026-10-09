@@ -77,6 +77,9 @@ func (f *Feed) ListForums(ctx context.Context, only int) ([]forum.Forum, []error
 	for i, err := range errs {
 		errs[i] = system.Timeout(ctx, f.Read, err)
 	}
+	for i := range forums {
+		cleanForum(&forums[i])
+	}
 
 	slices.SortStableFunc(forums, func(a, b forum.Forum) int {
 		return strings.Compare(a.Title(), b.Title())
@@ -128,6 +131,10 @@ func (f *Feed) List(
 			order = retry
 			posts, err = sys.ListPosts(bounded, forumID, order)
 		}
+	}
+
+	for i := range posts {
+		cleanPost(&posts[i])
 	}
 
 	return Result{System: idx, Order: order, Posts: posts}, system.Timeout(ctx, f.Read, err)
@@ -266,7 +273,9 @@ func valueWord(want system.Order) string {
 func (f *Feed) LoadPost(ctx context.Context, p *post.Post) error {
 	bounded, cancel := system.Bound(ctx, f.Read)
 	defer cancel()
-	return system.Timeout(ctx, f.Read, f.Systems[p.SysIDX].LoadPost(bounded, p))
+	err := f.Systems[p.SysIDX].LoadPost(bounded, p)
+	cleanPost(p)
+	return system.Timeout(ctx, f.Read, err)
 }
 
 func (f *Feed) CreatePost(ctx context.Context, p *post.Post) error {

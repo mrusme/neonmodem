@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/mrusme/neonmodem/internal/system/credential"
+	"github.com/mrusme/neonmodem/internal/system/text"
 	"golang.org/x/term"
 )
 
@@ -197,7 +198,7 @@ func (t *Terminal) Generated(ctx context.Context, f Field, value string) (Answer
 		if !shown {
 			fmt.Fprintf(t.out,
 				"Save this %s in your password manager now. It won't be shown again.\n%s\n",
-				f.Name, value)
+				f.Name, text.Printable(value))
 			shown = true
 		}
 
@@ -241,7 +242,7 @@ func (t *Terminal) run(ctx context.Context, command string) (string, bool, error
 		return "", false, ctx.Err()
 	}
 
-	fmt.Fprintf(t.out, "The command failed: %v\n", err)
+	fmt.Fprintf(t.out, "The command failed: %s\n", text.Printable(err.Error()))
 	return "", false, nil
 }
 
@@ -271,6 +272,6 @@ func (t *Terminal) choose(question string, options []string, field string) (int,
 	}
 }
 
-func (t *Terminal) Notice(text string) {
-	fmt.Fprintln(t.out, text)
+func (t *Terminal) Notice(notice string) {
+	fmt.Fprintln(t.out, text.PrintableLines(notice))
 }

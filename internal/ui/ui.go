@@ -18,6 +18,7 @@ import (
 	"github.com/mrusme/neonmodem/internal/models/post"
 	"github.com/mrusme/neonmodem/internal/openwith"
 	"github.com/mrusme/neonmodem/internal/system"
+	"github.com/mrusme/neonmodem/internal/system/text"
 	"github.com/mrusme/neonmodem/internal/ui/ctx"
 	"github.com/mrusme/neonmodem/internal/ui/header"
 	"github.com/mrusme/neonmodem/internal/ui/msgs"
@@ -390,7 +391,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case msgs.FeedStatus:
-		m.status = msg.Text
+		m.status = text.Printable(msg.Text)
 		return m, nil
 
 	case msgs.FocusView, msgs.BlurView, msgs.RefreshFeed, msgs.OrderChanged, msgs.FeedResult, msgs.NoticesChanged:
@@ -476,6 +477,7 @@ func (m Model) closeFocused() (Model, tea.Cmd, bool) {
 	if closed && focused == postshow.WIN_ID {
 		m.ctx.CancelLoad()
 		m.ctx.StopLoading(ctx.LoadPost)
+		m.ctx.StopLoading(ctx.LoadImages)
 	}
 	return m, tea.Batch(cmds...), true
 }
@@ -552,9 +554,9 @@ func (m Model) handlePickerItems(msg msgs.PickerItems) (tea.Model, tea.Cmd) {
 
 func (m Model) showNotice(msg msgs.Notice) (tea.Model, tea.Cmd) {
 	m.noticeID++
-	m.notice = msg.Text
+	m.notice = text.Printable(msg.Text)
 	m.alert = msg.IsError
-	m.notices = append(m.notices, msgs.NoticeEntry{At: time.Now(), Text: msg.Text, IsError: msg.IsError})
+	m.notices = append(m.notices, msgs.NoticeEntry{At: time.Now(), Text: m.notice, IsError: msg.IsError})
 	if len(m.notices) > maxNotices {
 		m.notices = slices.Clone(m.notices[len(m.notices)-maxNotices:])
 	}
