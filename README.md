@@ -92,8 +92,10 @@ file location depends on the operating system. On Unix systems, it is in
 `%AppData%\neonmodem.toml`.
 
 Connecting a system that is already connected asks whether to keep the existing
-connection or to replace it. The previous credentials stay valid on the site
-until you revoke them there, since Neon Modem can't do that for every system.
+connection or to replace it. Replacing a Hyperuplink connection revokes the
+previous API key on the board, unless the key comes from a command. For every
+other system the previous credentials stay valid on the site until you revoke
+them there, since Neon Modem can't do that everywhere.
 
 Credentials are stored in plain text unless they are read from a command, so the
 file is created with mode `0600`. When the file can't be written, for example
@@ -177,8 +179,15 @@ reasons.
 
 #### Hyperuplink
 
-For connecting to a Hyperuplink instance you'll need to have an active account
-on that instance. Neon Modem will store the instance URL, username and API key.
+Neon Modem supprts the JSON API of a Hyperuplink internet bulletin board. Give
+that address without the `/api/v1` path. With an account, sign in with your
+username and password and the board issues an API key named
+`neonmodem on <hostname>`. Neon Modem stores the instance URL, the username and
+that key, but no password. If you have two-factor authentication enabled you
+will have to enter the current code. Instead of the password you can also enter
+an API key issued on the board's _API_ page under your account settings. Choose
+_No account_ when asked for the username for a read-only connection to a board
+that serves guests.
 
 ```sh
 neonmodem connect --type hyperuplink --url https://api.hyperup.link
@@ -316,11 +325,11 @@ time, and Most comments.
 
 | Order         |     Discourse      |       Lemmy        |      Lobsters      |    Hacker News     |    Hyperuplink     |
 | :------------ | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: |
-| New           | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                    |
+| New           | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | Active        | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                    | :heavy_check_mark: |
 | Hot           | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |                    |
 | Top           | :heavy_check_mark: | :heavy_check_mark: |                    | :heavy_check_mark: |                    |
-| Most comments | :heavy_check_mark: | :heavy_check_mark: |                    |                    |                    |
+| Most comments | :heavy_check_mark: | :heavy_check_mark: |                    |                    | :heavy_check_mark: |
 
 A system without the chosen order keeps its own order, or sorts the posts it
 listed by date or replies for New and Most comments. The line below the header
