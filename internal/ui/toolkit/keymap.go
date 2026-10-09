@@ -24,6 +24,10 @@ func (tk *ToolKit) KeymapGet(id string) key.Binding {
 	return key.NewBinding()
 }
 
+func (tk *ToolKit) SetCloseHelp(help string) {
+	tk.closeHelp = help
+}
+
 func (tk *ToolKit) KeymapHelpStrings() []string {
 	var bindings []string
 	for _, binding := range tk.keybindings {
@@ -37,7 +41,11 @@ func (tk *ToolKit) KeymapHelpStrings() []string {
 		return bindings[i] > bindings[j]
 	})
 
-	bindings = append(bindings, "esc close")
+	closeHelp := tk.closeHelp
+	if closeHelp == "" {
+		closeHelp = "close"
+	}
+	bindings = append(bindings, "esc "+closeHelp)
 
 	return bindings
 }

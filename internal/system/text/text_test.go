@@ -58,3 +58,32 @@ func TestFirstNonEmpty(t *testing.T) {
 		t.Errorf("got %q", got)
 	}
 }
+
+func TestFirstParagraph(t *testing.T) {
+	cases := []struct {
+		name     string
+		markdown string
+		want     string
+	}{
+		{"plain", "Welcome to Programmer Humor!\n\nThis is a place for jokes.", "Welcome to Programmer Humor!"},
+		{"heading first", "## Rules\n\nBe nice.", "Be nice."},
+		{"links and emphasis", "Welcome to the [Python community](https://x.y/c/python) on **programming.dev**, _really_!", "Welcome to the Python community on programming.dev, really!"},
+		{"code span", "Run `go test \\*` here", "Run go test \\* here"},
+		{"escapes", `Stars \*not\* emphasis`, "Stars *not* emphasis"},
+		{"entities", "Tom &amp; Jerry &#169; &copy;", "Tom & Jerry © ©"},
+		{"autolink", "See <https://example.com> now", "See https://example.com now"},
+		{"image only first", "![logo](x.png)\n\nThe real text", "The real text"},
+		{"image inside", "A ![logo](x.png) logo", "A logo"},
+		{"raw html", "Real <b>bold</b> text", "Real bold text"},
+		{"spoiler", ":::spoiler Credits\n- icon by someone\n:::\n\nA community for art.", "A community for art."},
+		{"soft breaks", "One line\nand the next\\\nand a hard break", "One line and the next and a hard break"},
+		{"list and quote", "- one\n- two\n\n> quoted\n\n```\ncode\n```\n\n---\n\nAfter all that", "After all that"},
+		{"empty", "", ""},
+		{"heading only", "# Rules", ""},
+	}
+	for _, tc := range cases {
+		if got := FirstParagraph(tc.markdown); got != tc.want {
+			t.Errorf("%s: got %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}

@@ -45,8 +45,8 @@ var DefaultKeyMap = KeyMap{
 		key.WithHelp("r/enter", "read"),
 	),
 	Quit: key.NewBinding(
-		key.WithKeys("esc"),
-		key.WithHelp("esc", "quit"),
+		key.WithKeys("ctrl+q"),
+		key.WithHelp("ctrl+q", "quit"),
 	),
 }
 
@@ -109,17 +109,19 @@ func NewModel(c *ctx.Ctx) Model {
 	m.list.SetShowTitle(false)
 	m.list.SetShowStatusBar(false)
 	m.list.DisableQuitKeybindings()
+	m.setHelpKeys(0)
 
 	return m
 }
 
-func (m *Model) setNoticeHelp(count int) {
-	if count == 0 {
-		m.list.AdditionalShortHelpKeys = nil
-		return
+func (m *Model) setHelpKeys(notices int) {
+	bindings := []key.Binding{m.keymap.Quit}
+	if notices > 0 {
+		bindings = []key.Binding{m.keymap.Notices, m.keymap.Quit}
 	}
-	binding := m.keymap.Notices
-	m.list.AdditionalShortHelpKeys = func() []key.Binding { return []key.Binding{binding} }
+	help := func() []key.Binding { return bindings }
+	m.list.AdditionalShortHelpKeys = help
+	m.list.AdditionalFullHelpKeys = help
 }
 
 func (m Model) delegate() list.DefaultDelegate {
@@ -140,12 +142,6 @@ func (m Model) Update(msg tea.Msg) (views.View, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		switch {
-		case key.Matches(msg, m.keymap.Quit):
-			if m.list.FilterState() == list.Filtering {
-				break
-			}
-			return m, tea.Quit
-
 		case key.Matches(msg, m.keymap.Refresh):
 			if m.list.FilterState() == list.Filtering {
 				break
@@ -174,7 +170,7 @@ func (m Model) Update(msg tea.Msg) (views.View, tea.Cmd) {
 		}
 
 	case msgs.NoticesChanged:
-		m.setNoticeHelp(msg.Count)
+		m.setHelpKeys(msg.Count)
 		return m, nil
 
 	case tea.WindowSizeMsg:
@@ -210,6 +206,10 @@ func (m Model) Update(msg tea.Msg) (views.View, tea.Cmd) {
 	cmds = append(cmds, lcmd)
 
 	return m, tea.Batch(cmds...)
+}
+
+func (m Model) FilterState() list.FilterState {
+	return m.list.FilterState()
 }
 
 func (m *Model) frameSize() (int, int) {

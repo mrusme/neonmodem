@@ -169,3 +169,25 @@ func TestPickerStartsOnTheSelectedItemAndFitsItsDescriptions(t *testing.T) {
 		t.Errorf("entries without notes keep two lines, got %d", h)
 	}
 }
+
+func TestOnlyTheOrderPickerGrowsWithItsDescriptions(t *testing.T) {
+	long := forum.Forum{Name: "programming", Info: "Welcome!\n\n## Rules\n- one\n- two"}
+
+	for _, kind := range []msgs.PickerKind{msgs.PickSystem, msgs.PickForum, msgs.PickOpenWith} {
+		m := testModel(t)
+		m.Update(msgs.OpenPicker{Kind: kind, Items: []list.Item{forum.Forum{Name: "All"}, long}})
+		if h := m.delegate().Height(); h != 2 {
+			t.Errorf("picker kind %d opens with entries of %d lines", kind, h)
+		}
+		m.Update(msgs.PickerItems{Kind: kind, Items: []list.Item{forum.Forum{Name: "All"}, long}})
+		if h := m.delegate().Height(); h != 2 {
+			t.Errorf("picker kind %d gets entries of %d lines from its items", kind, h)
+		}
+	}
+
+	m := testModel(t)
+	m.Update(msgs.OpenPicker{Kind: msgs.PickOrder, Items: []list.Item{long}})
+	if h := m.delegate().Height(); h != 6 {
+		t.Errorf("the order picker gives a five-line description %d lines", h)
+	}
+}

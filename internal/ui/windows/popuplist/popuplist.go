@@ -22,6 +22,7 @@ type Model struct {
 	list       list.Model
 	loading    bool
 	itemHeight int
+	filter     list.FilterState
 }
 
 func NewModel(c *ctx.Ctx) *Model {
@@ -76,7 +77,10 @@ func itemHeight(items []list.Item) int {
 }
 
 func (m *Model) setItems(items []list.Item) tea.Cmd {
-	m.itemHeight = itemHeight(items)
+	m.itemHeight = 2
+	if m.kind == msgs.PickOrder {
+		m.itemHeight = itemHeight(items)
+	}
 	m.list.SetDelegate(m.delegate())
 	return m.list.SetItems(items)
 }
@@ -93,6 +97,7 @@ func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
 		m.list.ResetSelected()
 		cmd := m.setItems(msg.Items)
 		m.list.Select(msg.Selected)
+		m.syncHelp()
 		return m, cmd
 
 	case msgs.PickerItems:
@@ -119,5 +124,32 @@ func (m *Model) Update(msg tea.Msg) (windows.Window, tea.Cmd) {
 
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
+	m.syncHelp()
 	return m, cmd
+}
+
+func (m *Model) FilterState() list.FilterState {
+	return m.list.FilterState()
+}
+
+func (m *Model) syncHelp() {
+	state := m.list.FilterState()
+	if state == m.filter {
+		return
+	}
+	m.filter = state
+
+	var enter, esc string
+	switch state {
+	case list.Filtering:
+		enter, esc = "apply filter", "cancel filter"
+	case list.FilterApplied:
+		enter, esc = "choose", "clear filter"
+	case list.Unfiltered:
+		enter, esc = "choose", "close"
+	}
+	m.tk.KeymapAdd("enter", enter, "enter")
+	m.tk.SetCloseHelp(esc)
+	m.handleViewResize()
+	m.tk.InvalidateCache()
 }

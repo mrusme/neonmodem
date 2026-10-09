@@ -16,6 +16,7 @@ import (
 	"github.com/mrusme/neonmodem/internal/models/reply"
 	"github.com/mrusme/neonmodem/internal/system"
 	"github.com/mrusme/neonmodem/internal/system/httpx"
+	"github.com/mrusme/neonmodem/internal/system/text"
 	"go.elara.ws/go-lemmy"
 )
 
@@ -231,7 +232,7 @@ func (sys *System) ListForums(ctx context.Context) ([]forum.Forum, error) {
 				models = append(models, forum.Forum{
 					ID:     strconv.FormatInt(c.Community.ID, 10),
 					Name:   c.Community.Name,
-					Info:   c.Community.Description.ValueOr(c.Community.Title),
+					Info:   text.FirstNonEmpty(text.FirstParagraph(c.Community.Description.ValueOrZero()), c.Community.Title),
 					SysIDX: sys.idx,
 				})
 			}

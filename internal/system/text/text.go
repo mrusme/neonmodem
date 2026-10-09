@@ -9,6 +9,10 @@ import (
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/araddon/dateparse"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
+	gtext "github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
 )
 
 var converter = sync.OnceValue(func() *md.Converter {
@@ -65,4 +69,47 @@ func FirstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func FirstParagraph(markdown string) string {
+	source := []byte(markdown)
+	doc := goldmark.New().Parser().Parse(gtext.NewReader(source))
+
+	for node := doc.FirstChild(); node != nil; node = node.NextSibling() {
+		if _, ok := node.(*ast.Paragraph); !ok {
+			continue
+		}
+		var b strings.Builder
+		writeInline(&b, node, source, false)
+		paragraph := strings.Join(strings.Fields(b.String()), " ")
+		if paragraph != "" && !strings.HasPrefix(paragraph, ":::") {
+			return paragraph
+		}
+	}
+	return ""
+}
+
+func writeInline(b *strings.Builder, parent ast.Node, source []byte, code bool) {
+	for node := parent.FirstChild(); node != nil; node = node.NextSibling() {
+		switch node := node.(type) {
+		case *ast.Text:
+			value := node.Segment.Value(source)
+			if !code {
+				value = util.ResolveEntityNames(util.ResolveNumericReferences(util.UnescapePunctuations(value)))
+			}
+			b.Write(value)
+			if node.SoftLineBreak() || node.HardLineBreak() {
+				b.WriteByte(' ')
+			}
+		case *ast.String:
+			b.Write(node.Value)
+		case *ast.AutoLink:
+			b.Write(node.Label(source))
+		case *ast.CodeSpan:
+			writeInline(b, node, source, true)
+		case *ast.Image, *ast.RawHTML:
+		default:
+			writeInline(b, node, source, code)
+		}
+	}
 }

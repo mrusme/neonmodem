@@ -49,12 +49,16 @@ type KeyMap struct {
 	OrderSelect  key.Binding
 	Close        key.Binding
 	Quit         key.Binding
+	Interrupt    key.Binding
 }
 
 var DefaultKeyMap = KeyMap{
 	Quit: key.NewBinding(
+		key.WithKeys("ctrl+q"),
+		key.WithHelp("C-q", "quit"),
+	),
+	Interrupt: key.NewBinding(
 		key.WithKeys("ctrl+c"),
-		key.WithHelp("C-c", "quit"),
 	),
 	SystemSelect: key.NewBinding(
 		key.WithKeys("ctrl+e"),
@@ -410,25 +414,47 @@ func (m Model) changeBackground(msg tea.BackgroundColorMsg) (tea.Model, tea.Cmd)
 	return m, tea.Batch(m.broadcast(msgs.ThemeChanged{})...)
 }
 
+type filterer interface {
+	FilterState() list.FilterState
+}
+
+func (m Model) filterState() list.FilterState {
+	var target any = m.views[m.currentView]
+	if m.wm.GetNumberOpen() > 0 {
+		target = m.wm.FocusedWindow()
+	}
+	if f, ok := target.(filterer); ok {
+		return f.FilterState()
+	}
+	return list.Unfiltered
+}
+
 func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd, bool) {
 	switch {
 	case key.Matches(msg, m.keymap.Quit):
 		return m, tea.Quit, true
 
+	case key.Matches(msg, m.keymap.Interrupt):
+		return m, msgs.Send(msgs.Notice{Text: "Press ctrl+q to quit"}), true
+
 	case key.Matches(msg, m.keymap.Close):
-		if m.wm.GetNumberOpen() == 0 {
-			return m, nil, false
+		if m.wm.GetNumberOpen() == 0 || m.filterState() != list.Unfiltered {
+			break
 		}
 		return m.closeFocused()
 
-	case key.Matches(msg, m.keymap.SystemSelect):
-		return m.onPostsView(m.openSystemPicker)
-
-	case key.Matches(msg, m.keymap.ForumSelect):
-		return m.onPostsView(m.openForumPicker)
-
-	case key.Matches(msg, m.keymap.OrderSelect):
-		return m.onPostsView(m.openOrderPicker)
+	case key.Matches(msg, m.keymap.SystemSelect, m.keymap.ForumSelect, m.keymap.OrderSelect):
+		if m.filterState() == list.Filtering {
+			break
+		}
+		switch {
+		case key.Matches(msg, m.keymap.SystemSelect):
+			return m.onPostsView(m.openSystemPicker)
+		case key.Matches(msg, m.keymap.ForumSelect):
+			return m.onPostsView(m.openForumPicker)
+		default:
+			return m.onPostsView(m.openOrderPicker)
+		}
 	}
 
 	if m.wm.GetNumberOpen() > 0 {

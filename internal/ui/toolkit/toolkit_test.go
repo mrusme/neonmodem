@@ -153,3 +153,44 @@ func TestHandleMsgDispatchesKeysAndFocus(t *testing.T) {
 		t.Error("a blur for every window blurs this one")
 	}
 }
+
+func TestKeyBarBreaksOnlyBetweenEntries(t *testing.T) {
+	for width := 38; width <= 120; width++ {
+		tk := testToolKit(t)
+		tk.KeymapAdd("reply", "reply (prefix with #, e.g. '2r')", "r")
+		tk.KeymapAdd("openwith", "open with", "O")
+		tk.KeymapAdd("older", "older replies", "z")
+		tk.KeymapAdd("open", "open in browser", "o")
+		tk.HandleMsg(tea.WindowSizeMsg{Width: width, Height: 20})
+
+		entries := tk.KeymapHelpStrings()
+		var seen []string
+		for line := range strings.SplitSeq(tk.helpText(tk.dialogTheme()), "\n") {
+			if strings.HasPrefix(line, "·") || strings.HasSuffix(line, "·") {
+				t.Errorf("at %d columns a line starts or ends with the separator: %q", width, line)
+			}
+			for entry := range strings.SplitSeq(line, keySeparator) {
+				if !slices.Contains(entries, entry) {
+					t.Errorf("at %d columns the bar splits an entry: %q", width, line)
+				}
+				seen = append(seen, entry)
+			}
+		}
+		if !slices.Equal(seen, entries) {
+			t.Errorf("at %d columns the bar shows %q instead of %q", width, seen, entries)
+		}
+
+		view := tk.Dialog("Title", "content")
+		if w, h := lipgloss.Width(view), lipgloss.Height(view); w != width || h != 20 {
+			t.Errorf("at %d columns the dialog renders %dx%d", width, w, h)
+		}
+	}
+}
+
+func TestKeyLinesCutAnEntryWiderThanTheLine(t *testing.T) {
+	got := keyLines([]string{"a", strings.Repeat("x", 30), "esc close"}, 20)
+	want := "a\n" + strings.Repeat("x", 19) + "…\nesc close"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}

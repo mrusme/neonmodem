@@ -15,6 +15,7 @@ import (
 
 var (
 	keyCtrlC = tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl}
+	keyCtrlQ = tea.KeyPressMsg{Code: 'q', Mod: tea.ModCtrl}
 	keyCtrlT = tea.KeyPressMsg{Code: 't', Mod: tea.ModCtrl}
 	keyCtrlO = tea.KeyPressMsg{Code: 'o', Mod: tea.ModCtrl}
 )
@@ -42,29 +43,49 @@ func quits(cmd tea.Cmd) bool {
 	return ok
 }
 
-func TestCtrlCQuitsFromEveryState(t *testing.T) {
+func everyState(t *testing.T, check func(state string, m Model)) {
+	t.Helper()
+
 	m, _ := rootModel(t)
-	if _, cmd := m.Update(keyCtrlC); !quits(cmd) {
-		t.Error("ctrl+c in the posts list doesn't quit")
-	}
+	check("the posts list", m)
 
 	updated, cmd := m.Update(msgs.OpenPost{Post: post.Post{ID: "p", Subject: "s", SysIDX: 0}})
 	m, _ = settleModel(t, updated.(Model), cmd)
-	if _, cmd := m.Update(keyCtrlC); !quits(cmd) {
-		t.Error("ctrl+c over the post window doesn't quit")
-	}
+	check("the post window", m)
 
 	updated, cmd = m.Update(msgs.Compose{Action: msgs.ComposeReply, Post: post.Post{ID: "p", SysIDX: 0}})
 	m, _ = settleModel(t, updated.(Model), cmd)
-	if _, cmd := m.Update(keyCtrlC); !quits(cmd) {
-		t.Error("ctrl+c over the compose window doesn't quit")
-	}
+	check("the compose window", m)
 
 	updated, cmd = m.Update(keyCtrlO)
 	m, _ = settleModel(t, updated.(Model), cmd)
-	if _, cmd := m.Update(keyCtrlC); !quits(cmd) {
-		t.Error("ctrl+c over a picker doesn't quit")
-	}
+	check("a picker", m)
+}
+
+func TestCtrlQQuitsFromEveryState(t *testing.T) {
+	everyState(t, func(state string, m Model) {
+		if _, cmd := m.Update(keyCtrlQ); !quits(cmd) {
+			t.Errorf("ctrl+q over %s doesn't quit", state)
+		}
+	})
+}
+
+func TestCtrlCOnlyNamesTheQuitKey(t *testing.T) {
+	everyState(t, func(state string, m Model) {
+		open := m.wm.Focused()
+		updated, cmd := m.Update(keyCtrlC)
+		if quits(cmd) {
+			t.Errorf("ctrl+c over %s quits", state)
+			return
+		}
+		m, notices := settleModel(t, updated.(Model), cmd)
+		if len(notices) != 1 || notices[0].Text != "Press ctrl+q to quit" {
+			t.Errorf("ctrl+c over %s gives the notices %+v", state, notices)
+		}
+		if m.wm.Focused() != open {
+			t.Errorf("ctrl+c over %s moved the focus from %q to %q", state, open, m.wm.Focused())
+		}
+	})
 }
 
 func TestAForumListArrivingUnderAnotherPickerEndsTheSpinner(t *testing.T) {

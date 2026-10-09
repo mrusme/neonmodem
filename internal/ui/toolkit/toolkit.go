@@ -18,6 +18,7 @@ type ToolKit struct {
 	focused bool
 
 	keybindings map[string]key.Binding
+	closeHelp   string
 
 	viewfunc  ViewFunc
 	viewcache string

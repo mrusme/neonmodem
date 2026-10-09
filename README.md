@@ -286,8 +286,8 @@ In the posts list:
 - `C-t`: Open forum selector
 - `C-o`: Open sort order selector
 - `!`: Show the recent notices
-- `esc`: Quit
-- `C-c`: Quit, from every view and dialog
+- `esc`: Cancel or clear the filter
+- `C-q`: Quit, from every view and dialog
 
 In the post view dialog:
 

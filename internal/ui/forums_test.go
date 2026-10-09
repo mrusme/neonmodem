@@ -170,16 +170,4 @@ func TestNoticeShowsAndExpires(t *testing.T) {
 	}
 }
 
-func TestEscapeWithoutWindowsReachesTheView(t *testing.T) {
-	m, _ := testModel(t, &fakeSystem{})
-
-	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
-	if cmd == nil {
-		t.Fatal("expected the posts view to quit on esc")
-	}
-	if _, ok := cmd().(tea.QuitMsg); !ok {
-		t.Fatalf("expected tea.QuitMsg, got %T", cmd())
-	}
-}
-
 var _ list.Item = SystemItem{}

@@ -8,6 +8,8 @@ import (
 	"github.com/mrusme/neonmodem/internal/ui/theme"
 )
 
+const keySeparator = " · "
+
 func (tk *ToolKit) SetErrorDialog(isError bool) {
 	tk.errorDialog = isError
 }
@@ -33,11 +35,32 @@ func (tk *ToolKit) InnerHeight() int {
 }
 
 func (tk *ToolKit) barHeight(t theme.Dialog) int {
-	return lipgloss.Height(tk.bar(t, tk.helpText()))
+	return lipgloss.Height(tk.bar(t, tk.helpText(t)))
 }
 
-func (tk *ToolKit) helpText() string {
-	return strings.Join(tk.KeymapHelpStrings(), " · ")
+func (tk *ToolKit) helpText(t theme.Dialog) string {
+	style := t.Bottombar
+	width := tk.InnerWidth() - style.GetHorizontalMargins() - style.GetHorizontalPadding() -
+		style.GetHorizontalBorderSize()
+	return keyLines(tk.KeymapHelpStrings(), max(width, 1))
+}
+
+func keyLines(entries []string, width int) string {
+	var lines []string
+	line := ""
+	for _, entry := range entries {
+		entry = ansi.Truncate(entry, width, "…")
+		switch {
+		case line == "":
+			line = entry
+		case ansi.StringWidth(line+keySeparator+entry) <= width:
+			line += keySeparator + entry
+		default:
+			lines = append(lines, line)
+			line = entry
+		}
+	}
+	return strings.Join(append(lines, line), "\n")
 }
 
 func (tk *ToolKit) bar(t theme.Dialog, text string) string {
@@ -68,7 +91,7 @@ func (tk *ToolKit) dialog(title string, content string, status string) string {
 		titleWidth-titleStyle.GetHorizontalPadding()-titleStyle.GetHorizontalBorderSize(), "…")
 	titlebar := titleStyle.Align(lipgloss.Center).Width(titleWidth).Render(titleText)
 
-	bar := tk.bar(t, tk.helpText())
+	bar := tk.bar(t, tk.helpText(t))
 	if status != "" {
 		bar = fit(tk.bar(t, status), width, lipgloss.Height(bar))
 	}

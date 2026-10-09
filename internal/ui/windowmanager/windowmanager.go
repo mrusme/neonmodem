@@ -118,6 +118,13 @@ func (wm *WM) Focused() string {
 	return wm.stack[len(wm.stack)-1].id
 }
 
+func (wm *WM) FocusedWindow() windows.Window {
+	if len(wm.stack) == 0 {
+		return nil
+	}
+	return wm.stack[len(wm.stack)-1].win
+}
+
 func (wm *WM) IsOpen(id string) bool {
 	return wm.index(id) >= 0
 }
