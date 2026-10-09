@@ -126,3 +126,31 @@ func TestAFinishedPostLoadKeepsAPendingFeedSpinner(t *testing.T) {
 		t.Error("the feed is still pending, the spinner must keep running")
 	}
 }
+
+func TestClosingThePostWindowEndsItsImagePhase(t *testing.T) {
+	m, c := rootModel(t)
+	updated, cmd := m.Update(msgs.OpenPost{Post: post.Post{ID: "p", Subject: "s", SysIDX: 0}})
+	m, _ = settleModel(t, updated.(Model), cmd)
+	c.StartLoading(ctx.LoadImages)
+
+	press(t, m, keyEsc)
+	if c.IsLoading() {
+		t.Error("closing the post window must end its image phase")
+	}
+}
+
+func TestNoticesAndTheStatusLineArePrintable(t *testing.T) {
+	m, _ := rootModel(t)
+
+	updated, _ := m.Update(msgs.Notice{Text: "x\x1b[2Jy", IsError: true})
+	m = updated.(Model)
+	if m.notice != "xy" || m.notices[len(m.notices)-1].Text != "xy" {
+		t.Errorf("the notice is %q and its history entry %q", m.notice, m.notices[len(m.notices)-1].Text)
+	}
+
+	updated, _ = m.Update(msgs.FeedStatus{Text: "s\u009b2Jt"})
+	m = updated.(Model)
+	if m.status != "s2Jt" {
+		t.Errorf("the status is %q", m.status)
+	}
+}

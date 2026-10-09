@@ -3,6 +3,8 @@ package hyperuplink
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,8 +17,10 @@ import (
 )
 
 const (
-	topicID = "0192b1c2-7d3e-7f40-8a51-6b7c8d9e0f10"
-	forumID = "0192b1c2-7d3e-7f40-8a51-000000000002"
+	topicID    = "0192b1c2-7d3e-7f40-8a51-6b7c8d9e0f10"
+	forumID    = "0192b1c2-7d3e-7f40-8a51-000000000002"
+	newTopicID = "0192b1c2-7d3e-7f40-8a51-00000000cafe"
+	newReplyID = "0192b1c2-7d3e-7f40-8a51-00000000beef"
 )
 
 type request struct {
@@ -30,6 +34,17 @@ type request struct {
 type fixtureServer struct {
 	t        *testing.T
 	requests []request
+
+	status int
+	code   string
+	html   bool
+}
+
+func problem(w http.ResponseWriter, status int, code string) {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(status)
+	fmt.Fprintf(w, `{"type":"about:blank","title":%q,"status":%d,"code":%q}`,
+		http.StatusText(status), status, code)
 }
 
 func (f *fixtureServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -41,117 +56,149 @@ func (f *fixtureServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	f.requests = append(f.requests, req)
 
+	switch {
+	case f.html:
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("<html><body>Cannot GET " + r.URL.Path + "</body></html>"))
+		return
+	case f.status != 0:
+		problem(w, f.status, f.code)
+		return
+	}
+
+	page := r.URL.Query().Get("page")
 	w.Header().Set("Content-Type", "application/json")
 	switch {
-	case r.URL.Path == "/":
-		w.Write([]byte(boardJSON))
-	case r.URL.Path == "/topics":
+	case r.URL.Path == "/api/v1/forums":
+		w.Write([]byte(forumsJSON))
+	case r.URL.Path == "/api/v1/topics" && r.Method == http.MethodGet:
 		w.Write([]byte(topicsJSON))
-	case r.URL.Path == "/topics/"+topicID && r.URL.Query().Get("page") == "1":
-		w.Write([]byte(topicPage1JSON))
-	case r.URL.Path == "/topics/"+topicID && r.URL.Query().Get("page") == "2":
-		w.Write([]byte(topicPage2JSON))
-	case r.URL.Path == "/topics/"+topicID+"/replies":
-		w.Write([]byte(`{"id":"0192b1c2-7d3e-7f40-8a51-00000000beef","short_id":"beef"}`))
-	case r.URL.Path == "/new":
-		w.Write([]byte(`{"id":"0192b1c2-7d3e-7f40-8a51-00000000cafe","slug":"a-new-topic","category_slug":"general","forum_slug":"chat"}`))
+	case r.URL.Path == "/api/v1/forums/"+forumID+"/topics":
+		w.Write([]byte(topicsJSON))
+	case r.URL.Path == "/api/v1/topics/"+topicID:
+		w.Write([]byte(topicJSON))
+	case r.URL.Path == "/api/v1/topics/"+topicID+"/replies" && r.Method == http.MethodGet && page == "1":
+		w.Write([]byte(repliesPage1JSON))
+	case r.URL.Path == "/api/v1/topics/"+topicID+"/replies" && r.Method == http.MethodGet && page == "2":
+		w.Write([]byte(repliesPage2JSON))
+	case r.URL.Path == "/api/v1/topics" && r.Method == http.MethodPost:
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte(`{"topic":{"id":"` + newTopicID + `","slug":"a-new-topic","name":"A new topic",` +
+			`"url":"https://board.example/_general/chat/a-new-topic","attachments":[]}}`))
+	case r.URL.Path == "/api/v1/topics/"+topicID+"/replies" && r.Method == http.MethodPost:
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte(`{"reply":{"id":"` + newReplyID + `","short_id":"beef","topic_id":"` + topicID + `","parent_id":"r1"}}`))
 	default:
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"error":"not found"}`))
+		problem(w, http.StatusNotFound, "err_not_found")
 	}
 }
 
-func testSystem(t *testing.T) (system.System, *fixtureServer) {
+func testSystem(t *testing.T, f *fixtureServer, token string) (system.System, string) {
 	t.Helper()
 
-	f := &fixtureServer{t: t}
+	f.t = t
 	srv := httptest.NewServer(f)
 	t.Cleanup(srv.Close)
 
-	sys, err := New(system.Env{
-		Index: 3,
-		Settings: system.Settings{
-			URL:         srv.URL,
-			Credentials: map[string]string{system.CredentialToken: "hup_test"},
-		},
-	})
+	settings := system.Settings{URL: srv.URL}
+	if token != "" {
+		settings.Credentials = map[string]string{system.CredentialToken: token}
+	}
+	sys, err := New(system.Env{Index: 3, Settings: settings})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return sys, f
+	return sys, srv.URL
 }
 
-const boardJSON = `{
-  "categories_forums": [
-    {"category": {"id": "c1", "name": "General", "slug": "general", "position": 1},
-     "forums": [
-       {"id": "` + forumID + `", "name": "Chat", "slug": "chat", "position": 1, "category_id": "c1",
-        "description": "Talk about anything", "category_name": "General", "category_slug": "general",
-        "topics": 2, "replies": 5},
-       {"id": "f2", "name": "Help", "slug": "help", "position": 2, "category_id": "c1",
-        "description": "Ask for help", "category_name": "General", "category_slug": "general",
-        "topics": 0, "replies": 0}
-     ]},
-    {"category": {"id": "c2", "name": "Meta", "slug": "meta", "position": 2},
-     "forums": [
-       {"id": "f3", "name": "Site", "slug": "site", "position": 1, "category_id": "c2",
-        "description": "About this board", "category_name": "Meta", "category_slug": "meta",
-        "topics": 1, "replies": 0}
-     ]}
-  ],
-  "recent_topics": []
-}`
+const forumsJSON = `{"forums": [
+  {"id": "` + forumID + `", "name": "Chat", "slug": "chat", "position": 1, "description": "Talk about anything",
+   "category": {"id": "c1", "name": "General", "slug": "general"}, "topics": 2, "replies": 5,
+   "last_activity_at": "2026-10-02T09:00:00Z", "permissions": {"read": true, "write": true, "moderate": false},
+   "url": "https://board.example/_general/chat"},
+  {"id": "f2", "name": "Help", "slug": "help", "position": 2, "description": "Ask for help",
+   "category": {"id": "c1", "name": "General", "slug": "general"}, "topics": 0, "replies": 0,
+   "last_activity_at": null, "permissions": {"read": true, "write": false, "moderate": false},
+   "url": "https://board.example/_general/help"},
+  {"id": "f3", "name": "Site", "slug": "site", "position": 1, "description": "About this board",
+   "category": {"id": "c2", "name": "Meta", "slug": "meta"}, "topics": 1, "replies": 0,
+   "last_activity_at": null, "permissions": {"read": true, "write": true, "moderate": false},
+   "url": "https://board.example/_meta/site"}
+]}`
+
+const attachmentJSON = `{"id": "a1", "filename": "layout.png", "mime_type": "image/png",
+  "created_at": "2026-10-01T10:00:00Z", "url": "/api/v1/attachments/a1"}`
 
 const topicsJSON = `{
-  "forum": {"id": "` + forumID + `", "name": "Chat", "slug": "chat", "category_name": "General", "category_slug": "general"},
+  "forum": {"id": "` + forumID + `", "name": "Chat", "slug": "chat", "category": {"id": "c1", "name": "General", "slug": "general"}},
   "topics": [
-    {"id": "` + topicID + `", "short_id": "abc", "name": "A pinned and locked topic", "slug": "a-pinned-and-locked-topic",
-     "forum_id": "` + forumID + `", "author_id": "u1", "kind": "regular", "pinned": true,
+    {"id": "` + topicID + `", "short_id": "abc", "slug": "a-pinned-and-locked-topic", "name": "A pinned and locked topic",
+     "kind": "regular", "pinned": true, "locked_at": "2026-10-02T10:00:00Z",
      "text": "The opening text.", "html": "<p>The opening text.</p>",
-     "created_at": "2026-10-01T10:00:00Z", "updated_at": "2026-10-01T10:00:00Z", "locked_at": "2026-10-02T10:00:00Z",
-     "views": 12, "category_name": "General", "category_slug": "general", "forum_name": "Chat", "forum_slug": "chat",
-     "author_username": "alice", "replies": 3, "last_reply_at": "2026-10-02T09:00:00Z"},
-    {"id": "0192b1c2-7d3e-7f40-8a51-000000000099", "short_id": "def", "name": "An open topic", "slug": "an-open-topic",
-     "forum_id": "` + forumID + `", "author_id": "u2", "kind": "regular", "pinned": false,
+     "created_at": "2026-10-01T10:00:00Z", "last_activity_at": "2026-10-02T09:00:00Z", "replies": 3, "views": 12,
+     "author": {"id": "u1", "username": "alice", "role": "user", "joined_at": "2026-01-01T00:00:00Z"},
+     "forum": {"id": "` + forumID + `", "name": "Chat", "slug": "chat"}, "category": {"name": "General", "slug": "general"},
+     "attachments": [` + attachmentJSON + `],
+     "url": "https://board.example/_general/chat/a-pinned-and-locked-topic"},
+    {"id": "0192b1c2-7d3e-7f40-8a51-000000000099", "short_id": "def", "slug": "an-open-topic", "name": "An open topic",
+     "kind": "regular", "pinned": false, "locked_at": null,
      "text": "Second.", "html": "<p>Second.</p>",
-     "created_at": "2026-10-03T10:00:00Z", "updated_at": "2026-10-03T10:00:00Z",
-     "views": 1, "category_name": "General", "category_slug": "general", "forum_name": "Chat", "forum_slug": "chat",
-     "author_username": "bob", "replies": 0}
+     "created_at": "2026-10-03T10:00:00Z", "last_activity_at": "2026-10-03T10:00:00Z", "replies": 0, "views": 1,
+     "author": {"id": "u2", "username": "bob", "role": "user", "joined_at": "2026-01-01T00:00:00Z"},
+     "forum": {"id": "` + forumID + `", "name": "Chat", "slug": "chat"}, "category": {"name": "General", "slug": "general"},
+     "attachments": [],
+     "url": "https://board.example/_general/chat/an-open-topic"}
   ],
-  "total": 2,
-  "pages": 1
+  "pagination": {"page": 1, "per_page": 10, "total": 2, "pages": 1}
 }`
 
-const topicPage1JSON = `{
-  "topic": {"id": "` + topicID + `", "short_id": "abc", "name": "A pinned and locked topic", "slug": "a-pinned-and-locked-topic",
-    "forum_id": "` + forumID + `", "author_id": "u1", "kind": "regular", "pinned": true,
-    "text": "The full opening text.", "html": "<p>The full opening text.</p>",
-    "created_at": "2026-10-01T10:00:00Z", "locked_at": "2026-10-02T10:00:00Z",
-    "category_name": "General", "category_slug": "general", "forum_name": "Chat", "forum_slug": "chat",
-    "author_username": "alice", "replies": 3},
-  "replies": [
-    {"id": "r1", "short_id": "r1", "topic_id": "` + topicID + `", "reply_id": "", "author_id": "u2",
-     "text": "First reply.", "created_at": "2026-10-01T11:00:00Z", "author_username": "bob"},
-    {"id": "r2", "short_id": "r2", "topic_id": "` + topicID + `", "reply_id": "r1", "author_id": "u1",
-     "text": "Answer to the first.", "created_at": "2026-10-01T12:00:00Z", "author_username": "alice"}
-  ],
-  "total": 3,
-  "pages": 2
+const topicJSON = `{"topic":
+  {"id": "` + topicID + `", "short_id": "abc", "slug": "a-pinned-and-locked-topic", "name": "A pinned and locked topic",
+   "kind": "poll", "pinned": true, "locked_at": "2026-10-02T10:00:00Z",
+   "text": "The full opening text.\n", "html": "<p>The full opening text.</p>",
+   "created_at": "2026-10-01T10:00:00Z", "last_activity_at": "2026-10-02T09:00:00Z", "replies": 3, "views": 12,
+   "author": {"id": "u1", "username": "alice", "role": "user", "joined_at": "2026-01-01T00:00:00Z"},
+   "forum": {"id": "` + forumID + `", "name": "Chat", "slug": "chat"}, "category": {"name": "General", "slug": "general"},
+   "attachments": [` + attachmentJSON + `],
+   "poll": {"options": [{"index": 0, "text": "QWERTY", "votes": 7, "percent": 58},
+                        {"index": 1, "text": "Colemak", "votes": 4, "percent": 33},
+                        {"index": 2, "text": "Other", "votes": 1, "percent": 8}],
+            "total": 12, "ended": true, "ends_at": "2026-10-05T18:00:00Z",
+            "viewer": {"can_vote": false, "has_voted": true, "selection": 0}},
+   "viewer": {"unread": false},
+   "url": "https://board.example/_general/chat/a-pinned-and-locked-topic"}
 }`
 
-const topicPage2JSON = `{
-  "topic": {"id": "` + topicID + `", "name": "A pinned and locked topic", "text": "The full opening text.",
-    "pinned": true, "locked_at": "2026-10-02T10:00:00Z"},
+const repliesPage1JSON = `{
   "replies": [
-    {"id": "r3", "short_id": "r3", "topic_id": "` + topicID + `", "reply_id": "", "author_id": "u3",
-     "text": "", "created_at": "2026-10-02T09:00:00Z", "deleted_at": "2026-10-02T09:30:00Z", "author_username": "carol"}
+    {"id": "r1", "short_id": "r1", "topic_id": "` + topicID + `", "parent_id": null,
+     "text": "First reply.", "html": "<p>First reply.</p>", "created_at": "2026-10-01T11:00:00Z",
+     "author": {"id": "u2", "username": "bob", "role": "user", "joined_at": "2026-01-01T00:00:00Z"},
+     "attachments": [], "url": "https://board.example/_general/chat/a-pinned-and-locked-topic#post-r1"},
+    {"id": "r2", "short_id": "r2", "topic_id": "` + topicID + `", "parent_id": "r1",
+     "text": "Answer to the first.", "html": "<p>Answer to the first.</p>", "created_at": "2026-10-01T12:00:00Z",
+     "author": {"id": "u1", "username": "alice", "role": "user", "joined_at": "2026-01-01T00:00:00Z"},
+     "attachments": [{"id": "a2", "filename": "notes.txt", "mime_type": "text/plain",
+                      "created_at": "2026-10-01T12:00:00Z", "url": "/api/v1/attachments/a2"}],
+     "url": "https://board.example/_general/chat/a-pinned-and-locked-topic#post-r2"}
   ],
-  "total": 3,
-  "pages": 2
+  "pagination": {"page": 1, "per_page": 100, "total": 3, "pages": 2}
+}`
+
+const repliesPage2JSON = `{
+  "replies": [
+    {"id": "r3", "short_id": "r3", "topic_id": "` + topicID + `", "parent_id": "gone",
+     "text": "Orphaned answer.", "html": "<p>Orphaned answer.</p>", "created_at": "2026-10-02T09:00:00Z",
+     "author": {"id": "u3", "username": "carol", "role": "user", "joined_at": "2026-01-01T00:00:00Z"},
+     "attachments": [], "url": "https://board.example/_general/chat/a-pinned-and-locked-topic#post-r3"}
+  ],
+  "pagination": {"page": 2, "per_page": 100, "total": 3, "pages": 2}
 }`
 
 func TestForumsAreNamedAfterTheirCategory(t *testing.T) {
-	sys, f := testSystem(t)
+	f := &fixtureServer{}
+	sys, _ := testSystem(t, f, "hup_test")
 
 	forums, err := sys.ListForums(context.Background())
 	if err != nil {
@@ -171,13 +218,14 @@ func TestForumsAreNamedAfterTheirCategory(t *testing.T) {
 	if forums[0].ID != forumID || forums[0].Info != "Talk about anything" {
 		t.Errorf("the first forum is %+v", forums[0])
 	}
-	if f.requests[0].auth != "Bearer hup_test" {
-		t.Errorf("the token is sent as %q", f.requests[0].auth)
+	if f.requests[0].path != "/api/v1/forums" || f.requests[0].auth != "Bearer hup_test" {
+		t.Errorf("the forums were requested as %+v", f.requests[0])
 	}
 }
 
 func TestTopicsBecomePostsWithTheirIDsIntact(t *testing.T) {
-	sys, f := testSystem(t)
+	f := &fixtureServer{}
+	sys, origin := testSystem(t, f, "hup_test")
 
 	posts, err := sys.ListPosts(context.Background(), forumID, system.OrderActive)
 	if err != nil {
@@ -186,13 +234,19 @@ func TestTopicsBecomePostsWithTheirIDsIntact(t *testing.T) {
 	if len(posts) != 2 {
 		t.Fatalf("got %d posts, expected 2", len(posts))
 	}
-	if f.requests[0].path != "/topics" || !strings.Contains(f.requests[0].query, "forum_id="+forumID) {
+	if f.requests[0].path != "/api/v1/forums/"+forumID+"/topics" ||
+		!strings.Contains(f.requests[0].query, "sort=active") || !strings.Contains(f.requests[0].query, "page=1") {
 		t.Errorf("the list request was %s?%s", f.requests[0].path, f.requests[0].query)
 	}
 
 	p := posts[0]
-	if p.ID != topicID || p.Subject != "A pinned and locked topic" || p.Body != "The opening text." {
+	if p.ID != topicID || p.Subject != "A pinned and locked topic" {
 		t.Errorf("unexpected post %+v", p)
+	}
+	wantBody := "The opening text.\n\nAttachments:\n- ![layout.png (image/png)](" +
+		origin + "/api/v1/attachments/a1)"
+	if p.Body != wantBody {
+		t.Errorf("the body is %q", p.Body)
 	}
 	if !p.Pinned || !p.Closed || p.ReplyCount != 3 || p.Kind != post.KindText {
 		t.Errorf("flags are wrong: %+v", p)
@@ -203,33 +257,73 @@ func TestTopicsBecomePostsWithTheirIDsIntact(t *testing.T) {
 	if p.Forum.ID != forumID || p.Forum.Name != "General/Chat" || p.Forum.SysIDX != 3 || p.SysIDX != 3 {
 		t.Errorf("forum is %+v", p.Forum)
 	}
-	if !strings.HasSuffix(p.URL, "/_general/chat/a-pinned-and-locked-topic") {
+	if p.URL != "https://board.example/_general/chat/a-pinned-and-locked-topic" {
 		t.Errorf("URL is %q", p.URL)
 	}
 	if p.CreatedAt.IsZero() {
 		t.Error("the creation time was not parsed")
 	}
-	if posts[1].Closed || posts[1].Pinned {
-		t.Error("an open topic is neither closed nor pinned")
+	if posts[1].Closed || posts[1].Pinned || posts[1].Body != "Second." {
+		t.Errorf("an open topic without attachments is %+v", posts[1])
+	}
+}
+
+func TestEveryOrderMapsToTheServersSort(t *testing.T) {
+	f := &fixtureServer{}
+	sys, _ := testSystem(t, f, "hup_test")
+
+	for order, want := range map[system.Order]string{
+		system.OrderNew:      "sort=new",
+		system.OrderActive:   "sort=active",
+		system.OrderComments: "sort=replies",
+	} {
+		f.requests = nil
+		if _, err := sys.ListPosts(context.Background(), "", order); err != nil {
+			t.Fatalf("%s: %v", order, err)
+		}
+		if f.requests[0].path != "/api/v1/topics" || !strings.Contains(f.requests[0].query, want) {
+			t.Errorf("%s was requested as %s?%s", order, f.requests[0].path, f.requests[0].query)
+		}
+	}
+
+	f.requests = nil
+	if _, err := sys.ListPosts(context.Background(), "", system.OrderHot); !errors.Is(err, system.ErrOrderUnavailable) {
+		t.Errorf("Hot gave %v", err)
+	}
+	if len(f.requests) != 0 {
+		t.Errorf("an unavailable order made %d requests", len(f.requests))
+	}
+	ordering := sys.Orders("")
+	if ordering.Default != system.OrderActive || len(ordering.Supported) != 3 {
+		t.Errorf("the orders are %+v", ordering)
 	}
 }
 
 func TestLoadPostCollectsEveryReplyPageIntoATree(t *testing.T) {
-	sys, f := testSystem(t)
+	f := &fixtureServer{}
+	sys, origin := testSystem(t, f, "hup_test")
 
 	p := &post.Post{ID: topicID, Subject: "A pinned and locked topic", SysIDX: 3}
 	if err := sys.LoadPost(context.Background(), p); err != nil {
 		t.Fatal(err)
 	}
 
-	if len(f.requests) != 2 {
-		t.Fatalf("expected two page requests, got %d", len(f.requests))
+	if len(f.requests) != 3 {
+		t.Fatalf("expected the topic and two reply pages, got %d requests", len(f.requests))
 	}
-	if f.requests[0].path != "/topics/"+topicID || f.requests[0].query != "page=1" || f.requests[1].query != "page=2" {
+	if f.requests[0].path != "/api/v1/topics/"+topicID ||
+		f.requests[1].path != "/api/v1/topics/"+topicID+"/replies" ||
+		f.requests[1].query != "page=1&per_page=100" || f.requests[2].query != "page=2&per_page=100" {
 		t.Errorf("the pages were requested as %+v", f.requests)
 	}
 
-	if p.Body != "The full opening text." || !p.Pinned || !p.Closed || p.ReplyCount != 3 {
+	wantBody := "The full opening text.\n\n" +
+		"Poll, 12 votes, ended:\n- QWERTY: 7 votes (58%)\n- Colemak: 4 votes (33%)\n- Other: 1 vote (8%)\n\n" +
+		"Attachments:\n- ![layout.png (image/png)](" + origin + "/api/v1/attachments/a1)"
+	if p.Body != wantBody {
+		t.Errorf("the body is %q", p.Body)
+	}
+	if !p.Pinned || !p.Closed || p.ReplyCount != 3 {
 		t.Errorf("the post was not refreshed: %+v", p)
 	}
 	if len(p.Replies) != 2 {
@@ -237,29 +331,36 @@ func TestLoadPostCollectsEveryReplyPageIntoATree(t *testing.T) {
 	}
 
 	first := p.Replies[0]
-	if first.ID != "r1" || first.PostID != topicID || first.Author.Name != "bob" || first.SysIDX != 3 {
+	if first.ID != "r1" || first.PostID != topicID || first.Author.Name != "bob" || first.SysIDX != 3 ||
+		first.Body != "First reply." {
 		t.Errorf("the first reply is %+v", first)
 	}
 	if len(first.Replies) != 1 || first.Replies[0].ID != "r2" || first.Replies[0].ParentID != "r1" {
 		t.Errorf("the answer is not nested under the first reply: %+v", first.Replies)
 	}
-	if deleted := p.Replies[1]; deleted.ID != "r3" || !deleted.Deleted {
-		t.Errorf("the deleted reply from page two is %+v", deleted)
+	wantAnswer := "Answer to the first.\n\nAttachments:\n- notes.txt (text/plain): " +
+		origin + "/api/v1/attachments/a2"
+	if first.Replies[0].Body != wantAnswer {
+		t.Errorf("the answer's body is %q", first.Replies[0].Body)
+	}
+	if orphan := p.Replies[1]; orphan.ID != "r3" || orphan.ParentID != "" || orphan.Author.Name != "carol" {
+		t.Errorf("the reply whose parent is gone is %+v", orphan)
 	}
 }
 
 func TestCreatePostAndReplyPostTheirBodiesAndKeepTheIDs(t *testing.T) {
-	sys, f := testSystem(t)
+	f := &fixtureServer{}
+	sys, _ := testSystem(t, f, "hup_test")
 
 	p := &post.Post{Subject: "A new topic", Body: "Some text", Forum: forum.Forum{ID: forumID}}
 	if err := sys.CreatePost(context.Background(), p); err != nil {
 		t.Fatal(err)
 	}
-	if p.ID != "0192b1c2-7d3e-7f40-8a51-00000000cafe" {
-		t.Errorf("the created post has id %q", p.ID)
+	if p.ID != newTopicID || p.URL != "https://board.example/_general/chat/a-new-topic" {
+		t.Errorf("the created post has id %q and URL %q", p.ID, p.URL)
 	}
 	created := f.requests[0]
-	if created.method != http.MethodPost || created.path != "/new" || created.auth != "Bearer hup_test" {
+	if created.method != http.MethodPost || created.path != "/api/v1/topics" || created.auth != "Bearer hup_test" {
 		t.Errorf("the post was created with %+v", created)
 	}
 	if created.body["name"] != "A new topic" || created.body["text"] != "Some text" ||
@@ -271,33 +372,131 @@ func TestCreatePostAndReplyPostTheirBodiesAndKeepTheIDs(t *testing.T) {
 	if err := sys.CreateReply(context.Background(), r); err != nil {
 		t.Fatal(err)
 	}
-	if r.ID != "0192b1c2-7d3e-7f40-8a51-00000000beef" {
+	if r.ID != newReplyID {
 		t.Errorf("the created reply has id %q", r.ID)
 	}
 	replied := f.requests[1]
-	if replied.method != http.MethodPost || replied.path != "/topics/"+topicID+"/replies" {
+	if replied.method != http.MethodPost || replied.path != "/api/v1/topics/"+topicID+"/replies" {
 		t.Errorf("the reply was created with %+v", replied)
 	}
-	if replied.body["text"] != "An answer" || replied.body["reply_id"] != "r1" {
+	if replied.body["text"] != "An answer" || replied.body["parent_id"] != "r1" {
 		t.Errorf("the reply body was %+v", replied.body)
+	}
+
+	top := &reply.Reply{PostID: topicID, Body: "A top-level answer"}
+	if err := sys.CreateReply(context.Background(), top); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := f.requests[2].body["parent_id"]; ok {
+		t.Errorf("a top-level reply sent a parent: %+v", f.requests[2].body)
 	}
 }
 
-func TestServerErrorsNameTheField(t *testing.T) {
+func TestGuestsReadWithoutAKeyAndCantPost(t *testing.T) {
+	f := &fixtureServer{}
+	sys, _ := testSystem(t, f, "")
+
+	if sys.Description() != "Hyperuplink (read-only)" || sys.Capabilities() != system.CapRead {
+		t.Errorf("a guest connection is described as %q with capabilities %08b",
+			sys.Description(), sys.Capabilities())
+	}
+
+	if _, err := sys.ListForums(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if f.requests[0].auth != "" {
+		t.Errorf("a guest sent %q", f.requests[0].auth)
+	}
+
+	err := sys.CreatePost(context.Background(), &post.Post{Subject: "x", Forum: forum.Forum{ID: forumID}})
+	if !errors.Is(err, system.ErrNoCredentials) {
+		t.Errorf("a guest post gave %v", err)
+	}
+	if err := sys.CreateReply(context.Background(), &reply.Reply{PostID: topicID}); !errors.Is(err, system.ErrNoCredentials) {
+		t.Errorf("a guest reply gave %v", err)
+	}
+	if len(f.requests) != 1 {
+		t.Errorf("a guest's writes reached the server: %+v", f.requests)
+	}
+}
+
+func TestARejectedKeyEndsTheSession(t *testing.T) {
+	f := &fixtureServer{status: http.StatusUnauthorized, code: "err_apikey_invalid"}
+	sys, origin := testSystem(t, f, "hup_test")
+
+	_, err := sys.ListForums(context.Background())
+	if !errors.Is(err, system.ErrNeedsConnect) {
+		t.Fatalf("got %v", err)
+	}
+	want := "the API key for 127.0.0.1 was rejected; connect again with " +
+		"`neonmodem connect --type hyperuplink --url " + origin + "`"
+	if err.Error() != want {
+		t.Errorf("the error reads %q", err)
+	}
+
+	if _, again := sys.ListPosts(context.Background(), "", system.OrderActive); again == nil ||
+		again.Error() != err.Error() {
+		t.Errorf("the second call gave %v", again)
+	}
+	if err := sys.LoadPost(context.Background(), &post.Post{ID: topicID}); !errors.Is(err, system.ErrNeedsConnect) {
+		t.Errorf("LoadPost gave %v", err)
+	}
+	if err := sys.CreatePost(context.Background(), &post.Post{}); !errors.Is(err, system.ErrNeedsConnect) {
+		t.Errorf("CreatePost gave %v", err)
+	}
+	if len(f.requests) != 1 {
+		t.Errorf("the ended session kept calling the server: %d requests", len(f.requests))
+	}
+}
+
+func TestAClosedBoardEndsAGuestSession(t *testing.T) {
+	f := &fixtureServer{status: http.StatusUnauthorized, code: "err_authentication_required"}
+	sys, _ := testSystem(t, f, "")
+
+	_, err := sys.ListPosts(context.Background(), "", system.OrderActive)
+	if !errors.Is(err, system.ErrNeedsConnect) {
+		t.Fatalf("got %v", err)
+	}
+	if !strings.Contains(err.Error(), "127.0.0.1 no longer serves guests; connect with an account using `neonmodem connect") {
+		t.Errorf("the error reads %q", err)
+	}
+}
+
+func TestServerProblemsNameTheField(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/problem+json")
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		w.Write([]byte(`{"error":"validation failed","fields":{"name":"is too short"}}`))
+		w.Write([]byte(`{"type":"about:blank","title":"Unprocessable Entity","status":422,"code":"validation",` +
+			`"errors":{"name":["required","max"],"text":["required"]}}`))
 	}))
 	t.Cleanup(srv.Close)
 
-	sys, err := New(system.Env{Settings: system.Settings{URL: srv.URL}})
+	sys, err := New(system.Env{Settings: system.Settings{
+		URL:         srv.URL,
+		Credentials: map[string]string{system.CredentialToken: "hup_test"},
+	}})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	err = sys.CreatePost(context.Background(), &post.Post{Subject: "x"})
-	if err == nil || !strings.Contains(err.Error(), "validation failed (name: is too short)") {
+	if err == nil || !strings.Contains(err.Error(), "validation (name: required, max; text: required)") {
 		t.Errorf("the error is %v", err)
+	}
+	if errors.Is(err, system.ErrNeedsConnect) {
+		t.Error("a validation problem must not end the session")
+	}
+}
+
+func TestAnOlderBoardIsNamed(t *testing.T) {
+	f := &fixtureServer{html: true}
+	sys, _ := testSystem(t, f, "hup_test")
+
+	_, err := sys.ListForums(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "the board may run a Hyperuplink older than its API v1") {
+		t.Errorf("got %v", err)
+	}
+	if errors.Is(err, system.ErrNeedsConnect) {
+		t.Error("an HTML answer must not end the session")
 	}
 }

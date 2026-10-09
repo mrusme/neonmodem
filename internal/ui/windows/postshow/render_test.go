@@ -72,7 +72,7 @@ func TestOpeningAPostDoesNotBlockTheEventLoop(t *testing.T) {
 
 	// How long the work itself takes; this is what used to run in Update.
 	start := time.Now()
-	rendered, ok := renderPost(context.Background(), c, p, 100, 92)
+	rendered, ok := renderPost(context.Background(), c, p, 100)
 	renderTook := time.Since(start)
 
 	if !ok {
@@ -141,7 +141,7 @@ func TestCancelledRenderStopsEarly(t *testing.T) {
 
 	loadCtx := &cancelAfter{Context: context.Background(), limit: 5}
 
-	rendered, ok := renderPost(loadCtx, c, p, 100, 92)
+	rendered, ok := renderPost(loadCtx, c, p, 100)
 
 	if ok {
 		t.Fatal("expected the cancelled render to report that it gave up")
@@ -200,11 +200,11 @@ func TestRepeatedRendersDoNotAccumulate(t *testing.T) {
 	c := testCtx(t)
 	p := testPost(10)
 
-	first, ok := renderPost(context.Background(), c, p, 100, 92)
+	first, ok := renderPost(context.Background(), c, p, 100)
 	if !ok {
 		t.Fatal("first render was superseded")
 	}
-	second, ok := renderPost(context.Background(), c, p, 100, 92)
+	second, ok := renderPost(context.Background(), c, p, 100)
 	if !ok {
 		t.Fatal("second render was superseded")
 	}
@@ -221,13 +221,13 @@ func TestOlderRepliesNoticeFollowsThePage(t *testing.T) {
 	c := testCtx(t)
 	p := testPost(2)
 
-	rendered, _ := renderPost(context.Background(), c, p, 100, 92)
+	rendered, _ := renderPost(context.Background(), c, p, 100)
 	if strings.Contains(rendered.content, "Older replies available") {
 		t.Error("no older-replies notice expected when everything is loaded")
 	}
 
 	p.ReplyPage = post.ReplyPage{Offset: 20, Size: 20, Total: 60}
-	rendered, _ = renderPost(context.Background(), c, p, 100, 92)
+	rendered, _ = renderPost(context.Background(), c, p, 100)
 	if !strings.Contains(rendered.content, "Older replies available") {
 		t.Error("expected the older-replies notice for a later page")
 	}

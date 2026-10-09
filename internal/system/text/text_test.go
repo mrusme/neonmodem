@@ -87,3 +87,26 @@ func TestFirstParagraph(t *testing.T) {
 		}
 	}
 }
+
+func TestPrintableDropsControlCharacters(t *testing.T) {
+	for _, c := range []struct{ in, want string }{
+		{"plain text", "plain text"},
+		{"clear \x1b[2J screen", "clear  screen"},
+		{"a \x1b]8;;https://evil.example\alink", "a link"},
+		{"bell\a and del\x7f", "bell and del"},
+		{"c1 \u009b2J csi", "c1 2J csi"},
+		{"line\nbreak\ttab\rreturn", "line break tab return"},
+		{"Ünïcödé ✓ 漢字", "Ünïcödé ✓ 漢字"},
+	} {
+		if got := Printable(c.in); got != c.want {
+			t.Errorf("Printable(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
+func TestPrintableLinesKeepsLineBreaks(t *testing.T) {
+	got := PrintableLines("first \x1b[2Jline\r\nsecond\tline\a\n\u009bthird\rpart")
+	if want := "first line\nsecond line\nthird part"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}

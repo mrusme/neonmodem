@@ -17,7 +17,7 @@ func TestRenderedPostFitsTheViewportWidth(t *testing.T) {
 	p.Body = "https://example.com/" + strings.Repeat("x", 120)
 
 	const width = 60
-	rendered, ok := renderPost(context.Background(), c, p, width, width-2)
+	rendered, ok := renderPost(context.Background(), c, p, width)
 	if !ok {
 		t.Fatal("renderPost was superseded")
 	}
