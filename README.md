@@ -52,6 +52,13 @@ it:
 $ tar -xzf ./neonmodem_*.tar.gz
 ```
 
+Windows builds are `.zip` archives. Every release includes `checksums.txt` with
+the SHA-256 sum of each archive, which you can check after the download:
+
+```sh
+$ sha256sum --ignore-missing -c checksums.txt
+```
+
 The binary is called `neonmodem`. Feel free to move it to e.g. `/usr/local/bin`.
 
 ### From Sauce
@@ -179,7 +186,7 @@ reasons.
 
 #### Hyperuplink
 
-Neon Modem supprts the JSON API of a Hyperuplink internet bulletin board. Give
+Neon Modem supports the JSON API of a Hyperuplink internet bulletin board. Give
 that address without the `/api/v1` path. With an account, sign in with your
 username and password and the board issues an API key named
 `neonmodem on <hostname>`. Neon Modem stores the instance URL, the username and
