@@ -1,0 +1,80 @@
+{
+  "comment_view": {
+    "comment": {
+      "id": 35,
+      "creator_id": 3,
+      "post_id": 16,
+      "content": "Marble kestrel thistle",
+      "removed": false,
+      "published": "2026-10-27T01:31:11.546400Z",
+      "deleted": false,
+      "ap_id": "https://localhost/comment/35",
+      "local": true,
+      "path": "0.34.35",
+      "distinguished": false,
+      "language_id": 0
+    },
+    "creator": {
+      "id": 3,
+      "name": "vera",
+      "banned": false,
+      "published": "2026-10-04T17:23:01.735302Z",
+      "actor_id": "https://localhost/u/vera",
+      "local": true,
+      "deleted": false,
+      "bot_account": false,
+      "instance_id": 1
+    },
+    "post": {
+      "id": 16,
+      "name": "Walnut prairie compass",
+      "body": "Hazel *quartz* meadow drifts by the cedar.",
+      "creator_id": 3,
+      "community_id": 3,
+      "removed": false,
+      "locked": false,
+      "published": "2026-10-27T01:31:11.485710Z",
+      "deleted": false,
+      "nsfw": false,
+      "ap_id": "https://localhost/post/16",
+      "local": true,
+      "language_id": 0,
+      "featured_community": false,
+      "featured_local": false
+    },
+    "community": {
+      "id": 3,
+      "name": "testing",
+      "title": "Testing",
+      "description": "## Rules\n\nThe testing community of this instance.\n\n- Be kind",
+      "removed": false,
+      "published": "2026-10-04T17:23:01.550438Z",
+      "updated": "2026-10-27T01:29:56.213379Z",
+      "deleted": false,
+      "nsfw": false,
+      "actor_id": "https://localhost/c/testing",
+      "local": true,
+      "hidden": false,
+      "posting_restricted_to_mods": false,
+      "instance_id": 1,
+      "visibility": "Public"
+    },
+    "counts": {
+      "comment_id": 35,
+      "score": 1,
+      "upvotes": 1,
+      "downvotes": 0,
+      "published": "2026-10-27T01:31:11.546400Z",
+      "child_count": 0
+    },
+    "creator_banned_from_community": false,
+    "banned_from_community": false,
+    "creator_is_moderator": false,
+    "creator_is_admin": false,
+    "subscribed": "NotSubscribed",
+    "saved": false,
+    "creator_blocked": false,
+    "my_vote": 1
+  },
+  "recipient_ids": []
+}

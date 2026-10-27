@@ -1,0 +1,72 @@
+{
+  "communities": [
+    {
+      "community": {
+        "id": 2,
+        "name": "general",
+        "title": "General",
+        "description": "## Rules\n\nThe general community of this instance.\n\n- Be kind",
+        "removed": false,
+        "published": "2026-10-04T17:23:01.321749Z",
+        "updated": "2026-10-27T01:29:56.192587Z",
+        "deleted": false,
+        "nsfw": false,
+        "actor_id": "https://localhost/c/general",
+        "local": true,
+        "hidden": false,
+        "posting_restricted_to_mods": false,
+        "instance_id": 1,
+        "visibility": "Public"
+      },
+      "subscribed": "NotSubscribed",
+      "blocked": false,
+      "counts": {
+        "community_id": 2,
+        "subscribers": 3,
+        "posts": 14,
+        "comments": 31,
+        "published": "2026-10-04T17:23:01.321749Z",
+        "users_active_day": 2,
+        "users_active_week": 0,
+        "users_active_month": 0,
+        "users_active_half_year": 0,
+        "subscribers_local": 3
+      },
+      "banned_from_community": false
+    },
+    {
+      "community": {
+        "id": 3,
+        "name": "testing",
+        "title": "Testing",
+        "description": "## Rules\n\nThe testing community of this instance.\n\n- Be kind",
+        "removed": false,
+        "published": "2026-10-04T17:23:01.550438Z",
+        "updated": "2026-10-27T01:29:56.213379Z",
+        "deleted": false,
+        "nsfw": false,
+        "actor_id": "https://localhost/c/testing",
+        "local": true,
+        "hidden": false,
+        "posting_restricted_to_mods": false,
+        "instance_id": 1,
+        "visibility": "Public"
+      },
+      "subscribed": "NotSubscribed",
+      "blocked": false,
+      "counts": {
+        "community_id": 3,
+        "subscribers": 1,
+        "posts": 0,
+        "comments": 0,
+        "published": "2026-10-04T17:23:01.550438Z",
+        "users_active_day": 0,
+        "users_active_week": 0,
+        "users_active_month": 0,
+        "users_active_half_year": 0,
+        "subscribers_local": 1
+      },
+      "banned_from_community": false
+    }
+  ]
+}

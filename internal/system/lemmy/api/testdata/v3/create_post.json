@@ -1,0 +1,71 @@
+{
+  "post_view": {
+    "post": {
+      "id": 17,
+      "name": "Cobalt ridge almanac",
+      "url": "https://example.com/",
+      "creator_id": 3,
+      "community_id": 3,
+      "removed": false,
+      "locked": false,
+      "published": "2026-10-27T01:31:11.587534Z",
+      "deleted": false,
+      "nsfw": false,
+      "embed_title": "Example Domain",
+      "ap_id": "https://localhost/post/17",
+      "local": true,
+      "language_id": 0,
+      "featured_community": false,
+      "featured_local": false,
+      "url_content_type": "text/html; charset=utf-8"
+    },
+    "creator": {
+      "id": 3,
+      "name": "vera",
+      "banned": false,
+      "published": "2026-10-04T17:23:01.735302Z",
+      "actor_id": "https://localhost/u/vera",
+      "local": true,
+      "deleted": false,
+      "bot_account": false,
+      "instance_id": 1
+    },
+    "community": {
+      "id": 3,
+      "name": "testing",
+      "title": "Testing",
+      "description": "## Rules\n\nThe testing community of this instance.\n\n- Be kind",
+      "removed": false,
+      "published": "2026-10-04T17:23:01.550438Z",
+      "updated": "2026-10-27T01:29:56.213379Z",
+      "deleted": false,
+      "nsfw": false,
+      "actor_id": "https://localhost/c/testing",
+      "local": true,
+      "hidden": false,
+      "posting_restricted_to_mods": false,
+      "instance_id": 1,
+      "visibility": "Public"
+    },
+    "creator_banned_from_community": false,
+    "banned_from_community": false,
+    "creator_is_moderator": false,
+    "creator_is_admin": false,
+    "counts": {
+      "post_id": 17,
+      "comments": 0,
+      "score": 1,
+      "upvotes": 1,
+      "downvotes": 0,
+      "published": "2026-10-27T01:31:11.587534Z",
+      "newest_comment_time": "2026-10-27T01:31:11.587534Z"
+    },
+    "subscribed": "NotSubscribed",
+    "saved": false,
+    "read": true,
+    "hidden": false,
+    "creator_blocked": false,
+    "my_vote": 1,
+    "unread_comments": 0
+  }
+}

@@ -3,8 +3,11 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"log/slog"
 	"maps"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -93,6 +96,21 @@ func readFile(t *testing.T, path string) []byte {
 	return data
 }
 
+func fakeLemmy(t *testing.T) string {
+	t.Helper()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/nodeinfo/2.1" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"version":"2.1","software":{"name":"lemmy","version":"0.19.21"}}`)
+	}))
+	t.Cleanup(srv.Close)
+	return srv.URL
+}
+
 func lemmyAt(sysURL string, credentials map[string]string) config.SystemConfig {
 	return config.SystemConfig{
 		Type:     "lemmy",
@@ -121,20 +139,21 @@ func TestConnectKeepsAnExistingConnection(t *testing.T) {
 }
 
 func TestConnectReplacesAConnectionInPlace(t *testing.T) {
+	lemmy := fakeLemmy(t)
 	news := config.SystemConfig{Type: "hackernews", Settings: system.Settings{URL: "https://news.ycombinator.com"}}
 	other := lemmyAt("https://other.example", map[string]string{"username": "vera", "token_cmd": "pass show other"})
 	a, path := connectApp(t,
 		news,
-		lemmyAt("http://lemmy.example", map[string]string{"username": "vera", "password_cmd": "pass show lemmy"}),
+		lemmyAt(lemmy, map[string]string{"username": "vera", "password_cmd": "pass show lemmy"}),
 		other,
 	)
 
-	out, err := runConnect(t, a, "2\n3\nlocal\n", "lemmy", "http://lemmy.example")
+	out, err := runConnect(t, a, "2\n3\nlocal\n", "lemmy", lemmy)
 	if err != nil {
 		t.Fatalf("connect: %v\n%s", err, out)
 	}
 	if !strings.Contains(out, "Successfully replaced the connection!") ||
-		!strings.Contains(out, "The previous credentials stay valid until you revoke them on lemmy.example.") {
+		!strings.Contains(out, "The previous credentials stay valid until you revoke them on 127.0.0.1.") {
 		t.Errorf("unexpected output:\n%s", out)
 	}
 
@@ -146,7 +165,7 @@ func TestConnectReplacesAConnectionInPlace(t *testing.T) {
 		t.Fatalf("got %d systems", len(saved.Systems))
 	}
 	replaced := saved.Systems[1]
-	if replaced.Type != "lemmy" || replaced.Settings.URL != "http://lemmy.example" ||
+	if replaced.Type != "lemmy" || replaced.Settings.URL != lemmy ||
 		len(replaced.Settings.Credentials) != 0 || replaced.Settings.Options["listing"] != "local" {
 		t.Errorf("the replaced entry is %+v", replaced)
 	}
@@ -178,10 +197,11 @@ func TestConnectReplacesTheOnlyHackerNewsConnection(t *testing.T) {
 }
 
 func TestAFailedReplaceLeavesTheFileUnchanged(t *testing.T) {
-	a, path := connectApp(t, lemmyAt("http://lemmy.example", map[string]string{"username": "vera", "password": "old"}))
+	lemmy := fakeLemmy(t)
+	a, path := connectApp(t, lemmyAt(lemmy, map[string]string{"username": "vera", "password": "old"}))
 	before := readFile(t, path)
 
-	_, err := runConnect(t, a, "2\n3\nnonsense\n", "lemmy", "http://lemmy.example")
+	_, err := runConnect(t, a, "2\n3\nnonsense\n", "lemmy", lemmy)
 	if err == nil || !strings.Contains(err.Error(), "is not a valid feed") {
 		t.Fatalf("got %v", err)
 	}
@@ -194,9 +214,10 @@ func TestAFailedReplaceLeavesTheFileUnchanged(t *testing.T) {
 }
 
 func TestConnectAddsANewConnection(t *testing.T) {
+	other := fakeLemmy(t)
 	a, path := connectApp(t, lemmyAt("http://lemmy.example", nil))
 
-	out, err := runConnect(t, a, "3\n\n", "lemmy", "https://other.example")
+	out, err := runConnect(t, a, "3\n\n", "lemmy", other)
 	if err != nil {
 		t.Fatalf("connect: %v\n%s", err, out)
 	}
@@ -210,17 +231,18 @@ func TestConnectAddsANewConnection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(saved.Systems) != 2 || saved.Systems[1].Settings.URL != "https://other.example" {
+	if len(saved.Systems) != 2 || saved.Systems[1].Settings.URL != other {
 		t.Errorf("got systems %+v", saved.Systems)
 	}
 }
 
 func TestConnectLeavesInMemoryChangesOutOfTheFile(t *testing.T) {
+	other := fakeLemmy(t)
 	a, path := connectApp(t, lemmyAt("http://lemmy.example", nil))
 	a.cfg.Debug = true
 	a.cfg.RenderSplash = false
 
-	out, err := runConnect(t, a, "3\n\n", "lemmy", "https://other.example")
+	out, err := runConnect(t, a, "3\n\n", "lemmy", other)
 	if err != nil {
 		t.Fatalf("connect: %v\n%s", err, out)
 	}
@@ -229,7 +251,7 @@ func TestConnectLeavesInMemoryChangesOutOfTheFile(t *testing.T) {
 	if strings.Contains(doc, "Debug") || strings.Contains(doc, "RenderSplash") {
 		t.Errorf("the flag and the override reached the file:\n%s", doc)
 	}
-	if !strings.Contains(doc, "url = 'https://other.example'") {
+	if !strings.Contains(doc, "url = '"+other+"'") {
 		t.Errorf("the new connection is missing:\n%s", doc)
 	}
 }
@@ -238,6 +260,7 @@ func TestConnectPrintsTheSnippetWhenTheFileCantBeWritten(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("root can write a read-only file")
 	}
+	other := fakeLemmy(t)
 	a, path := connectApp(t, lemmyAt("http://lemmy.example", nil))
 	before := readFile(t, path)
 	if err := os.Chmod(path, 0o444); err != nil {
@@ -245,11 +268,11 @@ func TestConnectPrintsTheSnippetWhenTheFileCantBeWritten(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chmod(path, 0o600) })
 
-	out, err := runConnect(t, a, "3\n\n", "lemmy", "https://other.example")
+	out, err := runConnect(t, a, "3\n\n", "lemmy", other)
 	if err == nil || !strings.Contains(err.Error(), "wasn't saved") {
 		t.Fatalf("got %v\n%s", err, out)
 	}
-	for _, want := range []string{"couldn't be written", "Add this to it yourself", "[[Systems]]", "url = 'https://other.example'"} {
+	for _, want := range []string{"couldn't be written", "Add this to it yourself", "[[Systems]]", "url = '" + other + "'"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("the output lacks %q:\n%s", want, out)
 		}

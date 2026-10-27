@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/mrusme/neonmodem/internal/system"
+	"github.com/mrusme/neonmodem/internal/system/lemmy/api"
 	"github.com/mrusme/neonmodem/internal/system/prompt"
-	"go.elara.ws/go-lemmy"
 )
 
 var errTooManyLogins = errors.New(
@@ -22,6 +22,14 @@ func (sys *System) Connect(
 	sysURL string,
 ) (system.Settings, error) {
 	settings := system.Settings{URL: sysURL, Options: map[string]string{}}
+
+	client, err := newClient(sysURL, "", sys.proxy, sys.logger, 0)
+	if err != nil {
+		return settings, err
+	}
+	if err := readVersion(ctx, sys.readTimeout, client); err != nil {
+		return settings, fmt.Errorf("could not connect to %s: %w", sysURL, err)
+	}
 
 	username, err := p.Credential(ctx, prompt.Field{
 		Name:      "username or email",
@@ -44,13 +52,9 @@ func (sys *System) Connect(
 			return settings, err
 		}
 
-		client, err := newClient(sysURL, sys.proxy, sys.logger)
-		if err != nil {
-			return settings, err
-		}
-		jwt, err := logIn(ctx, sys.readTimeout, client, p, lemmy.Login{
-			UsernameOrEmail: username.Value,
-			Password:        password.Value,
+		jwt, err := logIn(ctx, sys.readTimeout, client, p, api.Login{
+			Username: username.Value,
+			Password: password.Value,
 		})
 		if err != nil {
 			return settings, fmt.Errorf("could not log in to %s: %w", sysURL, err)
@@ -89,67 +93,67 @@ func (sys *System) Connect(
 	return settings, nil
 }
 
+func readVersion(ctx context.Context, timeout time.Duration, client *api.Client) error {
+	bounded, cancel := system.Bound(ctx, timeout)
+	defer cancel()
+
+	_, err := client.Version(bounded)
+	return system.Timeout(ctx, timeout, err)
+}
+
 func logIn(
 	ctx context.Context,
 	timeout time.Duration,
-	client *lemmy.Client,
+	client *api.Client,
 	p prompt.Prompter,
-	login lemmy.Login,
+	login api.Login,
 ) (string, error) {
-	resp, err := login1(ctx, timeout, client, login)
-	if errorString(err) == "missing_totp_token" {
+	jwt, err := login1(ctx, timeout, client, login)
+	if errors.Is(err, api.ErrCodeRequired) {
 		p.Notice("Your account uses two-factor authentication.")
-		resp, err = logInWithCode(ctx, timeout, client, p, login)
+		jwt, err = logInWithCode(ctx, timeout, client, p, login)
 	}
-	if errorString(err) == "rate_limit_error" {
+	if errors.Is(err, api.ErrRateLimited) {
 		return "", errTooManyLogins
 	}
-	if err != nil {
-		return "", err
-	}
-
-	jwt, ok := resp.JWT.Value()
-	if !ok || jwt == "" {
-		return "", lemmy.ErrNoToken
-	}
-	return jwt, nil
+	return jwt, err
 }
 
 func login1(
 	ctx context.Context,
 	timeout time.Duration,
-	client *lemmy.Client,
-	login lemmy.Login,
-) (*lemmy.LoginResponse, error) {
+	client *api.Client,
+	login api.Login,
+) (string, error) {
 	bounded, cancel := system.Bound(ctx, timeout)
 	defer cancel()
 
-	resp, err := client.Login(bounded, login)
-	return resp, system.Timeout(ctx, timeout, err)
+	jwt, err := client.Login(bounded, login)
+	return jwt, system.Timeout(ctx, timeout, err)
 }
 
 func logInWithCode(
 	ctx context.Context,
 	timeout time.Duration,
-	client *lemmy.Client,
+	client *api.Client,
 	p prompt.Prompter,
-	login lemmy.Login,
-) (*lemmy.LoginResponse, error) {
+	login api.Login,
+) (string, error) {
 	for rejected := 0; ; {
 		code, err := prompt.Code(p)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 
-		login.TOTP2FAToken = lemmy.NewOptional(code)
-		resp, err := login1(ctx, timeout, client, login)
-		if errorString(err) != "incorrect_totp_token" {
-			return resp, err
+		login.Code = code
+		jwt, err := login1(ctx, timeout, client, login)
+		if !errors.Is(err, api.ErrCodeIncorrect) {
+			return jwt, err
 		}
 
 		rejected++
 		if rejected == prompt.MaxCodes {
-			return nil, prompt.ErrCodesRejected
+			return "", prompt.ErrCodesRejected
 		}
 		p.Notice(prompt.CodeRejected)
 	}

@@ -8,6 +8,17 @@ import (
 )
 
 func TestEveryCallEndsWithItsContext(t *testing.T) {
+	eachFlavor(t, func(t *testing.T, fl flavor) {
+		sys, err := New(system.Env{Settings: system.Settings{URL: blockingLemmy(t, fl), Credentials: token("vera")}})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		systemtest.Deadlines(t, sys, "1", "2")
+	})
+}
+
+func TestReadingTheVersionEndsWithTheContext(t *testing.T) {
 	sys, err := New(system.Env{Settings: system.Settings{URL: systemtest.Blocking(t), Credentials: token("vera")}})
 	if err != nil {
 		t.Fatal(err)

@@ -16,18 +16,22 @@ import (
 	"github.com/mrusme/neonmodem/internal/models/reply"
 	"github.com/mrusme/neonmodem/internal/system"
 	"github.com/mrusme/neonmodem/internal/system/httpx"
+	"github.com/mrusme/neonmodem/internal/system/lemmy/api"
 	"github.com/mrusme/neonmodem/internal/system/text"
-	"go.elara.ws/go-lemmy"
 )
 
 const (
 	Kind = "lemmy"
 
-	OptionListing = "listing"
+	OptionListing    = "listing"
+	OptionMarkAsRead = "mark_as_read"
 
 	ListingSubscribed = "subscribed"
 	ListingLocal      = "local"
 	ListingAll        = "all"
+
+	optionYes = "yes"
+	optionNo  = "no"
 
 	commentDepth = 8
 	pageSize     = 50
@@ -40,39 +44,72 @@ type System struct {
 	proxy       string
 	logger      *slog.Logger
 	readTimeout time.Duration
-	client      *lemmy.Client
+	markAsRead  bool
+	client      *api.Client
 
 	sessionMu sync.Mutex
 	ended     error
 }
 
 func New(env system.Env) (system.System, error) {
+	markAsRead, err := markAsRead(env.Settings)
+	if err != nil {
+		return nil, err
+	}
+
 	sys := &System{
 		idx:         env.Index,
 		settings:    env.Settings,
 		proxy:       env.Proxy,
 		logger:      env.Log(),
 		readTimeout: env.ReadTimeout,
+		markAsRead:  markAsRead,
 	}
 
 	if env.Settings.URL != "" {
-		client, err := newClient(env.Settings.URL, env.Proxy, sys.logger)
+		client, err := newClient(env.Settings.URL, sys.token(), env.Proxy, sys.logger, 3)
 		if err != nil {
 			return nil, err
 		}
-		client.Token = sys.token()
 		sys.client = client
 	}
 
 	return sys, nil
 }
 
-func newClient(sysURL string, proxy string, logger *slog.Logger) (*lemmy.Client, error) {
-	return lemmy.NewWithClient(sysURL, httpx.NewHTTPClient(httpx.Options{
-		Proxy:   proxy,
-		Retries: 3,
-		Logger:  logger,
-	}))
+func newClient(
+	sysURL string,
+	token string,
+	proxy string,
+	logger *slog.Logger,
+	retries int,
+) (*api.Client, error) {
+	return api.NewClient(api.Config{
+		URL:   sysURL,
+		Token: token,
+		Read: httpx.NewHTTPClient(httpx.Options{
+			Proxy:   proxy,
+			Retries: retries,
+			Logger:  logger,
+		}),
+		Write: httpx.NewHTTPClient(httpx.Options{
+			Proxy:  proxy,
+			Logger: logger,
+		}),
+	})
+}
+
+func markAsRead(settings system.Settings) (bool, error) {
+	value := settings.Option(OptionMarkAsRead, optionNo)
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case optionYes:
+		return true, nil
+	case optionNo:
+		return false, nil
+	default:
+		return false, fmt.Errorf("the option %s is %q; use %s or %s",
+			OptionMarkAsRead, value, optionYes, optionNo)
+	}
 }
 
 func (sys *System) Kind() string {
@@ -107,36 +144,19 @@ func (sys *System) Capabilities() system.Capabilities {
 	return system.AccountCapabilities(sys.hasAccount())
 }
 
-func (sys *System) listingType() lemmy.ListingType {
+func (sys *System) listingType() api.Listing {
 	listing := sys.settings.Option(OptionListing, ListingSubscribed)
 	switch strings.ToLower(listing) {
 	case ListingAll:
-		return lemmy.ListingTypeAll
+		return api.ListingAll
 	case ListingLocal:
-		return lemmy.ListingTypeLocal
+		return api.ListingLocal
 	default:
 		if !sys.hasAccount() {
-			return lemmy.ListingTypeLocal
+			return api.ListingLocal
 		}
-		return lemmy.ListingTypeSubscribed
+		return api.ListingSubscribed
 	}
-}
-
-func errorString(err error) string {
-	if le, ok := errors.AsType[lemmy.Error](err); ok {
-		return le.ErrStr
-	}
-	return ""
-}
-
-func isAuthError(err error) bool {
-	le, ok := errors.AsType[lemmy.Error](err)
-	if !ok {
-		return false
-	}
-	return le.Code == 401 ||
-		le.ErrStr == "not_logged_in" ||
-		le.ErrStr == "incorrect_login"
 }
 
 func (sys *System) connectCommand() string {
@@ -175,6 +195,9 @@ func (sys *System) listing(ctx context.Context, call func(ctx context.Context) e
 	if err := sys.sessionErr(); err != nil {
 		return err
 	}
+	if _, err := sys.client.Version(ctx); err != nil {
+		return err
+	}
 	if sys.token() == "" {
 		return call(ctx)
 	}
@@ -184,7 +207,7 @@ func (sys *System) listing(ctx context.Context, call func(ctx context.Context) e
 
 	checked := make(chan error, 1)
 	go func() {
-		_, err := sys.client.ValidateAuth(ctx)
+		err := sys.client.ValidateAuth(ctx)
 		if err != nil {
 			cancel()
 		}
@@ -193,7 +216,7 @@ func (sys *System) listing(ctx context.Context, call func(ctx context.Context) e
 
 	err := call(ctx)
 	if checkErr := <-checked; checkErr != nil {
-		if isAuthError(checkErr) {
+		if errors.Is(checkErr, api.ErrSessionInvalid) {
 			return sys.end()
 		}
 		return fmt.Errorf("checking the session: %w", checkErr)
@@ -207,44 +230,31 @@ func (sys *System) write(ctx context.Context, call func(ctx context.Context) err
 	}
 
 	err := call(ctx)
-	if err != nil && sys.token() != "" && isAuthError(err) {
+	if err != nil && sys.token() != "" && errors.Is(err, api.ErrSessionInvalid) {
 		return sys.end()
 	}
 	return err
 }
 
 func (sys *System) ListForums(ctx context.Context) ([]forum.Forum, error) {
-	var models []forum.Forum
-
+	var communities []api.Community
 	err := sys.listing(ctx, func(ctx context.Context) error {
-		for page := int64(1); page <= maxPages; page++ {
-			resp, err := sys.client.Communities(ctx, lemmy.ListCommunities{
-				Type:  lemmy.NewOptional(sys.listingType()),
-				Sort:  lemmy.NewOptional(lemmy.SortTypeTopAll),
-				Limit: lemmy.NewOptional(int64(pageSize)),
-				Page:  lemmy.NewOptional(page),
-			})
-			if err != nil {
-				return err
-			}
-
-			for _, c := range resp.Communities {
-				models = append(models, forum.Forum{
-					ID:     strconv.FormatInt(c.Community.ID, 10),
-					Name:   c.Community.Name,
-					Info:   text.FirstNonEmpty(text.FirstParagraph(c.Community.Description.ValueOrZero()), c.Community.Title),
-					SysIDX: sys.idx,
-				})
-			}
-
-			if len(resp.Communities) < pageSize {
-				break
-			}
-		}
-		return nil
+		var err error
+		communities, err = sys.client.Communities(ctx, sys.listingType(), pageSize, maxPages)
+		return err
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	var models []forum.Forum
+	for _, c := range communities {
+		models = append(models, forum.Forum{
+			ID:     strconv.FormatInt(c.ID, 10),
+			Name:   c.Name,
+			Info:   text.FirstNonEmpty(text.FirstParagraph(c.Summary), text.FirstParagraph(c.Description), c.Title),
+			SysIDX: sys.idx,
+		})
 	}
 
 	return models, nil
@@ -254,26 +264,26 @@ func (sys *System) Orders(string) system.Ordering {
 	return system.Ordering{Default: system.OrderNew, Supported: system.AllOrders()}
 }
 
-func sortType(order system.Order) lemmy.SortType {
+func sortType(order system.Order) api.Sort {
 	switch order {
 	case system.OrderActive:
-		return lemmy.SortTypeNewComments
+		return api.SortNewComments
 	case system.OrderHot:
-		return lemmy.SortTypeHot
+		return api.SortHot
 	case system.OrderTopDay:
-		return lemmy.SortTypeTopDay
+		return api.SortTopDay
 	case system.OrderTopWeek:
-		return lemmy.SortTypeTopWeek
+		return api.SortTopWeek
 	case system.OrderTopMonth:
-		return lemmy.SortTypeTopMonth
+		return api.SortTopMonth
 	case system.OrderTopYear:
-		return lemmy.SortTypeTopYear
+		return api.SortTopYear
 	case system.OrderTopAll:
-		return lemmy.SortTypeTopAll
+		return api.SortTopAll
 	case system.OrderComments:
-		return lemmy.SortTypeMostComments
+		return api.SortMostComments
 	default:
-		return lemmy.SortTypeNew
+		return api.SortNew
 	}
 }
 
@@ -282,23 +292,24 @@ func (sys *System) ListPosts(
 	forumID string,
 	order system.Order,
 ) ([]post.Post, error) {
-	params := lemmy.GetPosts{
-		Type:  lemmy.NewOptional(sys.listingType()),
-		Sort:  lemmy.NewOptional(sortType(order)),
-		Limit: lemmy.NewOptional(int64(pageSize)),
+	query := api.PostQuery{
+		Listing:    sys.listingType(),
+		Sort:       sortType(order),
+		Limit:      pageSize,
+		MarkAsRead: sys.markAsRead,
 	}
 	if forumID != "" {
 		communityID, err := strconv.ParseInt(forumID, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("invalid community id %q: %w", forumID, err)
 		}
-		params.CommunityID = lemmy.NewOptional(communityID)
+		query.CommunityID = communityID
 	}
 
-	var resp *lemmy.GetPostsResponse
+	var posts []api.Post
 	err := sys.listing(ctx, func(ctx context.Context) error {
 		var err error
-		resp, err = sys.client.Posts(ctx, params)
+		posts, err = sys.client.Posts(ctx, query)
 		return err
 	})
 	if err != nil {
@@ -306,43 +317,43 @@ func (sys *System) ListPosts(
 	}
 
 	var models []post.Post
-	for _, pv := range resp.Posts {
-		models = append(models, sys.toPost(pv))
+	for _, p := range posts {
+		models = append(models, sys.toPost(p))
 	}
 
 	return models, nil
 }
 
-func (sys *System) toPost(pv lemmy.PostView) post.Post {
-	kind, body := post.LinkBody(pv.Post.URL.ValueOr(""), pv.Post.Body.ValueOr(""))
+func (sys *System) toPost(p api.Post) post.Post {
+	kind, body := post.LinkBody(p.URL, p.Body)
 
 	return post.Post{
-		ID:      strconv.FormatInt(pv.Post.ID, 10),
-		Subject: pv.Post.Name,
+		ID:      strconv.FormatInt(p.ID, 10),
+		Subject: p.Name,
 		Body:    body,
 		Kind:    kind,
 
-		Pinned: pv.Post.FeaturedCommunity || pv.Post.FeaturedLocal,
-		Closed: pv.Post.Locked || pv.Post.Deleted || pv.Post.Removed,
+		Pinned: p.FeaturedCommunity || p.FeaturedLocal,
+		Closed: p.Locked || p.Deleted || p.Removed,
 
-		CreatedAt: pv.Post.Published,
+		CreatedAt: p.Published,
 
 		Author: author.Author{
-			ID:   strconv.FormatInt(pv.Post.CreatorID, 10),
-			Name: pv.Creator.Name,
+			ID:   strconv.FormatInt(p.CreatorID, 10),
+			Name: p.CreatorName,
 		},
 
 		Forum: forum.Forum{
-			ID:     strconv.FormatInt(pv.Post.CommunityID, 10),
-			Name:   pv.Community.Name,
+			ID:     strconv.FormatInt(p.CommunityID, 10),
+			Name:   p.CommunityName,
 			SysIDX: sys.idx,
 		},
 
-		ReplyCount: int(pv.Counts.Comments),
-		Score:      post.Score{Value: int(pv.Counts.Score), Unit: post.ScorePoints},
+		ReplyCount: int(p.Comments),
+		Score:      post.Score{Value: int(p.Score), Unit: post.ScorePoints},
 
-		URL:  fmt.Sprintf("%s/post/%d", sys.settings.URL, pv.Post.ID),
-		Link: pv.Post.URL.ValueOr(""),
+		URL:  fmt.Sprintf("%s/post/%d", sys.settings.URL, p.ID),
+		Link: p.URL,
 
 		SysIDX: sys.idx,
 	}
@@ -358,44 +369,39 @@ func (sys *System) LoadPost(ctx context.Context, p *post.Post) error {
 		return err
 	}
 
-	postResp, err := sys.client.Post(ctx, lemmy.GetPost{ID: lemmy.NewOptional(postID)})
+	loaded, err := sys.client.Post(ctx, postID)
 	if err != nil {
 		return err
 	}
-	comments, err := sys.client.Comments(ctx, lemmy.GetComments{
-		PostID:   lemmy.NewOptional(postID),
-		MaxDepth: lemmy.NewOptional(int64(commentDepth)),
-		Sort:     lemmy.NewOptional(lemmy.CommentSortTypeOld),
-		Type:     lemmy.NewOptional(lemmy.ListingTypeAll),
-	})
+	comments, err := sys.client.Comments(ctx, postID, commentDepth)
 	if err != nil {
 		return err
 	}
 
-	p.Refresh(sys.toPost(postResp.PostView))
-	p.Replies = sys.buildTree(p.ID, comments.Comments)
+	p.Refresh(sys.toPost(loaded))
+	p.Replies = sys.buildTree(p.ID, comments)
 
 	return nil
 }
 
-func (sys *System) buildTree(postID string, views []lemmy.CommentView) []reply.Reply {
-	replies := make([]reply.Reply, 0, len(views))
-	for _, cv := range views {
+func (sys *System) buildTree(postID string, comments []api.Comment) []reply.Reply {
+	replies := make([]reply.Reply, 0, len(comments))
+	for _, c := range comments {
 		parentID := ""
-		if parts := strings.Split(cv.Comment.Path, "."); len(parts) >= 3 {
+		if parts := strings.Split(c.Path, "."); len(parts) >= 3 {
 			parentID = parts[len(parts)-2]
 		}
 
 		replies = append(replies, reply.Reply{
-			ID:        strconv.FormatInt(cv.Comment.ID, 10),
+			ID:        strconv.FormatInt(c.ID, 10),
 			PostID:    postID,
 			ParentID:  parentID,
-			Body:      cv.Comment.Content,
-			Deleted:   cv.Comment.Deleted || cv.Comment.Removed,
-			CreatedAt: cv.Comment.Published,
+			Body:      c.Content,
+			Deleted:   c.Deleted || c.Removed,
+			CreatedAt: c.Published,
 			Author: author.Author{
-				ID:   strconv.FormatInt(cv.Comment.CreatorID, 10),
-				Name: cv.Creator.Name,
+				ID:   strconv.FormatInt(c.CreatorID, 10),
+				Name: c.CreatorName,
 			},
 			SysIDX: sys.idx,
 		})
@@ -414,28 +420,24 @@ func (sys *System) CreatePost(ctx context.Context, p *post.Post) error {
 		return fmt.Errorf("invalid community id %q: %w", p.Forum.ID, err)
 	}
 
-	create := lemmy.CreatePost{
-		Name:        p.Subject,
-		CommunityID: communityID,
-		NSFW:        lemmy.NewOptional(false),
-	}
+	create := api.NewPost{CommunityID: communityID, Name: p.Subject}
 	if p.Kind == post.KindLink {
-		create.URL = lemmy.NewOptional(strings.TrimSpace(p.Body))
+		create.URL = strings.TrimSpace(p.Body)
 	} else {
-		create.Body = lemmy.NewOptional(p.Body)
+		create.Body = p.Body
 	}
 
-	var resp *lemmy.PostResponse
+	var id int64
 	err = sys.write(ctx, func(ctx context.Context) error {
 		var err error
-		resp, err = sys.client.CreatePost(ctx, create)
+		id, err = sys.client.CreatePost(ctx, create)
 		return err
 	})
 	if err != nil {
 		return err
 	}
 
-	p.ID = strconv.FormatInt(resp.PostView.Post.ID, 10)
+	p.ID = strconv.FormatInt(id, 10)
 	return nil
 }
 
@@ -449,28 +451,25 @@ func (sys *System) CreateReply(ctx context.Context, r *reply.Reply) error {
 		return fmt.Errorf("invalid post id %q: %w", r.PostID, err)
 	}
 
-	create := lemmy.CreateComment{
-		PostID:  postID,
-		Content: r.Body,
-	}
+	create := api.NewComment{PostID: postID, Content: r.Body}
 	if r.ParentID != "" {
 		parentID, err := strconv.ParseInt(r.ParentID, 10, 64)
 		if err != nil {
 			return fmt.Errorf("invalid comment id %q: %w", r.ParentID, err)
 		}
-		create.ParentID = lemmy.NewOptional(parentID)
+		create.ParentID = parentID
 	}
 
-	var resp *lemmy.CommentResponse
+	var id int64
 	err = sys.write(ctx, func(ctx context.Context) error {
 		var err error
-		resp, err = sys.client.CreateComment(ctx, create)
+		id, err = sys.client.CreateComment(ctx, create)
 		return err
 	})
 	if err != nil {
 		return err
 	}
 
-	r.ID = strconv.FormatInt(resp.CommentView.Comment.ID, 10)
+	r.ID = strconv.FormatInt(id, 10)
 	return nil
 }

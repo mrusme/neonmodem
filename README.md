@@ -225,9 +225,15 @@ for the current code from the authenticator app. The token can also be read from
 a command. Neon Modem then shows it once, so it can be saved e.g. in a password
 manager.
 
+Neon Modem works with instances on Lemmy 0.19 and on Lemmy 1.0. It reads the
+version of the instance when it starts and uses the matching API.
+
 The session stays valid until it's ended on the server, for example by a
 password change. Neon Modem then lists nothing from that instance and shows the
 connect command to run. Make sure to restart Neon Modem after running it.
+
+An instance's upgrade from Lemmy 0.19 to 1.0 ends every session on it, so you
+have to connect again.
 
 **Note:** Replacing a connection doesn't end its old session. A password change,
 however, ends all of them.
@@ -239,6 +245,11 @@ Choose _No account_ when asked for the username to connect without an account.
 The connect command also asks which feed to list. Either `subscribed`, the
 default feed, requiring an account, `local` or `all`. The choice is stored as
 `listing` in the system's `options` table.
+
+On Lemmy 1.0, `mark_as_read = 'yes'` in the system's `options` table marks the
+posts that Neon Modem lists as read on the instance. Without it, or with `'no'`,
+the read state stays as it is, whatever the account's setting says. Lemmy 0.19
+ignores the option.
 
 ```sh
 neonmodem connect --type lemmy --url https://lemmy.ml

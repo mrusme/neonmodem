@@ -1,0 +1,135 @@
+{
+  "post_view": {
+    "post": {
+      "id": 16,
+      "name": "Walnut prairie compass",
+      "body": "Hazel *quartz* meadow drifts by the cedar.",
+      "creator_id": 3,
+      "community_id": 3,
+      "removed": false,
+      "locked": false,
+      "published": "2026-10-27T01:31:11.485710Z",
+      "deleted": false,
+      "nsfw": false,
+      "ap_id": "https://localhost/post/16",
+      "local": true,
+      "language_id": 0,
+      "featured_community": false,
+      "featured_local": false
+    },
+    "creator": {
+      "id": 3,
+      "name": "vera",
+      "banned": false,
+      "published": "2026-10-04T17:23:01.735302Z",
+      "actor_id": "https://localhost/u/vera",
+      "local": true,
+      "deleted": false,
+      "bot_account": false,
+      "instance_id": 1
+    },
+    "community": {
+      "id": 3,
+      "name": "testing",
+      "title": "Testing",
+      "description": "## Rules\n\nThe testing community of this instance.\n\n- Be kind",
+      "removed": false,
+      "published": "2026-10-04T17:23:01.550438Z",
+      "updated": "2026-10-27T01:29:56.213379Z",
+      "deleted": false,
+      "nsfw": false,
+      "actor_id": "https://localhost/c/testing",
+      "local": true,
+      "hidden": false,
+      "posting_restricted_to_mods": false,
+      "instance_id": 1,
+      "visibility": "Public"
+    },
+    "creator_banned_from_community": false,
+    "banned_from_community": false,
+    "creator_is_moderator": false,
+    "creator_is_admin": false,
+    "counts": {
+      "post_id": 16,
+      "comments": 3,
+      "score": 1,
+      "upvotes": 1,
+      "downvotes": 0,
+      "published": "2026-10-27T01:31:11.485710Z",
+      "newest_comment_time": "2026-10-27T01:31:11.569350Z"
+    },
+    "subscribed": "NotSubscribed",
+    "saved": false,
+    "read": false,
+    "hidden": false,
+    "creator_blocked": false,
+    "unread_comments": 3
+  },
+  "community_view": {
+    "community": {
+      "id": 3,
+      "name": "testing",
+      "title": "Testing",
+      "description": "## Rules\n\nThe testing community of this instance.\n\n- Be kind",
+      "removed": false,
+      "published": "2026-10-04T17:23:01.550438Z",
+      "updated": "2026-10-27T01:29:56.213379Z",
+      "deleted": false,
+      "nsfw": false,
+      "actor_id": "https://localhost/c/testing",
+      "local": true,
+      "hidden": false,
+      "posting_restricted_to_mods": false,
+      "instance_id": 1,
+      "visibility": "Public"
+    },
+    "subscribed": "NotSubscribed",
+    "blocked": false,
+    "counts": {
+      "community_id": 3,
+      "subscribers": 1,
+      "posts": 2,
+      "comments": 3,
+      "published": "2026-10-04T17:23:01.550438Z",
+      "users_active_day": 0,
+      "users_active_week": 0,
+      "users_active_month": 0,
+      "users_active_half_year": 0,
+      "subscribers_local": 1
+    },
+    "banned_from_community": false
+  },
+  "moderators": [
+    {
+      "community": {
+        "id": 3,
+        "name": "testing",
+        "title": "Testing",
+        "description": "## Rules\n\nThe testing community of this instance.\n\n- Be kind",
+        "removed": false,
+        "published": "2026-10-04T17:23:01.550438Z",
+        "updated": "2026-10-27T01:29:56.213379Z",
+        "deleted": false,
+        "nsfw": false,
+        "actor_id": "https://localhost/c/testing",
+        "local": true,
+        "hidden": false,
+        "posting_restricted_to_mods": false,
+        "instance_id": 1,
+        "visibility": "Public"
+      },
+      "moderator": {
+        "id": 2,
+        "name": "admin",
+        "banned": false,
+        "published": "2026-10-04T17:21:16.047998Z",
+        "actor_id": "https://localhost/u/admin",
+        "local": true,
+        "deleted": false,
+        "bot_account": false,
+        "instance_id": 1
+      }
+    }
+  ],
+  "cross_posts": []
+}

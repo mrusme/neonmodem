@@ -1,40 +1,37 @@
 package lemmy
 
 import (
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/mrusme/neonmodem/internal/models/reply"
 	"github.com/mrusme/neonmodem/internal/system"
-	"go.elara.ws/go-lemmy"
+	"github.com/mrusme/neonmodem/internal/system/lemmy/api"
 )
 
-func view(id int64, path string, content string, deleted bool) lemmy.CommentView {
-	return lemmy.CommentView{
-		Comment: lemmy.Comment{
-			ID:        id,
-			Path:      path,
-			Content:   content,
-			Deleted:   deleted,
-			Published: time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC),
-		},
-		Creator: lemmy.Person{Name: "u" + path},
+func comment(id int64, path string, content string, deleted bool) api.Comment {
+	return api.Comment{
+		ID:          id,
+		Path:        path,
+		Content:     content,
+		Deleted:     deleted,
+		Published:   time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC),
+		CreatorName: "u" + path,
 	}
 }
 
 func TestBuildTreeThreadsByPath(t *testing.T) {
 	sys := &System{idx: 3}
 
-	views := []lemmy.CommentView{
-		view(1, "0.1", "top one", false),
-		view(2, "0.1.2", "child of one", false),
-		view(3, "0.3", "top three", true),
-		view(4, "0.1.2.4", "grandchild", false),
-		view(5, "0.9.5", "orphan whose parent is not loaded", false),
+	comments := []api.Comment{
+		comment(1, "0.1", "top one", false),
+		comment(2, "0.1.2", "child of one", false),
+		comment(3, "0.3", "top three", true),
+		comment(4, "0.1.2.4", "grandchild", false),
+		comment(5, "0.9.5", "orphan whose parent is not loaded", false),
 	}
 
-	tree := sys.buildTree("42", views)
+	tree := sys.buildTree("42", comments)
 
 	if len(tree) != 3 {
 		t.Fatalf("expected 3 top-level replies (two roots and one orphan), got %d", len(tree))
@@ -63,35 +60,20 @@ func TestBuildTreeThreadsByPath(t *testing.T) {
 
 func TestListingTypeFallsBackForAnonymous(t *testing.T) {
 	anon := &System{settings: system.Settings{}}
-	if got := anon.listingType(); got != lemmy.ListingTypeLocal {
+	if got := anon.listingType(); got != api.ListingLocal {
 		t.Errorf("anonymous subscribed should fall back to local, got %s", got)
 	}
 
 	account := &System{settings: system.Settings{
 		Credentials: map[string]string{"username": "u", "token": "t"},
 	}}
-	if got := account.listingType(); got != lemmy.ListingTypeSubscribed {
+	if got := account.listingType(); got != api.ListingSubscribed {
 		t.Errorf("default with an account should be subscribed, got %s", got)
 	}
 
 	all := &System{settings: system.Settings{Options: map[string]string{OptionListing: "ALL"}}}
-	if got := all.listingType(); got != lemmy.ListingTypeAll {
+	if got := all.listingType(); got != api.ListingAll {
 		t.Errorf("option all should give All, got %s", got)
-	}
-}
-
-func TestIsAuthError(t *testing.T) {
-	if !isAuthError(lemmy.Error{Code: 401}) {
-		t.Error("401 should be an auth error")
-	}
-	if !isAuthError(lemmy.Error{ErrStr: "not_logged_in", Code: 400}) {
-		t.Error("not_logged_in should be an auth error")
-	}
-	if isAuthError(lemmy.Error{ErrStr: "couldnt_find_post", Code: 400}) {
-		t.Error("a missing post is not an auth error")
-	}
-	if isAuthError(errors.New("network down")) {
-		t.Error("a plain error is not an auth error")
 	}
 }
 
@@ -111,15 +93,47 @@ func TestCapabilitiesFollowCredentials(t *testing.T) {
 func TestLinkPostsCarryTheirLink(t *testing.T) {
 	sys := &System{settings: system.Settings{URL: "https://lemmy.example"}}
 
-	link := sys.toPost(lemmy.PostView{Post: lemmy.Post{ID: 7, Name: "Linux 7.3",
-		URL: lemmy.NewOptional("https://kernel.org/")}})
+	link := sys.toPost(api.Post{ID: 7, Name: "Linux 7.3", URL: "https://kernel.org/"})
 	if link.Link != "https://kernel.org/" || link.URL != "https://lemmy.example/post/7" {
 		t.Errorf("link post: link=%q url=%q", link.Link, link.URL)
 	}
 
-	text := sys.toPost(lemmy.PostView{Post: lemmy.Post{ID: 8, Name: "A question",
-		Body: lemmy.NewOptional("Why?")}})
+	text := sys.toPost(api.Post{ID: 8, Name: "A question", Body: "Why?"})
 	if text.Link != "" {
 		t.Errorf("a text post has no link, got %q", text.Link)
+	}
+}
+
+func TestNewReadsMarkAsRead(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		want  bool
+		err   string
+	}{
+		{"", false, ""},
+		{"no", false, ""},
+		{"yes", true, ""},
+		{" Yes ", true, ""},
+		{"maybe", false, `the option mark_as_read is "maybe"; use yes or no`},
+		{"true", false, `the option mark_as_read is "true"; use yes or no`},
+	} {
+		settings := system.Settings{URL: "https://lemmy.example"}
+		if tc.value != "" {
+			settings.Options = map[string]string{OptionMarkAsRead: tc.value}
+		}
+
+		sys, err := New(system.Env{Settings: settings})
+		if tc.err != "" {
+			if err == nil || err.Error() != tc.err {
+				t.Errorf("%q: got %v, want %q", tc.value, err, tc.err)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("%q: %v", tc.value, err)
+		}
+		if got := sys.(*System).markAsRead; got != tc.want {
+			t.Errorf("%q: got %v, want %v", tc.value, got, tc.want)
+		}
 	}
 }
