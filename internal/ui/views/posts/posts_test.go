@@ -208,13 +208,11 @@ func TestOrderChangeWithoutReloadsRemergesAtOnce(t *testing.T) {
 
 func TestRowsShowScoreRepliesAndSystem(t *testing.T) {
 	item := Item{
-		Post: post.Post{
-			Author:     author.Author{ID: "alice", Name: "alice"},
-			CreatedAt:  time.Now().Add(-3 * time.Hour),
-			Forum:      forum.Forum{Name: "Show HN"},
-			ReplyCount: 87,
-			Score:      post.Score{Value: 312, Unit: post.ScorePoints},
-		},
+		Author:      author.Author{ID: "alice", Name: "alice"},
+		CreatedAt:   time.Now().Add(-3 * time.Hour),
+		Forum:       forum.Forum{Name: "Show HN"},
+		ReplyCount:  87,
+		Score:       post.Score{Value: 312, Unit: post.ScorePoints},
 		SystemTitle: "news.ycombinator.com",
 	}
 	want := "by alice 3 hours ago in Show HN · 312 points · 87 replies · news.ycombinator.com"
