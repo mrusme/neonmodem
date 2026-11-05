@@ -84,8 +84,9 @@ func (sys *System) Connect(
 		p.Notice(openURL)
 	}
 
+	p.Notice("\nUse the \"Copy key\" button on the page, or make sure the key is a single line without whitespace.")
 	encodedUserAPIKey, err := p.Line(
-		"\nPlease copy the user API key after authorizing and paste it here",
+		"Please copy the user API key after authorizing and paste it here",
 		"user API key",
 	)
 	if err != nil {
